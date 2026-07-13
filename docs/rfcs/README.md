@@ -2,6 +2,8 @@
 
 RFCs document foundational proposals, philosophies, terminology, architecture, and governance before implementation.
 
+Before changing a foundational RFC, review [`CROSS-REFERENCES.md`](./CROSS-REFERENCES.md) to understand dependencies and affected areas.
+
 ## Current RFCs
 
 - RFC-000 — Why Loxora?
