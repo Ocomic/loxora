@@ -13,7 +13,11 @@ Before changing a foundational RFC, review [`CROSS-REFERENCES.md`](./CROSS-REFER
 - RFC-004 — Development Workflow
 - RFC-005 — Project Preparation
 - RFC-006 — Knowledge Navigation & Progressive Context
+- RFC-007 — Initial Architecture and Hackathon MVP Boundaries — **Proposed**
 
-## Planned
+RFC-000 through RFC-006 are foundational drafts. RFC-007 is an implementation-boundary proposal and must not be treated as accepted architecture until reviewed.
 
-- RFC-007 — Initial Architecture and MVP Boundaries
+## Related proposals
+
+- [`../adr/ADR-001-runtime-workspace-and-mvp-persistence.md`](../adr/ADR-001-runtime-workspace-and-mvp-persistence.md)
+- [`../adr/ADR-002-lifecycle-and-relationship-representation.md`](../adr/ADR-002-lifecycle-and-relationship-representation.md)

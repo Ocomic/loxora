@@ -1,7 +1,19 @@
 # Build Week / Hackathon
 
-**Status:** Draft planning document  
+**Status:** Draft planning document
 **Working title:** Loxora MVP differentiation
+
+## Planning index
+
+- [MVP Scope](./MVP-SCOPE.md)
+- [Demo Script](./DEMO-SCRIPT.md)
+- [Real Versus Curated Demo Ledger](./REAL-VS-SIMULATED.md)
+- [Acceptance Matrix](./ACCEPTANCE-MATRIX.md)
+- [Pre-Hackathon Boundary Checklist](./PRE-HACKATHON-BOUNDARY.md)
+- [Sample Projects and Evidence Map](./SAMPLE-PROJECTS-AND-EVIDENCE.md)
+- [RFC-007 — Initial Architecture and Hackathon MVP Boundaries](../rfcs/RFC-007-initial-architecture-and-mvp-boundaries.md)
+
+The approved-in-principle MVP story leads with knowledge lifecycle and evidence-backed cross-project impact. Repository import is supporting infrastructure and must not become the central demo narrative.
 
 ## Context
 
@@ -147,15 +159,15 @@ The MVP does not need:
 - advanced embedding infrastructure,
 - or complete support for every project profile.
 
-## Demo narrative
+## Differentiating demo narrative
 
-1. Connect two related projects.
-2. Bootstrap a small amount of structured project knowledge.
-3. Show a cross-project dependency and ask an impact-analysis question.
-4. Change or supersede one important project decision.
-5. Roll the change back or restore an earlier approach.
-6. Ask Loxora for the current state and confirm that outdated knowledge is excluded.
-7. Request the history and show the full traceable evolution.
+1. Connect `identity-contract` and its consumer, `customer-portal`.
+2. Review and accept V1 of the shared token contract.
+3. Supersede V1 with V2, replacing `customer_id` with `subject_id`.
+4. Follow the dependency path and explain why the unchanged consumer rejects authentication.
+5. Accept V3 as a new restoration revision with V1-compatible semantics.
+6. Show Past, Current, and a separate Deferred plan to revisit the V2 migration.
+7. Generate lifecycle-filtered Context through the UI and the same read-only MCP core operation.
 
 ## Success criteria
 
