@@ -1,7 +1,7 @@
 # RFC-001 — Project Philosophy
 
 **Status:** Draft  
-**Version:** 0.2  
+**Version:** 0.3  
 **Last Updated:** July 2026
 
 ## Purpose
@@ -124,6 +124,40 @@ Source code remains authoritative for what software currently executes.
 
 Loxora is authoritative for documented project understanding, rationale, relationships, and knowledge history—subject to evidence and review state.
 
+### 25. Navigate before loading
+
+Agents should begin with maps, indexes, and summaries before loading detailed knowledge.
+
+A project memory should provide orientation before depth.
+
+### 26. Progressive disclosure
+
+Knowledge should be available in increasing levels of detail, from workspace and project maps to spaces, collections, nodes, revisions, and evidence.
+
+The system should open only the depth required for the task.
+
+### 27. Summaries are derived knowledge
+
+Summaries, indexes, and maps must preserve provenance, scope, freshness, and links to their underlying knowledge.
+
+They support navigation but never replace canonical source knowledge.
+
+### 28. Plans are not facts
+
+Past, current, and planned states must remain distinguishable.
+
+A proposed or approved future state must not be presented as already implemented or canonical.
+
+### 29. Shared does not mean unrestricted
+
+Loxora is shared project intelligence for humans and agents, but all sharing must respect workspace boundaries, permissions, provenance, governance, and project ownership.
+
+### 30. No knowledge mazes
+
+Important knowledge must be reachable through clear maps, indexes, typed relationships, or search.
+
+Orphans, broken links, stale summaries, duplicate concepts, and missing cross-project relationships should be detectable and reviewable.
+
 ## Engineering mindset
 
 Loxora should favor:
@@ -134,7 +168,9 @@ Loxora should favor:
 - transparency over hidden behavior,
 - evolution over rigid design,
 - collaboration over isolation,
-- explicit state over ambiguous recency.
+- explicit state over ambiguous recency,
+- orientation over indiscriminate loading,
+- meaningful structure over decorative graphs.
 
 ## Closing statement
 
@@ -144,4 +180,4 @@ AI models change.
 Development tools change.  
 Projects remain.
 
-Loxora exists to ensure that their knowledge remains with them—and remains understandable as it evolves.
+Loxora exists to ensure that their knowledge remains with them—and remains understandable, navigable, and trustworthy as it evolves.
