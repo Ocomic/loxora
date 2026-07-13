@@ -11,6 +11,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 5. RFC-004 — Development Workflow
 6. RFC-005 — Project Preparation
 7. RFC-006 — Knowledge Navigation & Progressive Context
+8. RFC-007 — Initial Architecture and Hackathon MVP Boundaries
 
 ## Dependency matrix
 
@@ -23,6 +24,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 | RFC-004 | RFC-001 to RFC-003 | RFC-005, RFC-006, agent prompts, implementation work | Defines how humans and agents move from idea to reviewed knowledge and implementation. |
 | RFC-005 | RFC-001 to RFC-004 | bootstrap, source ingestion, initial Codex prompt | Defines how a project is inspected and reconstructed before architecture or implementation begins. |
 | RFC-006 | RFC-001 to RFC-005 | retrieval, Context Packages, Project Map, Project Graph, UI, search | Defines how knowledge is organized, indexed, navigated, summarized, and connected without becoming a maze. |
+| RFC-007 | RFC-000 to RFC-006 | proposed ADRs, Hackathon implementation, MVP persistence, UI, MCP | Proposes a bounded vertical slice that proves lifecycle and cross-project impact without selecting permanent architecture. |
 
 ## Mandatory cross-RFC rules
 
@@ -96,6 +98,22 @@ Cross-project relationships must preserve:
 - and review status.
 
 Shared knowledge is never automatically canonical in the target project.
+
+### RFC-007 and the Hackathon MVP
+
+RFC-007 must preserve the terminology, lifecycle, workflow, preparation, and navigation constraints in RFC-000 through RFC-006.
+
+Its proposed simplifications do not redefine the long-term model:
+
+- repository import remains supporting infrastructure;
+- Project Maps, Spaces, Collections, and Nodes provide the stored navigation structure;
+- indexes and summaries may be projections for the MVP;
+- accepted knowledge remains immutable and review-gated;
+- current, historical, and planned knowledge remain separate;
+- SQLite is an MVP persistence proposal, not permanent canonical architecture;
+- the UI and read-only MCP adapter use the same Context Package core operation.
+
+Changes to RFC-007 require review of both proposed ADRs and all Hackathon planning documents. Changes to RFC-003 or RFC-006 require revalidation of the lifecycle, temporal, navigation, impact, and Context Package acceptance criteria.
 
 ## Change impact rule
 

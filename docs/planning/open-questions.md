@@ -40,12 +40,36 @@
 - Profile architecture
 - Deployment and packaging
 
+### Proposed Hackathon defaults
+
+The following are proposed by RFC-007 and ADR-001/ADR-002 for the MVP only:
+
+- a TypeScript workspace with a local web UI, shared core, and read-only stdio MCP adapter;
+- SQLite as replaceable local MVP persistence, with deterministic export;
+- relational typed edges instead of a dedicated graph database;
+- Project Map, Space, Collection, and Node as the stored navigation structure;
+- summaries and indexes as projections where practical;
+- deterministic Context Package inputs rather than general natural-language routing.
+
+These defaults remain subject to review and do not resolve permanent storage, runtime, workspace, graph, search, connector, or deployment architecture.
+
 ## Build Week
 
-- Exact MVP scope
-- Required demo flows
-- Software and book demo datasets
-- Codex plugin scope
-- Cross-project dependency demonstration
-- Team collaboration depth
-- What is real vs. simulated
+- **Proposed scope:** lifecycle and rollback awareness plus cross-project impact using `identity-contract` and `customer-portal`.
+- **Proposed scenario:** V2 replaces `customer_id` with `subject_id`, breaks the consumer, and is restored through V3.
+- **Proposed temporal view:** historical V1/V2, current V3, and a separate Deferred migration plan.
+- **Proposed MCP scope:** one deterministic read-only Context Package tool shared with the UI.
+- **Proposed real behavior:** persistence, review, immutable revisions, lifecycle transitions, temporal filtering, traversal, impact, Context Packages, and MCP access.
+- **Curated inputs:** prepared documents, Evidence, transition reasons, and scenario content.
+- **Unresolved approval:** Decision Owner and reviewer assignment.
+- **Post-MVP question:** software and non-software profile datasets beyond the two-project demo.
+
+## Post-MVP questions retained
+
+- Permanent persistence and canonical interchange architecture.
+- General repository and external-source ingestion.
+- Production permissions and governance.
+- Offline and team synchronization.
+- Claim-level lifecycle.
+- Embeddings and broader retrieval strategy.
+- Profiles for books, games, research, and business projects.
