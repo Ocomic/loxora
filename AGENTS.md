@@ -11,10 +11,16 @@ Do not implement product functionality unless a task explicitly authorizes imple
 Before proposing architecture or implementation, read:
 
 1. `README.md`
-2. `docs/rfcs/RFC-000-why-loxora.md`
-3. `docs/rfcs/RFC-001-project-philosophy.md`
-4. `docs/rfcs/RFC-002-core-concepts-and-terminology.md`
-5. `docs/planning/open-questions.md`
+2. `docs/rfcs/README.md`
+3. `docs/rfcs/CROSS-REFERENCES.md`
+4. `docs/rfcs/RFC-000-why-loxora.md`
+5. `docs/rfcs/RFC-001-project-philosophy.md`
+6. `docs/rfcs/RFC-002-core-concepts-and-terminology.md`
+7. `docs/rfcs/RFC-003-knowledge-lifecycle.md`
+8. `docs/rfcs/RFC-004-development-workflow.md`
+9. `docs/rfcs/RFC-005-project-preparation.md`
+10. `docs/rfcs/RFC-006-knowledge-navigation-and-progressive-context.md`
+11. `docs/planning/open-questions.md`
 
 ## Core rules
 
@@ -22,18 +28,22 @@ Before proposing architecture or implementation, read:
 - Plan before architecture.
 - Architecture before code.
 - Knowledge before context.
+- Navigate before loading.
+- Use maps, indexes, summaries, and typed relationships before loading detailed knowledge.
 - Project knowledge belongs to the project, not to a model, IDE, chat, or individual.
 - AI agents propose; shared knowledge requires appropriate review.
 - Prefer evidence over assumptions.
 - Preserve uncertainty instead of inventing certainty.
 - Keep changes small, explicit, and reviewable.
 - Do not silently overwrite shared knowledge.
-- Do not mix current and historical knowledge.
+- Do not mix current, historical, and planned knowledge.
 - Preserve provenance, evidence, review state, and history.
 - Treat rollback as a new documented state transition, not as deletion of history.
+- Update or invalidate affected maps, indexes, summaries, and cross-project links when knowledge changes.
+- Avoid orphaned knowledge, broken links, duplicate concepts, and unexplained navigation dead ends.
 - Local-first and model independence are foundational constraints.
 - Team, organization, role, permission, and agent-identity support must remain possible.
-- Cross-project knowledge sharing must be explicit and permission-aware.
+- Cross-project knowledge sharing must be explicit, typed, evidence-backed, and permission-aware.
 
 ## During the current phase, do not implement
 
@@ -54,7 +64,7 @@ Record such ideas in `docs/planning/open-questions.md`.
 
 ## Knowledge evolution
 
-Current knowledge must be clearly distinguishable from historical knowledge.
+Current knowledge must be clearly distinguishable from historical and planned knowledge.
 
 When knowledge changes:
 
@@ -63,9 +73,29 @@ When knowledge changes:
 - record why the change occurred,
 - record who or what proposed and reviewed it,
 - identify which revision is current,
-- communicate deprecations, supersessions, restorations, and rollbacks explicitly.
+- communicate deprecations, supersessions, restorations, and rollbacks explicitly,
+- update or invalidate affected summaries and indexes,
+- review incoming and outgoing cross-project relationships.
 
 Historical knowledge must not be presented to agents as current unless the task explicitly requests history.
+
+Planned knowledge must not be presented as implemented or canonical until it has been verified and accepted according to project governance.
+
+## Navigation and discoverability
+
+Project knowledge must remain understandable without requiring internal identifiers or exhaustive graph traversal.
+
+Important knowledge should be reachable through at least one clear navigation path, such as:
+
+- Workspace Map,
+- Project Map,
+- Knowledge Space,
+- Space Index,
+- Knowledge Collection,
+- search,
+- or a typed relationship from another relevant item.
+
+If an agent discovers orphaned knowledge, stale summaries, broken links, duplicate concepts, or missing project dependencies, it should report them and propose a reviewable correction rather than silently reorganizing the knowledge structure.
 
 ## Decision process
 
@@ -75,10 +105,12 @@ For significant changes:
 2. Document the proposal.
 3. Discuss alternatives.
 4. Create or update the relevant RFC or ADR.
-5. Plan implementation.
-6. Implement only after approval.
-7. Review the result.
-8. Record reflection and resulting knowledge changes.
+5. Review RFC dependencies in `docs/rfcs/CROSS-REFERENCES.md`.
+6. Plan implementation.
+7. Implement only after approval.
+8. Review the result.
+9. Record reflection and resulting knowledge changes.
+10. Update or invalidate affected navigation surfaces and project relationships.
 
 ## Output expectations
 
@@ -89,4 +121,7 @@ Every completed task should state:
 - assumptions made,
 - validation performed,
 - open questions,
-- documentation requiring updates.
+- documentation requiring updates,
+- knowledge lifecycle effects,
+- navigation or summary effects,
+- and known cross-project impacts.
