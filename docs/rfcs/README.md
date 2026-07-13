@@ -9,7 +9,8 @@ RFCs document foundational proposals, philosophies, terminology, and architectur
 - RFC-002 — Core Concepts & Terminology
 - RFC-003 — Knowledge Lifecycle
 - RFC-004 — Development Workflow
+- RFC-005 — Project Preparation
 
 ## Planned
 
-- RFC-005 — Project Preparation
+- RFC-006 — Initial Architecture and MVP Boundaries
