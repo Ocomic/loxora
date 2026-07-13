@@ -7,9 +7,9 @@ RFCs document foundational proposals, philosophies, terminology, and architectur
 - RFC-000 — Why Loxora?
 - RFC-001 — Project Philosophy
 - RFC-002 — Core Concepts & Terminology
+- RFC-003 — Knowledge Lifecycle
 
 ## Planned
 
-- RFC-003 — Knowledge Lifecycle
 - RFC-004 — Development Workflow
 - RFC-005 — Project Preparation
