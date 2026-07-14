@@ -504,7 +504,7 @@ test("migration is idempotent and alternate identifiers are data-driven", async 
     const applied = memoryDatabase
       .prepare("SELECT COUNT(*) AS count FROM schema_migrations")
       .get() as { count: number };
-    assert.equal(applied.count, 3);
+    assert.equal(applied.count, 4);
     const fixture = await createBase(
       value.service,
       "unrelated-language",

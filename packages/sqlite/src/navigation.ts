@@ -33,6 +33,7 @@ import {
   type SpaceNavigationSummary,
   type SpaceId,
 } from "@loxora/core";
+import { buildCrossProjectProjectMapProjection } from "./navigation-cross-project.js";
 
 interface BuiltProjection {
   readonly projectMap: ProjectMap;
@@ -622,7 +623,19 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
       sources,
     };
     const activity = { rollbackEvents: activityRows, lifecycleEvents: lifecycleActivity };
-    const fingerprints = this.builder.fingerprints({ content, activity });
+    const crossProject = buildCrossProjectProjectMapProjection(this.database, projectId, scope);
+    const contentWithRelationships = {
+      ...content,
+      crossProject: crossProject.fingerprintContent,
+    };
+    const activityWithAssessments = {
+      ...activity,
+      crossProject: crossProject.fingerprintActivity,
+    };
+    const fingerprints = this.builder.fingerprints({
+      content: contentWithRelationships,
+      activity: activityWithAssessments,
+    });
     const allCounts = this.counts(nodeSummaries.map((item) => item.summary));
     const lastActivity =
       (
@@ -646,6 +659,9 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
       warnings: freeze(warnings),
       freshness,
       lastRelevantActivityAt: lastActivity,
+      outgoingDependencies: crossProject.outgoingDependencies,
+      incomingDependents: crossProject.incomingDependents,
+      relatedProjectIds: crossProject.relatedProjectIds,
     });
     return freeze({
       projectMap: map,

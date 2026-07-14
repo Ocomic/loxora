@@ -13,6 +13,16 @@ export type AuditEventId = Brand<string, "AuditEventId">;
 export type CorrelationId = Brand<string, "CorrelationId">;
 export type RollbackEventId = Brand<string, "RollbackEventId">;
 export type RevisionRelationshipId = Brand<string, "RevisionRelationshipId">;
+export type CrossProjectRelationshipProposalId = Brand<
+  string,
+  "CrossProjectRelationshipProposalId"
+>;
+export type CrossProjectRelationshipReviewDecisionId = Brand<
+  string,
+  "CrossProjectRelationshipReviewDecisionId"
+>;
+export type CrossProjectRelationshipId = Brand<string, "CrossProjectRelationshipId">;
+export type ImpactAssessmentId = Brand<string, "ImpactAssessmentId">;
 export type Scope = Brand<string, "Scope">;
 
 export type ProposalStatus = "Submitted" | "Accepted" | "Rejected";
@@ -55,7 +65,12 @@ export type AuditEventType =
   | "RestorationRevisionCreated"
   | "NavigationProjectionRebuilt"
   | "NavigationOrphansDetected"
-  | "NavigationOrphansResolved";
+  | "NavigationOrphansResolved"
+  | "CrossProjectRelationshipProposed"
+  | "CrossProjectRelationshipReviewDecisionRecorded"
+  | "CrossProjectRelationshipAccepted"
+  | "CrossProjectRelationshipRejected"
+  | "ImpactAssessmentCreated";
 
 export interface Project {
   readonly id: ProjectId;
@@ -339,6 +354,22 @@ export interface ProjectMap extends NavigationCounts {
   readonly warnings: readonly NavigationWarning[];
   readonly freshness: NavigationFreshness;
   readonly lastRelevantActivityAt: string | null;
+  readonly outgoingDependencies: readonly CrossProjectDependencySummary[];
+  readonly incomingDependents: readonly CrossProjectDependencySummary[];
+  readonly relatedProjectIds: readonly ProjectId[];
+}
+
+export interface CrossProjectDependencySummary {
+  readonly relationshipId: CrossProjectRelationshipId;
+  readonly direction: "DependsOn" | "DependedOnBy";
+  readonly relatedProjectId: ProjectId | null;
+  readonly inaccessibleReferenceId: string | null;
+  readonly relationshipBindingFreshness: "Fresh" | "Stale";
+  readonly assessmentFreshness: "Fresh" | "Stale" | null;
+  readonly latestSeverity: "Low" | "Medium" | "High" | "Critical" | null;
+  readonly visibility: "SharedBetweenProjects" | "Restricted";
+  readonly endpointPath: NavigationPath | null;
+  readonly warnings: readonly string[];
 }
 
 export interface SpaceNavigation {

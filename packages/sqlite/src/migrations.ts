@@ -38,8 +38,23 @@ function navigationMigration(): Migration {
   };
 }
 
+function crossProjectImpactMigration(): Migration {
+  return {
+    id: "004_cross_project_impact",
+    sql: readFileSync(
+      new URL("../../migrations/004_cross_project_impact.sql", import.meta.url),
+      "utf8",
+    ),
+  };
+}
+
 export function migrationCatalog(): readonly Migration[] {
-  return [initialMigration(), lineageMigration(), navigationMigration()];
+  return [
+    initialMigration(),
+    lineageMigration(),
+    navigationMigration(),
+    crossProjectImpactMigration(),
+  ];
 }
 
 export function runMigrations(

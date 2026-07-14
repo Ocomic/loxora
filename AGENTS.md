@@ -64,7 +64,7 @@ Before proposing architecture or implementation, read:
 
 Record such ideas in `docs/planning/open-questions.md`.
 
-Milestones 1 and 2 are complete. Milestone 3 is explicitly authorized by Ocomic on July 14, 2026 to implement only project-owned navigation, deterministic persisted projections and fallback, versioned freshness fingerprints, bounded navigation health, and migration compatibility as described in `docs/implementation/MILESTONE-3.md`. Planned Knowledge, cross-project impact, Context Packages, MCP, HTTP, UI, search, import, export, authentication, permissions, and synchronization remain outside that authorization.
+Milestones 1 through 3 are complete and merged. Milestone 4 is explicitly authorized by Ocomic on July 14, 2026 to implement only reviewed immutable `DependsOn` relationships, deterministic one-hop reverse impact traversal, revision-bound derived Impact Assessments, bounded visibility, Project Map discovery, and migration 004 as described in `docs/implementation/MILESTONE-4.md`. Planned Knowledge, Context Packages, MCP, HTTP, UI, search, import, export, authentication, production permissions, synchronization, and Milestone 5 remain outside that authorization.
 
 ## Knowledge evolution
 

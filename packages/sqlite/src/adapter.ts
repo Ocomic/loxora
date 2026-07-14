@@ -46,10 +46,13 @@ import {
   type SourceReference,
   type SourceReferenceId,
   type SpaceId,
+  type CrossProjectImpactStore,
+  type CrossProjectRelationshipId,
 } from "@loxora/core";
 import { DatabaseSync } from "node:sqlite";
 import { runMigrations } from "./migrations.js";
 import { SqliteNavigationProjectionStore } from "./navigation.js";
+import { SqliteCrossProjectImpactStore } from "./impact.js";
 
 interface ProposalRow {
   id: string;
@@ -182,11 +185,16 @@ export interface SqliteFaults {
   readonly afterReviewDecisionRecorded?: () => void;
   readonly afterCurrentPointerChanged?: () => void;
   readonly afterNavigationGenerationWritten?: () => void;
+  readonly afterRelationshipInserted?: () => void;
+  readonly afterAssessmentInserted?: () => void;
 }
 
-export class SqliteLifecycleStore implements LifecycleStore, NavigationStore {
+export class SqliteLifecycleStore
+  implements LifecycleStore, NavigationStore, CrossProjectImpactStore
+{
   private readonly database: DatabaseSync;
   private readonly navigation: SqliteNavigationProjectionStore;
+  private readonly impact: SqliteCrossProjectImpactStore;
 
   public constructor(
     path: string,
@@ -203,6 +211,7 @@ export class SqliteLifecycleStore implements LifecycleStore, NavigationStore {
       this.database,
       this.faults.afterNavigationGenerationWritten,
     );
+    this.impact = new SqliteCrossProjectImpactStore(this.database, this.faults);
   }
 
   public async createProject(project: Project, auditEvent: AuditEvent): Promise<void> {
@@ -871,6 +880,39 @@ export class SqliteLifecycleStore implements LifecycleStore, NavigationStore {
     input: Parameters<NavigationStore["rebuildNavigationProjection"]>[0],
   ): Promise<RebuildNavigationProjectionResult> {
     return this.navigation.rebuildNavigationProjection(input);
+  }
+
+  public getCurrentEndpoint(input: Parameters<CrossProjectImpactStore["getCurrentEndpoint"]>[0]) {
+    return this.impact.getCurrentEndpoint(input);
+  }
+  public submitCrossProjectRelationshipProposal(
+    input: Parameters<CrossProjectImpactStore["submitCrossProjectRelationshipProposal"]>[0],
+  ) {
+    return this.impact.submitCrossProjectRelationshipProposal(input);
+  }
+  public reviewCrossProjectRelationshipProposal(
+    input: Parameters<CrossProjectImpactStore["reviewCrossProjectRelationshipProposal"]>[0],
+  ) {
+    return this.impact.reviewCrossProjectRelationshipProposal(input);
+  }
+  public getCrossProjectRelationship(relationshipId: CrossProjectRelationshipId) {
+    return this.impact.getCrossProjectRelationship(relationshipId);
+  }
+  public createImpactAssessment(
+    input: Parameters<CrossProjectImpactStore["createImpactAssessment"]>[0],
+  ) {
+    return this.impact.createImpactAssessment(input);
+  }
+  public getProjectDependencies(
+    input: Parameters<CrossProjectImpactStore["getProjectDependencies"]>[0],
+  ) {
+    return this.impact.getProjectDependencies(input);
+  }
+  public getRevisionImpact(input: Parameters<CrossProjectImpactStore["getRevisionImpact"]>[0]) {
+    return this.impact.getRevisionImpact(input);
+  }
+  public getImpactPath(input: Parameters<CrossProjectImpactStore["getImpactPath"]>[0]) {
+    return this.impact.getImpactPath(input);
   }
 
   /** Test-only integrity access. This class is not exported from the package root. */

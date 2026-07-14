@@ -1,6 +1,6 @@
 # Milestone 3: Persisted Navigation Foundation
 
-**Status:** Implemented locally
+**Status:** Implemented and merged to `main`
 **Decision Owner:** Ocomic
 **Authorization date:** July 14, 2026
 **Scope:** Hackathon MVP Milestone 3 only
