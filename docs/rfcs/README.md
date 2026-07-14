@@ -13,9 +13,9 @@ Before changing a foundational RFC, review [`CROSS-REFERENCES.md`](./CROSS-REFER
 - RFC-004 — Development Workflow
 - RFC-005 — Project Preparation
 - RFC-006 — Knowledge Navigation & Progressive Context
-- RFC-007 — Initial Architecture and Hackathon MVP Boundaries — **Proposed**
+- RFC-007 — Initial Architecture and Hackathon MVP Boundaries — **Accepted for Hackathon MVP**
 
-RFC-000 through RFC-006 are foundational drafts. RFC-007 is an implementation-boundary proposal and must not be treated as accepted architecture until reviewed.
+RFC-000 through RFC-006 are foundational drafts. RFC-007 was accepted by Ocomic on July 13, 2026 only for explicitly authorized Hackathon MVP milestones; it is not permanent architecture.
 
 ## Related proposals
 

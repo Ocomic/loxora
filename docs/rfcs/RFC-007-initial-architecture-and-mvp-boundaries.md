@@ -1,8 +1,10 @@
 # RFC-007 — Initial Architecture and Hackathon MVP Boundaries
 
-**Status:** Proposed
+**Status:** Accepted for Hackathon MVP
 **Version:** 0.1
-**Last Updated:** July 2026
+**Last Updated:** July 13, 2026
+**Decision Date:** July 13, 2026
+**Decision Owner:** Ocomic
 
 ## Purpose
 
@@ -17,7 +19,7 @@ Repository import, local persistence, a web interface, and MCP access support th
 
 ## Status and approval boundary
 
-This RFC is a proposal. It does not authorize setup or implementation. The related ADRs must be reviewed before any architecture described here is treated as accepted.
+This RFC is accepted only for the Hackathon MVP. It authorizes implementation solely through explicitly assigned milestone tasks and does not establish permanent long-term Loxora architecture. ADR-001 and ADR-002 carry the same limited acceptance.
 
 ## Demo scenario
 
@@ -170,7 +172,7 @@ It returns stable ordered entries containing:
 
 The proposed MCP tool name is `loxora_get_context`. It is read-only. The MCP adapter must not reimplement selection or lifecycle filtering.
 
-## Proposed MVP architecture
+## Hackathon MVP architecture
 
 The related ADRs propose a TypeScript workspace, local web UI, local core service, read-only stdio MCP adapter, and SQLite-backed MVP persistence. Typed relationships are represented through relational edges. FTS5 may support general search if time permits.
 
@@ -218,14 +220,7 @@ Neither is needed to prove the differentiators and both would increase setup and
 
 ## Approval gates
 
-The following remain subject to human approval:
-
-- this RFC;
-- ADR-001 and ADR-002;
-- authorization for pre-Hackathon setup;
-- authorization for Hackathon implementation;
-- designation of the reviewer and Decision Owner;
-- acceptance of the deterministic export format as sufficient for MVP portability.
+RFC-007, ADR-001, and ADR-002 were accepted for the Hackathon MVP by Ocomic on July 13, 2026. Milestone 1 implementation is explicitly authorized. Later milestones, permanent architecture, production use, and acceptance of the deterministic export format remain subject to separate human approval.
 
 ## Implications
 

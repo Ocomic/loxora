@@ -1,6 +1,6 @@
 # Pre-Hackathon Boundary Checklist
 
-**Status:** Proposed
+**Status:** Historical boundary — Hackathon started July 13, 2026
 
 Pre-Hackathon preparation may reduce environment risk, but it must not implement the Loxora demo.
 
@@ -51,3 +51,13 @@ Before setup begins, record:
 - confirmation that RFC-007 and relevant ADR status permit the work.
 
 Approval of setup does not authorize Hackathon runtime implementation.
+
+## Hackathon start record
+
+- **Decision Owner:** Ocomic
+- **Decision date:** July 13, 2026
+- **Accepted architecture:** RFC-007, ADR-001, and ADR-002 for the Hackathon MVP only
+- **Authorized implementation:** only work explicitly named by a milestone task
+- **Current authorization:** Milestone 1 persistent lifecycle foundation
+
+This record closes the pre-Hackathon boundary. It does not authorize Milestone 2 or any unassigned UI, MCP, Context Package, navigation, cross-project, or demo functionality.

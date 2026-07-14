@@ -1,20 +1,24 @@
 # ADR-002 — Lifecycle and Relationship Representation
 
-**Status:** Proposed
-**Date:** July 2026
-**Decision Owner:** Unassigned
+**Status:** Accepted for Hackathon MVP
+**Date:** July 13, 2026
+**Decision Owner:** Ocomic
 
 ## Context
 
 The Hackathon MVP must demonstrate review before canon, immutable revisions, supersession, restoration, temporal separation, and evidence-backed cross-project impact. It must do so without implementing every long-term Loxora concept as a separate storage subsystem.
 
-## Proposed decision
+## Hackathon MVP decision
 
 Represent accepted knowledge as immutable Knowledge Revisions belonging to stable Knowledge Nodes. Use a minimal Proposal and Review Decision workflow to create those revisions. Represent intra-project and cross-project connections as typed, evidence-backed Relationship records.
 
 Project Maps, Spaces, Collections, and Nodes are the stored navigation structure required by the MVP. Indexes and summaries may be projections of that structure and its revisions rather than separately governed storage models.
 
 This ADR defines conceptual representation only. It does not define database tables or a functioning schema.
+
+Accepted Revision content and acceptance facts are immutable. Current is derived from a separate Current pointer. Historical is derived from accepted Revisions that are no longer referenced as Current. Later supersession and restoration relationships must add lineage without mutating prior Revision content.
+
+This acceptance is limited to explicitly authorized Hackathon MVP milestones and does not establish permanent lifecycle or relationship architecture.
 
 ## Proposal and review
 

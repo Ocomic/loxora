@@ -40,9 +40,9 @@
 - Profile architecture
 - Deployment and packaging
 
-### Proposed Hackathon defaults
+### Accepted Hackathon MVP defaults
 
-The following are proposed by RFC-007 and ADR-001/ADR-002 for the MVP only:
+The following were accepted by Ocomic on July 13, 2026 for explicitly authorized Hackathon MVP milestones only:
 
 - a TypeScript workspace with a local web UI, shared core, and read-only stdio MCP adapter;
 - SQLite as replaceable local MVP persistence, with deterministic export;
@@ -51,7 +51,7 @@ The following are proposed by RFC-007 and ADR-001/ADR-002 for the MVP only:
 - summaries and indexes as projections where practical;
 - deterministic Context Package inputs rather than general natural-language routing.
 
-These defaults remain subject to review and do not resolve permanent storage, runtime, workspace, graph, search, connector, or deployment architecture.
+These defaults do not resolve permanent storage, runtime, workspace, graph, search, connector, or deployment architecture. Node.js 24.18 `node:sqlite` is a release-candidate API and remains replaceable behind asynchronous Core ports.
 
 ## Build Week
 
@@ -61,7 +61,7 @@ These defaults remain subject to review and do not resolve permanent storage, ru
 - **Proposed MCP scope:** one deterministic read-only Context Package tool shared with the UI.
 - **Proposed real behavior:** persistence, review, immutable revisions, lifecycle transitions, temporal filtering, traversal, impact, Context Packages, and MCP access.
 - **Curated inputs:** prepared documents, Evidence, transition reasons, and scenario content.
-- **Unresolved approval:** Decision Owner and reviewer assignment.
+- **Decision Owner:** Ocomic for the Hackathon MVP decisions dated July 13, 2026.
 - **Post-MVP question:** software and non-software profile datasets beyond the two-project demo.
 
 ## Post-MVP questions retained

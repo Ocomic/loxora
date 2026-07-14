@@ -2,9 +2,11 @@
 
 ## Project state
 
-Loxora is currently in a controlled planning and preparation phase.
+Loxora is currently in a controlled Hackathon MVP implementation phase.
 
 Do not implement product functionality unless a task explicitly authorizes implementation.
+
+RFC-007, ADR-001, and ADR-002 are accepted only for the Hackathon MVP. Each implementation task must remain inside its explicitly assigned milestone. Acceptance of those documents is not blanket authorization for the complete MVP or permanent long-term architecture.
 
 ## Required reading order
 
@@ -45,7 +47,7 @@ Before proposing architecture or implementation, read:
 - Team, organization, role, permission, and agent-identity support must remain possible.
 - Cross-project knowledge sharing must be explicit, typed, evidence-backed, and permission-aware.
 
-## During the current phase, do not implement
+## Outside an explicitly authorized milestone, do not implement
 
 - Knowledge Graph
 - Project Graph
@@ -61,6 +63,8 @@ Before proposing architecture or implementation, read:
 - Build Week demo functionality
 
 Record such ideas in `docs/planning/open-questions.md`.
+
+Milestone 1 is explicitly authorized to implement only the persistent lifecycle foundation described in `docs/implementation/MILESTONE-1.md`. Supersession, restoration, history queries, navigation, cross-project impact, Context Packages, MCP, HTTP, and UI remain outside that authorization.
 
 ## Knowledge evolution
 

@@ -1,8 +1,8 @@
 # ADR-001 — Runtime, Workspace, and MVP Persistence
 
-**Status:** Proposed
-**Date:** July 2026
-**Decision Owner:** Unassigned
+**Status:** Accepted for Hackathon MVP
+**Date:** July 13, 2026
+**Decision Owner:** Ocomic
 
 ## Context
 
@@ -10,7 +10,7 @@ RFC-007 requires a solo Hackathon implementation that shares lifecycle and Conte
 
 The choice must preserve local-first operation, model independence, project ownership, inspectability, and future replacement of MVP infrastructure.
 
-## Proposed decision
+## Hackathon MVP decision
 
 Use a TypeScript workspace with:
 
@@ -23,7 +23,7 @@ Use a TypeScript workspace with:
 - FTS5 only as optional general-search support;
 - a deterministic, lossless export format for project-owned knowledge.
 
-The package manager and precise web/service frameworks remain setup-level choices only after this ADR is accepted. They must not create a second implementation of core behavior.
+For the Hackathon MVP, use Node.js 24.18, npm Workspaces, TypeScript, and the built-in `node:sqlite` adapter. The Node.js 24.18 `node:sqlite` API is Stability 1.2 — Release candidate. It must remain isolated behind asynchronous Core ports so it can be replaced without changing domain or application behavior. Precise future web/service frameworks remain later milestone choices and must not create a second implementation of core behavior.
 
 ## Persistence boundary
 
@@ -41,6 +41,8 @@ The MVP persistence implementation must:
 The export contract must be versioned, lossless for MVP concepts, stably ordered, and able to reconstruct Projects, navigation structure, Proposals, Review Decisions, Revisions, Sources, Evidence, Planned Knowledge, and Relationships. JSON is the proposed MVP interchange format; acceptance of that format remains an approval decision.
 
 This ADR does not define a functioning database schema.
+
+This acceptance is limited to the Hackathon MVP. It does not select permanent Loxora persistence or runtime architecture.
 
 ## Runtime boundaries
 
