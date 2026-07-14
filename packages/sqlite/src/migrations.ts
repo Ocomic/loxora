@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 export interface Migration {
   readonly id: string;
   readonly sql: string;
+  readonly rebuildsReferencedTable?: boolean;
 }
 
 function initialMigration(): Migration {
@@ -16,9 +17,24 @@ function initialMigration(): Migration {
   };
 }
 
+function lineageMigration(): Migration {
+  return {
+    id: "002_lifecycle_lineage",
+    sql: readFileSync(
+      new URL("../../migrations/002_lifecycle_lineage.sql", import.meta.url),
+      "utf8",
+    ),
+    rebuildsReferencedTable: true,
+  };
+}
+
+export function migrationCatalog(): readonly Migration[] {
+  return [initialMigration(), lineageMigration()];
+}
+
 export function runMigrations(
   database: DatabaseSync,
-  migrations: readonly Migration[] = [initialMigration()],
+  migrations: readonly Migration[] = migrationCatalog(),
 ): void {
   database.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -27,26 +43,41 @@ export function runMigrations(
     ) STRICT
   `);
 
-  const hasMigration = database.prepare("SELECT 1 FROM schema_migrations WHERE id = ?");
-  const recordMigration = database.prepare(
-    "INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
-  );
-
   for (const migration of migrations) {
-    if (hasMigration.get(migration.id) !== undefined) {
+    if (
+      database.prepare("SELECT 1 FROM schema_migrations WHERE id = ?").get(migration.id) !==
+      undefined
+    ) {
       continue;
     }
-
-    database.exec("BEGIN IMMEDIATE");
+    const foreignKeys = Number(
+      (database.prepare("PRAGMA foreign_keys").get() as { foreign_keys: number }).foreign_keys,
+    );
+    if (migration.rebuildsReferencedTable && foreignKeys === 1) {
+      database.exec("PRAGMA foreign_keys = OFF");
+    }
     try {
+      database.exec("BEGIN IMMEDIATE");
       database.exec(migration.sql);
-      recordMigration.run(migration.id, new Date().toISOString());
+      if (migration.rebuildsReferencedTable) {
+        const violations = database.prepare("PRAGMA foreign_key_check").all();
+        if (violations.length > 0) {
+          throw new Error(`Migration ${migration.id} failed foreign_key_check`);
+        }
+      }
+      database
+        .prepare("INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)")
+        .run(migration.id, new Date().toISOString());
       database.exec("COMMIT");
     } catch (error) {
       if (database.isTransaction) {
         database.exec("ROLLBACK");
       }
       throw error;
+    } finally {
+      if (migration.rebuildsReferencedTable && foreignKeys === 1) {
+        database.exec("PRAGMA foreign_keys = ON");
+      }
     }
   }
 }

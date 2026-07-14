@@ -64,7 +64,7 @@ Before proposing architecture or implementation, read:
 
 Record such ideas in `docs/planning/open-questions.md`.
 
-Milestone 1 is explicitly authorized to implement only the persistent lifecycle foundation described in `docs/implementation/MILESTONE-1.md`. Supersession, restoration, history queries, navigation, cross-project impact, Context Packages, MCP, HTTP, and UI remain outside that authorization.
+Milestone 1 is complete. Milestone 2 is explicitly authorized by Ocomic on July 14, 2026 to implement only supersession, Rollback Events, restoration, deterministic History, and migration compatibility as described in `docs/implementation/MILESTONE-2.md`. Navigation, Planned Knowledge, cross-project impact, Context Packages, MCP, HTTP, UI, import, export, authentication, and synchronization remain outside that authorization.
 
 ## Knowledge evolution
 

@@ -4,10 +4,10 @@
 
 Loxora is an experimental, local-first and model-independent project knowledge and context layer.
 
-**Status:** Hackathon MVP implementation — Milestone 1
+**Status:** Hackathon MVP implementation — Milestone 2
 **Working title:** Loxora
 
-This repository contains foundational RFCs, accepted Hackathon-only architecture decisions, and a bounded Milestone 1 lifecycle implementation. The Hackathon decisions do not establish permanent long-term Loxora architecture.
+This repository contains foundational RFCs, accepted Hackathon-only architecture decisions, and bounded Milestone 1 and 2 lifecycle implementations. The Hackathon decisions do not establish permanent long-term Loxora architecture.
 
 ## Foundational RFCs
 
@@ -34,4 +34,4 @@ See `docs/hackathon/README.md` for the complete planning index.
 
 Loxora is documentation-driven. Architecture decisions should be documented before implementation whenever reasonably possible.
 
-RFC-007, ADR-001, and ADR-002 are accepted only for the Hackathon MVP. Runtime implementation remains limited to explicitly authorized milestones. See `docs/implementation/MILESTONE-1.md` for the implemented boundary and validation commands.
+RFC-007, ADR-001, and ADR-002 are accepted only for the Hackathon MVP. Runtime implementation remains limited to explicitly authorized milestones. See `docs/implementation/MILESTONE-2.md` and `docs/implementation/LIFECYCLE-API.md` for the current boundary and API.

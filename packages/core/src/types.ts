@@ -11,10 +11,25 @@ export type ReviewDecisionId = Brand<string, "ReviewDecisionId">;
 export type RevisionId = Brand<string, "RevisionId">;
 export type AuditEventId = Brand<string, "AuditEventId">;
 export type CorrelationId = Brand<string, "CorrelationId">;
+export type RollbackEventId = Brand<string, "RollbackEventId">;
+export type RevisionRelationshipId = Brand<string, "RevisionRelationshipId">;
 export type Scope = Brand<string, "Scope">;
 
 export type ProposalStatus = "Submitted" | "Accepted" | "Rejected";
 export type ReviewDecisionKind = "Accepted" | "Rejected";
+export type ProposalKind = "Initial" | "Successor" | "Restoration";
+export type RevisionRole = ProposalKind;
+export type RevisionRelationshipType =
+  | "DirectPredecessor"
+  | "Supersedes"
+  | "RestoredFrom"
+  | "Reverts";
+export type HistoryClassification =
+  | "CurrentCanonical"
+  | "Historical"
+  | "Superseded"
+  | "Reverted"
+  | "RestorationSource";
 export type AuditEventType =
   | "ProjectCreated"
   | "KnowledgeSpaceCreated"
@@ -27,7 +42,17 @@ export type AuditEventType =
   | "KnowledgeRevisionCreated"
   | "CurrentRevisionAssigned"
   | "ProposalAccepted"
-  | "ProposalRejected";
+  | "ProposalRejected"
+  | "SuccessorProposalSubmitted"
+  | "SuccessorProposalAccepted"
+  | "SuccessorProposalRejected"
+  | "RevisionSuperseded"
+  | "CurrentRevisionChanged"
+  | "RollbackRecorded"
+  | "RestorationProposalSubmitted"
+  | "RestorationProposalAccepted"
+  | "RestorationProposalRejected"
+  | "RestorationRevisionCreated";
 
 export interface Project {
   readonly id: ProjectId;
@@ -91,6 +116,39 @@ export interface KnowledgeProposal {
   readonly createdAt: string;
   readonly scope: Scope;
   readonly status: ProposalStatus;
+  readonly kind: ProposalKind;
+  readonly changeReason: string | null;
+  readonly expectedPredecessorRevisionId: RevisionId | null;
+  readonly rollbackEventId: RollbackEventId | null;
+  readonly restorationSourceRevisionId: RevisionId | null;
+}
+
+export interface RollbackEvent {
+  readonly id: RollbackEventId;
+  readonly projectId: ProjectId;
+  readonly nodeId: NodeId;
+  readonly scope: Scope;
+  readonly revertedRevisionId: RevisionId;
+  readonly semanticSourceRevisionId: RevisionId;
+  readonly actorId: string;
+  readonly reason: string;
+  readonly evidenceReferenceIds: readonly EvidenceReferenceId[];
+  readonly recordedAt: string;
+  readonly correlationId: CorrelationId;
+}
+
+export interface RevisionRelationship {
+  readonly id: RevisionRelationshipId;
+  readonly projectId: ProjectId;
+  readonly nodeId: NodeId;
+  readonly scope: Scope;
+  readonly sourceRevisionId: RevisionId;
+  readonly targetRevisionId: RevisionId;
+  readonly type: RevisionRelationshipType;
+  readonly evidenceReferenceIds: readonly EvidenceReferenceId[];
+  readonly rollbackEventId: RollbackEventId | null;
+  readonly createdAt: string;
+  readonly correlationId: CorrelationId;
 }
 
 export interface ReviewDecision {
@@ -131,6 +189,7 @@ export interface AuditEvent {
   readonly occurredAt: string;
   readonly correlationId: CorrelationId;
   readonly payload: Readonly<Record<string, unknown>>;
+  readonly evidenceReferenceIds: readonly EvidenceReferenceId[];
 }
 
 export interface CurrentKnowledge {
@@ -145,6 +204,36 @@ export interface CurrentKnowledge {
   readonly evidence: readonly EvidenceReference[];
   readonly proposal: KnowledgeProposal;
   readonly reviewDecision: ReviewDecision;
+  readonly revisionRole: RevisionRole;
+  readonly incomingRelationships: readonly RevisionRelationship[];
+  readonly outgoingRelationships: readonly RevisionRelationship[];
+  readonly rollbackEvent: RollbackEvent | null;
+}
+
+export interface KnowledgeHistoryEntry {
+  readonly revision: KnowledgeRevision;
+  readonly revisionRole: RevisionRole;
+  readonly classifications: readonly HistoryClassification[];
+  readonly isCurrent: boolean;
+  readonly proposal: KnowledgeProposal;
+  readonly changeReason: string;
+  readonly reviewDecision: ReviewDecision;
+  readonly evidence: readonly EvidenceReference[];
+  readonly sources: readonly SourceReference[];
+  readonly incomingRelationships: readonly RevisionRelationship[];
+  readonly outgoingRelationships: readonly RevisionRelationship[];
+  readonly directPredecessorRevisionId: RevisionId | null;
+  readonly rollbackEvent: RollbackEvent | null;
+}
+
+export interface KnowledgeHistory {
+  readonly project: Project;
+  readonly space: KnowledgeSpace;
+  readonly collection: KnowledgeCollection;
+  readonly node: KnowledgeNode;
+  readonly scope: Scope;
+  readonly currentRevisionId: RevisionId;
+  readonly entries: readonly KnowledgeHistoryEntry[];
 }
 
 export type ReviewKnowledgeProposalResult =
@@ -154,6 +243,7 @@ export type ReviewKnowledgeProposalResult =
       readonly revision: KnowledgeRevision;
       readonly correlationId: CorrelationId;
       readonly auditEvents: readonly AuditEvent[];
+      readonly relationships: readonly RevisionRelationship[];
     }
   | {
       readonly proposal: KnowledgeProposal;
@@ -161,6 +251,13 @@ export type ReviewKnowledgeProposalResult =
       readonly revision: null;
       readonly correlationId: CorrelationId;
       readonly auditEvents: readonly AuditEvent[];
+      readonly relationships: readonly RevisionRelationship[];
     };
+
+export interface RecordRollbackResult {
+  readonly rollbackEvent: RollbackEvent;
+  readonly auditEvent: AuditEvent;
+  readonly correlationId: CorrelationId;
+}
 
 export const DEFAULT_SCOPE = "project" as Scope;

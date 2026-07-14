@@ -9,8 +9,11 @@ import type {
   LifecycleStore,
   RegisterEvidenceReferenceInput,
   RegisterSourceReferenceInput,
+  RecordRollbackInput,
   ReviewKnowledgeProposalInput,
   SubmitKnowledgeProposalInput,
+  SubmitRestorationProposalInput,
+  SubmitSuccessorProposalInput,
 } from "./ports.js";
 import type {
   AuditEvent,
@@ -21,6 +24,7 @@ import type {
   EvidenceReference,
   EvidenceReferenceId,
   KnowledgeCollection,
+  KnowledgeHistory,
   KnowledgeProposal,
   KnowledgeSpace,
   NodeId,
@@ -30,6 +34,10 @@ import type {
   ReviewDecisionId,
   ReviewKnowledgeProposalResult,
   RevisionId,
+  RevisionRelationshipId,
+  RollbackEvent,
+  RollbackEventId,
+  RecordRollbackResult,
   Scope,
   SourceReference,
   SourceReferenceId,
@@ -197,6 +205,11 @@ export class LifecycleService {
       createdAt,
       scope: this.scope(input.scope),
       status: "Submitted" as const,
+      kind: "Initial" as const,
+      changeReason: null,
+      expectedPredecessorRevisionId: null,
+      rollbackEventId: null,
+      restorationSourceRevisionId: null,
     });
     await this.store.submitProposal(
       proposal,
@@ -207,6 +220,145 @@ export class LifecycleService {
         proposal.id,
         input.proposerId,
         createdAt,
+      ),
+    );
+    return proposal;
+  }
+
+  public async submitSuccessorProposal(
+    input: SubmitSuccessorProposalInput,
+  ): Promise<KnowledgeProposal> {
+    const scope = this.scope(input.scope);
+    const current = await this.store.getCurrentKnowledge({
+      projectId: input.projectId,
+      nodeId: input.nodeId,
+      scope,
+    });
+    if (!current) {
+      throw new ValidationError("Successor Proposal requires Current Knowledge");
+    }
+    const createdAt = this.clock.now();
+    const proposal = freeze({
+      id: input.id ?? (this.idGenerator.next() as ProposalId),
+      projectId: input.projectId,
+      spaceId: current.space.id,
+      collectionId: current.collection.id,
+      proposedNodeId: input.nodeId,
+      proposedNodeTitle: current.node.title,
+      proposedContent: required(input.proposedContent, "Proposed content"),
+      sourceReferenceIds: requiredList(input.sourceReferenceIds, "Source references"),
+      evidenceReferenceIds: requiredList(input.evidenceReferenceIds, "Evidence references"),
+      proposerId: required(input.proposerId, "Proposer identity"),
+      createdAt,
+      scope,
+      status: "Submitted" as const,
+      kind: "Successor" as const,
+      changeReason: required(input.changeReason, "Change reason"),
+      expectedPredecessorRevisionId: input.expectedCurrentRevisionId,
+      rollbackEventId: null,
+      restorationSourceRevisionId: null,
+    });
+    await this.store.submitProposal(
+      proposal,
+      this.audit(
+        input.projectId,
+        "SuccessorProposalSubmitted",
+        "KnowledgeProposal",
+        proposal.id,
+        input.proposerId,
+        createdAt,
+        proposal.evidenceReferenceIds,
+      ),
+    );
+    return proposal;
+  }
+
+  public async recordRollback(input: RecordRollbackInput): Promise<RecordRollbackResult> {
+    const recordedAt = this.clock.now();
+    const correlationId = this.idGenerator.next() as CorrelationId;
+    const event = freeze({
+      id: input.id ?? (this.idGenerator.next() as RollbackEventId),
+      projectId: input.projectId,
+      nodeId: input.nodeId,
+      scope: this.scope(input.scope),
+      revertedRevisionId: input.revertedRevisionId,
+      semanticSourceRevisionId: input.semanticSourceRevisionId,
+      actorId: required(input.actorId, "Actor identity"),
+      reason: required(input.reason, "Rollback reason"),
+      evidenceReferenceIds: requiredList(input.evidenceReferenceIds, "Rollback Evidence"),
+      recordedAt,
+      correlationId,
+    }) as RollbackEvent;
+    return this.store.recordRollback(
+      event,
+      freeze({
+        id: this.idGenerator.next() as AuditEventId,
+        projectId: input.projectId,
+        type: "RollbackRecorded",
+        aggregateType: "RollbackEvent",
+        aggregateId: event.id,
+        actorId: event.actorId,
+        occurredAt: recordedAt,
+        correlationId,
+        payload: freeze({
+          revertedRevisionId: event.revertedRevisionId,
+          semanticSourceRevisionId: event.semanticSourceRevisionId,
+          reason: event.reason,
+        }),
+        evidenceReferenceIds: event.evidenceReferenceIds,
+      }),
+    );
+  }
+
+  public async submitRestorationProposal(
+    input: SubmitRestorationProposalInput,
+  ): Promise<KnowledgeProposal> {
+    const rollback = await this.store.getRollbackEvent({
+      projectId: input.projectId,
+      rollbackEventId: input.rollbackEventId,
+    });
+    if (!rollback) {
+      throw new ValidationError(`Rollback Event ${input.rollbackEventId} was not found`);
+    }
+    const current = await this.store.getCurrentKnowledge({
+      projectId: input.projectId,
+      nodeId: rollback.nodeId,
+      scope: rollback.scope,
+    });
+    if (!current) {
+      throw new ValidationError("Restoration Proposal requires Current Knowledge");
+    }
+    const createdAt = this.clock.now();
+    const proposal = freeze({
+      id: input.id ?? (this.idGenerator.next() as ProposalId),
+      projectId: input.projectId,
+      spaceId: current.space.id,
+      collectionId: current.collection.id,
+      proposedNodeId: rollback.nodeId,
+      proposedNodeTitle: current.node.title,
+      proposedContent: required(input.proposedContent, "Proposed content"),
+      sourceReferenceIds: requiredList(input.sourceReferenceIds, "Source references"),
+      evidenceReferenceIds: requiredList(input.evidenceReferenceIds, "Evidence references"),
+      proposerId: required(input.proposerId, "Proposer identity"),
+      createdAt,
+      scope: rollback.scope,
+      status: "Submitted" as const,
+      kind: "Restoration" as const,
+      changeReason: required(input.changeReason, "Change reason"),
+      expectedPredecessorRevisionId: rollback.revertedRevisionId,
+      rollbackEventId: rollback.id,
+      restorationSourceRevisionId: rollback.semanticSourceRevisionId,
+    });
+    await this.store.submitProposal(
+      proposal,
+      this.audit(
+        input.projectId,
+        "RestorationProposalSubmitted",
+        "KnowledgeProposal",
+        proposal.id,
+        input.proposerId,
+        createdAt,
+        proposal.evidenceReferenceIds,
       ),
     );
     return proposal;
@@ -235,7 +387,19 @@ export class LifecycleService {
       revisionId: accepted ? (this.idGenerator.next() as RevisionId) : null,
       correlationId: this.idGenerator.next() as CorrelationId,
       auditEventIds,
+      relationshipIds: Array.from(
+        { length: 4 },
+        () => this.idGenerator.next() as RevisionRelationshipId,
+      ),
     });
+  }
+
+  public async getKnowledgeHistory(input: {
+    readonly projectId: ProjectId;
+    readonly nodeId: NodeId;
+    readonly scope?: Scope;
+  }): Promise<KnowledgeHistory | null> {
+    return this.store.getKnowledgeHistory({ ...input, scope: this.scope(input.scope) });
   }
 
   public async getCurrentKnowledge(input: {
@@ -261,6 +425,7 @@ export class LifecycleService {
     aggregateId: string,
     actorId: string,
     occurredAt: string,
+    evidenceReferenceIds: readonly EvidenceReferenceId[] = [],
   ): AuditEvent {
     return freeze({
       id: this.idGenerator.next() as AuditEventId,
@@ -272,6 +437,7 @@ export class LifecycleService {
       occurredAt,
       correlationId: this.idGenerator.next() as CorrelationId,
       payload: freeze({}),
+      evidenceReferenceIds: Object.freeze([...evidenceReferenceIds]),
     });
   }
 }
