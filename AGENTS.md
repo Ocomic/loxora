@@ -64,7 +64,7 @@ Before proposing architecture or implementation, read:
 
 Record such ideas in `docs/planning/open-questions.md`.
 
-Milestone 1 is complete. Milestone 2 is explicitly authorized by Ocomic on July 14, 2026 to implement only supersession, Rollback Events, restoration, deterministic History, and migration compatibility as described in `docs/implementation/MILESTONE-2.md`. Navigation, Planned Knowledge, cross-project impact, Context Packages, MCP, HTTP, UI, import, export, authentication, and synchronization remain outside that authorization.
+Milestones 1 and 2 are complete. Milestone 3 is explicitly authorized by Ocomic on July 14, 2026 to implement only project-owned navigation, deterministic persisted projections and fallback, versioned freshness fingerprints, bounded navigation health, and migration compatibility as described in `docs/implementation/MILESTONE-3.md`. Planned Knowledge, cross-project impact, Context Packages, MCP, HTTP, UI, search, import, export, authentication, permissions, and synchronization remain outside that authorization.
 
 ## Knowledge evolution
 

@@ -52,11 +52,15 @@ export type AuditEventType =
   | "RestorationProposalSubmitted"
   | "RestorationProposalAccepted"
   | "RestorationProposalRejected"
-  | "RestorationRevisionCreated";
+  | "RestorationRevisionCreated"
+  | "NavigationProjectionRebuilt"
+  | "NavigationOrphansDetected"
+  | "NavigationOrphansResolved";
 
 export interface Project {
   readonly id: ProjectId;
   readonly name: string;
+  readonly purpose: string;
   readonly createdAt: string;
 }
 
@@ -64,6 +68,7 @@ export interface KnowledgeSpace {
   readonly id: SpaceId;
   readonly projectId: ProjectId;
   readonly name: string;
+  readonly description: string;
   readonly createdAt: string;
 }
 
@@ -72,6 +77,7 @@ export interface KnowledgeCollection {
   readonly projectId: ProjectId;
   readonly spaceId: SpaceId;
   readonly name: string;
+  readonly description: string;
   readonly createdAt: string;
 }
 
@@ -208,6 +214,7 @@ export interface CurrentKnowledge {
   readonly incomingRelationships: readonly RevisionRelationship[];
   readonly outgoingRelationships: readonly RevisionRelationship[];
   readonly rollbackEvent: RollbackEvent | null;
+  readonly navigationPath: NavigationPath;
 }
 
 export interface KnowledgeHistoryEntry {
@@ -234,6 +241,153 @@ export interface KnowledgeHistory {
   readonly scope: Scope;
   readonly currentRevisionId: RevisionId;
   readonly entries: readonly KnowledgeHistoryEntry[];
+  readonly navigationPath: NavigationPath;
+}
+
+export type NavigationEntityKind =
+  | "Project"
+  | "Space"
+  | "Collection"
+  | "Node"
+  | "Revision"
+  | "Evidence"
+  | "Source"
+  | "Proposal";
+
+export interface NavigationSegment {
+  readonly kind: NavigationEntityKind;
+  readonly id: string;
+  readonly label: string;
+}
+
+export interface NavigationPath {
+  readonly segments: readonly NavigationSegment[];
+  readonly temporalView: "Current" | "Historical" | null;
+}
+
+export type ProjectionFreshness = "Fresh" | "Stale" | "Missing";
+export type NavigationWarningCategory =
+  | "DatabaseIntegrity"
+  | "ProjectionOrphan"
+  | "SemanticOrphan"
+  | "Quality"
+  | "ExternalReferenceGap";
+
+export interface NavigationWarning {
+  readonly category: NavigationWarningCategory;
+  readonly code: string;
+  readonly entityKind: NavigationEntityKind;
+  readonly entityId: string;
+  readonly detail: string;
+  readonly path: NavigationPath | null;
+}
+
+export interface NavigationFreshness {
+  readonly content: ProjectionFreshness;
+  readonly activity: ProjectionFreshness;
+  readonly fingerprintVersion: string;
+  readonly projectionVersion: number;
+  readonly rebuiltAt: string | null;
+  readonly lastFailure: string | null;
+}
+
+export interface NavigationCounts {
+  readonly collectionCount: number;
+  readonly nodeCount: number;
+  readonly currentNodeCount: number;
+  readonly acceptedRevisionCount: number;
+  readonly historicalRevisionCount: number;
+  readonly nodesWithHistoryCount: number;
+}
+
+export interface NodeNavigationSummary {
+  readonly node: KnowledgeNode;
+  readonly path: NavigationPath;
+  readonly currentPreview: string | null;
+  readonly currentRevisionId: RevisionId | null;
+  readonly latestAcceptedAt: string | null;
+  readonly acceptedRevisionCount: number;
+  readonly historicalRevisionCount: number;
+  readonly hasHistory: boolean;
+  readonly currentEvidenceCount: number;
+  readonly currentSourceCount: number;
+  readonly warnings: readonly NavigationWarning[];
+}
+
+export interface CollectionNavigationSummary extends NavigationCounts {
+  readonly collection: KnowledgeCollection;
+  readonly path: NavigationPath;
+  readonly description: string;
+  readonly warnings: readonly NavigationWarning[];
+}
+
+export interface SpaceNavigationSummary extends NavigationCounts {
+  readonly space: KnowledgeSpace;
+  readonly path: NavigationPath;
+  readonly description: string;
+  readonly warnings: readonly NavigationWarning[];
+}
+
+export interface ProjectMap extends NavigationCounts {
+  readonly project: Project;
+  readonly scope: Scope;
+  readonly path: NavigationPath;
+  readonly purpose: string;
+  readonly spaces: readonly SpaceNavigationSummary[];
+  readonly externalSources: readonly SourceReference[];
+  readonly orphanCount: number;
+  readonly warnings: readonly NavigationWarning[];
+  readonly freshness: NavigationFreshness;
+  readonly lastRelevantActivityAt: string | null;
+}
+
+export interface SpaceNavigation {
+  readonly summary: SpaceNavigationSummary;
+  readonly collections: readonly CollectionNavigationSummary[];
+  readonly freshness: NavigationFreshness;
+}
+
+export interface CollectionNavigation {
+  readonly summary: CollectionNavigationSummary;
+  readonly nodes: readonly NodeNavigationSummary[];
+  readonly freshness: NavigationFreshness;
+}
+
+export interface NodeNavigation {
+  readonly summary: NodeNavigationSummary;
+  readonly freshness: NavigationFreshness;
+}
+
+export interface EvidenceBacklink {
+  readonly proposalId: ProposalId | null;
+  readonly revisionId: RevisionId | null;
+  readonly temporalView: "Current" | "Historical" | null;
+  readonly path: NavigationPath;
+}
+
+export interface EvidenceNavigation {
+  readonly evidence: EvidenceReference;
+  readonly source: SourceReference;
+  readonly backlinks: readonly EvidenceBacklink[];
+}
+
+export interface SourceNavigation {
+  readonly source: SourceReference;
+  readonly evidence: readonly EvidenceNavigation[];
+}
+
+export interface NavigationHealth {
+  readonly projectId: ProjectId;
+  readonly scope: Scope;
+  readonly warnings: readonly NavigationWarning[];
+  readonly orphanCount: number;
+  readonly freshness: NavigationFreshness;
+}
+
+export interface RebuildNavigationProjectionResult {
+  readonly projectMap: ProjectMap;
+  readonly generationId: string;
+  readonly correlationId: CorrelationId;
 }
 
 export type ReviewKnowledgeProposalResult =

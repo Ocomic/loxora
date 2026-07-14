@@ -19,6 +19,15 @@ import {
   type KnowledgeRevision,
   type KnowledgeSpace,
   type LifecycleStore,
+  type NavigationStore,
+  type ProjectMap,
+  type SpaceNavigation,
+  type CollectionNavigation,
+  type NodeNavigation,
+  type EvidenceNavigation,
+  type SourceNavigation,
+  type NavigationHealth,
+  type RebuildNavigationProjectionResult,
   type NodeId,
   type Project,
   type ProjectId,
@@ -40,6 +49,7 @@ import {
 } from "@loxora/core";
 import { DatabaseSync } from "node:sqlite";
 import { runMigrations } from "./migrations.js";
+import { SqliteNavigationProjectionStore } from "./navigation.js";
 
 interface ProposalRow {
   id: string;
@@ -64,12 +74,15 @@ interface CurrentRow {
   project_id: string;
   project_name: string;
   project_created_at: string;
+  project_purpose: string;
   space_id: string;
   space_name: string;
   space_created_at: string;
+  space_description: string;
   collection_id: string;
   collection_name: string;
   collection_created_at: string;
+  collection_description: string;
   node_id: string;
   node_title: string;
   node_created_at: string;
@@ -168,10 +181,12 @@ interface ReviewRow {
 export interface SqliteFaults {
   readonly afterReviewDecisionRecorded?: () => void;
   readonly afterCurrentPointerChanged?: () => void;
+  readonly afterNavigationGenerationWritten?: () => void;
 }
 
-export class SqliteLifecycleStore implements LifecycleStore {
+export class SqliteLifecycleStore implements LifecycleStore, NavigationStore {
   private readonly database: DatabaseSync;
+  private readonly navigation: SqliteNavigationProjectionStore;
 
   public constructor(
     path: string,
@@ -184,13 +199,17 @@ export class SqliteLifecycleStore implements LifecycleStore {
       this.database.exec("PRAGMA journal_mode = WAL");
     }
     runMigrations(this.database);
+    this.navigation = new SqliteNavigationProjectionStore(
+      this.database,
+      this.faults.afterNavigationGenerationWritten,
+    );
   }
 
   public async createProject(project: Project, auditEvent: AuditEvent): Promise<void> {
     this.transaction(() => {
       this.database
-        .prepare("INSERT INTO projects (id, name, created_at) VALUES (?, ?, ?)")
-        .run(project.id, project.name, project.createdAt);
+        .prepare("INSERT INTO projects (id, name, purpose, created_at) VALUES (?, ?, ?, ?)")
+        .run(project.id, project.name, project.purpose, project.createdAt);
       this.insertAudit(auditEvent);
     });
   }
@@ -199,9 +218,9 @@ export class SqliteLifecycleStore implements LifecycleStore {
     this.transaction(() => {
       this.database
         .prepare(
-          "INSERT INTO knowledge_spaces (id, project_id, name, created_at) VALUES (?, ?, ?, ?)",
+          "INSERT INTO knowledge_spaces (id, project_id, name, description, created_at) VALUES (?, ?, ?, ?, ?)",
         )
-        .run(space.id, space.projectId, space.name, space.createdAt);
+        .run(space.id, space.projectId, space.name, space.description, space.createdAt);
       this.insertAudit(auditEvent);
     });
   }
@@ -214,14 +233,15 @@ export class SqliteLifecycleStore implements LifecycleStore {
       this.database
         .prepare(
           `INSERT INTO knowledge_collections
-            (id, project_id, space_id, name, created_at)
-           VALUES (?, ?, ?, ?, ?)`,
+            (id, project_id, space_id, name, description, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
         )
         .run(
           collection.id,
           collection.projectId,
           collection.spaceId,
           collection.name,
+          collection.description,
           collection.createdAt,
         );
       this.insertAudit(auditEvent);
@@ -592,9 +612,9 @@ export class SqliteLifecycleStore implements LifecycleStore {
     const row = this.database
       .prepare(
         `SELECT
-           p.id AS project_id, p.name AS project_name, p.created_at AS project_created_at,
-           s.id AS space_id, s.name AS space_name, s.created_at AS space_created_at,
-           c.id AS collection_id, c.name AS collection_name, c.created_at AS collection_created_at,
+           p.id AS project_id, p.name AS project_name, p.purpose AS project_purpose, p.created_at AS project_created_at,
+           s.id AS space_id, s.name AS space_name, s.description AS space_description, s.created_at AS space_created_at,
+           c.id AS collection_id, c.name AS collection_name, c.description AS collection_description, c.created_at AS collection_created_at,
            n.id AS node_id, n.title AS node_title, n.created_at AS node_created_at,
            r.id AS revision_id, r.content, r.proposal_id, r.review_decision_id,
            r.proposer_id, r.reviewer_id, r.accepted_at, r.correlation_id,
@@ -637,12 +657,14 @@ export class SqliteLifecycleStore implements LifecycleStore {
     const project = Object.freeze({
       id: row.project_id as ProjectId,
       name: row.project_name,
+      purpose: row.project_purpose,
       createdAt: row.project_created_at,
     });
     const space = Object.freeze({
       id: row.space_id as SpaceId,
       projectId: project.id,
       name: row.space_name,
+      description: row.space_description,
       createdAt: row.space_created_at,
     });
     const collection = Object.freeze({
@@ -650,6 +672,7 @@ export class SqliteLifecycleStore implements LifecycleStore {
       projectId: project.id,
       spaceId: space.id,
       name: row.collection_name,
+      description: row.collection_description,
       createdAt: row.collection_created_at,
     });
     const node = Object.freeze({
@@ -728,6 +751,16 @@ export class SqliteLifecycleStore implements LifecycleStore {
             rollbackEventId: proposal.rollbackEventId,
           })
         : null,
+      navigationPath: Object.freeze({
+        segments: Object.freeze([
+          Object.freeze({ kind: "Project" as const, id: project.id, label: project.name }),
+          Object.freeze({ kind: "Space" as const, id: space.id, label: space.name }),
+          Object.freeze({ kind: "Collection" as const, id: collection.id, label: collection.name }),
+          Object.freeze({ kind: "Node" as const, id: node.id, label: node.title }),
+          Object.freeze({ kind: "Revision" as const, id: revision.id, label: revision.id }),
+        ]),
+        temporalView: "Current" as const,
+      }),
     });
   }
 
@@ -785,7 +818,59 @@ export class SqliteLifecycleStore implements LifecycleStore {
       scope: input.scope,
       currentRevisionId: current.revision.id,
       entries: Object.freeze(entries),
+      navigationPath: Object.freeze({
+        segments: current.navigationPath.segments.slice(0, 4),
+        temporalView: "Historical" as const,
+      }),
     });
+  }
+
+  public getProjectMap(input: { projectId: ProjectId; scope: Scope }): Promise<ProjectMap | null> {
+    return this.navigation.getProjectMap(input);
+  }
+  public getSpaceNavigation(input: {
+    projectId: ProjectId;
+    spaceId: SpaceId;
+    scope: Scope;
+  }): Promise<SpaceNavigation | null> {
+    return this.navigation.getSpaceNavigation(input);
+  }
+  public getCollectionNavigation(input: {
+    projectId: ProjectId;
+    collectionId: CollectionId;
+    scope: Scope;
+  }): Promise<CollectionNavigation | null> {
+    return this.navigation.getCollectionNavigation(input);
+  }
+  public getNodeNavigation(input: {
+    projectId: ProjectId;
+    nodeId: NodeId;
+    scope: Scope;
+  }): Promise<NodeNavigation | null> {
+    return this.navigation.getNodeNavigation(input);
+  }
+  public getEvidenceNavigation(input: {
+    projectId: ProjectId;
+    evidenceReferenceId: EvidenceReferenceId;
+  }): Promise<EvidenceNavigation | null> {
+    return this.navigation.getEvidenceNavigation(input);
+  }
+  public getSourceNavigation(input: {
+    projectId: ProjectId;
+    sourceReferenceId: SourceReferenceId;
+  }): Promise<SourceNavigation | null> {
+    return this.navigation.getSourceNavigation(input);
+  }
+  public getNavigationHealth(input: {
+    projectId: ProjectId;
+    scope: Scope;
+  }): Promise<NavigationHealth | null> {
+    return this.navigation.getNavigationHealth(input);
+  }
+  public rebuildNavigationProjection(
+    input: Parameters<NavigationStore["rebuildNavigationProjection"]>[0],
+  ): Promise<RebuildNavigationProjectionResult> {
+    return this.navigation.rebuildNavigationProjection(input);
   }
 
   /** Test-only integrity access. This class is not exported from the package root. */

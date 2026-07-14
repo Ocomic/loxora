@@ -24,7 +24,11 @@ Accepted review creates a new Revision, `DirectPredecessor` and `Supersedes` Rel
 
 `getCurrentKnowledge({ projectId, nodeId, scope? })` returns only the Revision referenced by Current. The result includes its Revision role, lineage Relationships, Review provenance, Evidence, Sources, and optional Rollback Event.
 
+Current results include a Core-provided Project → Space → Collection → Node → Revision navigation path labeled `Current`.
+
 `getKnowledgeHistory({ projectId, nodeId, scope? })` returns accepted Revisions in direct-predecessor order. Each entry includes derived classifications, current flag, Proposal/change reason, Review Decision, Evidence, Sources, lineage, and Rollback Event. Submitted and Rejected Proposals are excluded.
+
+History results include a Core-provided parent path labeled `Historical`; callers do not reconstruct breadcrumbs.
 
 ## Errors and retry behavior
 

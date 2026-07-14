@@ -79,6 +79,7 @@ export class LifecycleService {
     const project = freeze({
       id: input.id ?? (this.idGenerator.next() as ProjectId),
       name: required(input.name, "Project name"),
+      purpose: input.purpose?.trim() ?? "",
       createdAt,
     });
     await this.store.createProject(
@@ -94,6 +95,7 @@ export class LifecycleService {
       id: input.id ?? (this.idGenerator.next() as SpaceId),
       projectId: input.projectId,
       name: required(input.name, "Knowledge Space name"),
+      description: input.description?.trim() ?? "",
       createdAt,
     });
     await this.store.createKnowledgeSpace(
@@ -119,6 +121,7 @@ export class LifecycleService {
       projectId: input.projectId,
       spaceId: input.spaceId,
       name: required(input.name, "Knowledge Collection name"),
+      description: input.description?.trim() ?? "",
       createdAt,
     });
     await this.store.createKnowledgeCollection(

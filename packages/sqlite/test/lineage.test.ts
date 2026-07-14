@@ -630,7 +630,7 @@ test("upgrades a populated 001 database without changing V1", async () => {
     assert.equal(
       (store.unsafeGetForTest("SELECT COUNT(*) count FROM schema_migrations") as { count: number })
         .count,
-      2,
+      3,
     );
     const history = await store.getKnowledgeHistory({
       projectId: "p" as never,

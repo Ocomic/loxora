@@ -113,7 +113,7 @@ This would align literally with every conceptual term but add unnecessary synchr
 
 ## Implementation status
 
-Milestone 1 implemented immutable initial Revisions and Current pointers. Milestone 2 implements successor and restoration Revisions, dedicated Rollback Events, typed Revision Relationships, stale-current protection, and deterministic History. Current and Historical remain query projections; accepted Revision rows are never reclassified through mutation. Navigation invalidation, Planned Knowledge, and cross-project Relationships remain later explicitly authorized work.
+Milestone 1 implemented immutable initial Revisions and Current pointers. Milestone 2 implements successor and restoration Revisions, dedicated Rollback Events, typed Revision Relationships, stale-current protection, and deterministic History. Milestone 3 implements replaceable navigation projections whose freshness is derived from canonical inputs without mutating accepted Revisions or coupling projection success to lifecycle acceptance. Planned Knowledge and cross-project Relationships remain later explicitly authorized work.
 
 ## Related documents
 

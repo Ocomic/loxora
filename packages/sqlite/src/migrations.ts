@@ -28,8 +28,18 @@ function lineageMigration(): Migration {
   };
 }
 
+function navigationMigration(): Migration {
+  return {
+    id: "003_navigation_foundation",
+    sql: readFileSync(
+      new URL("../../migrations/003_navigation_foundation.sql", import.meta.url),
+      "utf8",
+    ),
+  };
+}
+
 export function migrationCatalog(): readonly Migration[] {
-  return [initialMigration(), lineageMigration()];
+  return [initialMigration(), lineageMigration(), navigationMigration()];
 }
 
 export function runMigrations(
