@@ -1,6 +1,6 @@
 # Milestone 4: Reviewed Cross-Project Dependencies and Deterministic Impact
 
-**Status:** Implemented locally on `agent/milestone-4-cross-project-impact`
+**Status:** Implemented and merged to `main`
 **Decision Owner:** Ocomic
 **Authorization date:** July 14, 2026
 **Scope:** Hackathon MVP Milestone 4 only

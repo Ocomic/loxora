@@ -1,0 +1,21 @@
+{
+  "name": "@loxora/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "loxora-mcp": "./dist/src/server.js"
+  },
+  "dependencies": {
+    "@loxora/core": "0.0.0",
+    "@loxora/sqlite": "0.0.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.4.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  }
+}

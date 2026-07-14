@@ -75,6 +75,10 @@ These are unnecessary for the required relationship paths and would add operatio
 - General search may be cut without affecting the differentiating demo.
 - A later RFC or ADR may supersede this choice after broader storage requirements are known.
 
+## Implementation status
+
+Milestones 1–4 implement the asynchronous Core ports, SQLite adapter, lifecycle, navigation, and reviewed cross-project impact. Milestone 5 adds an ephemeral Context Package operation in Core and a single read-only stdio MCP adapter. The adapter opens an existing schema-004 database in SQLite read-only and query-only modes, runs no migrations, and delegates selection and budgeting to Core. Context Packages are not persisted and produce no Audit Events.
+
 ## Rollback
 
 Before product implementation begins, this proposal can be replaced without migration. After MVP data exists, rollback requires exporting project knowledge, validating round-trip completeness, and importing it into the replacement persistence adapter.

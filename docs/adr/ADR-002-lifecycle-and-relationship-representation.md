@@ -113,7 +113,7 @@ This would align literally with every conceptual term but add unnecessary synchr
 
 ## Implementation status
 
-Milestone 1 implemented immutable initial Revisions and Current pointers. Milestone 2 implements successor and restoration Revisions, dedicated Rollback Events, typed Revision Relationships, stale-current protection, and deterministic History. Milestone 3 implements replaceable navigation projections whose freshness is derived from canonical inputs without mutating accepted Revisions or coupling projection success to lifecycle acceptance. Milestone 4 implements separately reviewed immutable cross-project `DependsOn` Relationships and derived, revision-bound Impact Assessments without mutating either endpoint Project's canon. Planned Knowledge remains later explicitly authorized work.
+Milestone 1 implemented immutable initial Revisions and Current pointers. Milestone 2 implements successor and restoration Revisions, dedicated Rollback Events, typed Revision Relationships, stale-current protection, and deterministic History. Milestone 3 implements replaceable navigation projections whose freshness is derived from canonical inputs without mutating accepted Revisions or coupling projection success to lifecycle acceptance. Milestone 4 implements separately reviewed immutable cross-project `DependsOn` Relationships and derived, revision-bound Impact Assessments without mutating either endpoint Project's canon. Milestone 5 derives lifecycle-filtered Context Packages from those accepted records without making packages canonical or mutating lifecycle state. Planned Knowledge remains later explicitly authorized work.
 
 ## Related documents
 

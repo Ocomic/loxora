@@ -58,6 +58,6 @@ Approval of setup does not authorize Hackathon runtime implementation.
 - **Decision date:** July 13, 2026
 - **Accepted architecture:** RFC-007, ADR-001, and ADR-002 for the Hackathon MVP only
 - **Authorized implementation:** only work explicitly named by a milestone task
-- **Current authorization:** Milestone 2 lifecycle lineage, authorized by Ocomic on July 14, 2026
+- **Current authorization:** Milestone 5 Context Package and read-only MCP, authorized by Ocomic on July 14, 2026
 
-This record closes the pre-Hackathon boundary. Milestone 2 is limited to supersession, Rollback Events, restoration, History, and compatible persistence migration. It does not authorize any unassigned UI, MCP, Context Package, navigation, cross-project, or demo functionality.
+This record closes the pre-Hackathon boundary. Milestones 1–4 are complete and merged. Milestone 5 is limited to an ephemeral deterministic Context Package Core operation, one read-only stdio MCP tool, and their tests and documentation. It does not authorize Planned Knowledge, UI, HTTP, additional tools, search, import, export, authentication, production permissions, synchronization, or later milestones.

@@ -14,8 +14,11 @@ No implementation plan is final until the foundational RFCs are reviewed.
 - [Milestone 2 lifecycle lineage](../implementation/MILESTONE-2.md)
 - [Milestone 3 navigation foundation](../implementation/MILESTONE-3.md)
 - [Milestone 4 cross-project impact](../implementation/MILESTONE-4.md)
+- [Milestone 5 Context Package and MCP](../implementation/MILESTONE-5.md)
 - [Lifecycle Core API](../implementation/LIFECYCLE-API.md)
 - [Navigation Core API](../implementation/NAVIGATION-API.md)
 - [Cross-Project Impact Core API](../implementation/CROSS-PROJECT-IMPACT-API.md)
+- [Context Package Core API](../implementation/CONTEXT-PACKAGE-API.md)
+- [Read-only MCP API](../implementation/MCP-API.md)
 
 The Hackathon defaults are proposals for a bounded MVP. They do not permanently resolve Loxora's architecture or long-term product scope.

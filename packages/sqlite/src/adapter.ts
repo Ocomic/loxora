@@ -189,6 +189,12 @@ export interface SqliteFaults {
   readonly afterAssessmentInserted?: () => void;
 }
 
+export interface SqliteOpenOptions {
+  readonly readOnly?: boolean;
+  readonly runMigrations?: boolean;
+  readonly requiredMigrationId?: string;
+}
+
 export class SqliteLifecycleStore
   implements LifecycleStore, NavigationStore, CrossProjectImpactStore
 {
@@ -199,14 +205,30 @@ export class SqliteLifecycleStore
   public constructor(
     path: string,
     private readonly faults: SqliteFaults = {},
+    options: SqliteOpenOptions = {},
   ) {
-    this.database = new DatabaseSync(path, { timeout: 5_000 });
+    this.database = new DatabaseSync(path, {
+      timeout: 5_000,
+      readOnly: options.readOnly ?? false,
+    });
     this.database.exec("PRAGMA foreign_keys = ON");
     this.database.exec("PRAGMA busy_timeout = 5000");
-    if (path !== ":memory:") {
+    if (path !== ":memory:" && !options.readOnly) {
       this.database.exec("PRAGMA journal_mode = WAL");
     }
-    runMigrations(this.database);
+    if (options.runMigrations ?? true) {
+      runMigrations(this.database);
+    }
+    if (options.requiredMigrationId) {
+      const present = this.database
+        .prepare("SELECT 1 FROM schema_migrations WHERE id = ?")
+        .get(options.requiredMigrationId);
+      if (!present) {
+        this.database.close();
+        throw new IntegrityError(`Required migration ${options.requiredMigrationId} is missing`);
+      }
+    }
+    if (options.readOnly) this.database.exec("PRAGMA query_only = ON");
     this.navigation = new SqliteNavigationProjectionStore(
       this.database,
       this.faults.afterNavigationGenerationWritten,

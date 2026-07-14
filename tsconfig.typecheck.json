@@ -6,7 +6,8 @@
     "baseUrl": ".",
     "paths": {
       "@loxora/core": ["packages/core/src/index.ts"],
-      "@loxora/sqlite": ["packages/sqlite/src/index.ts"]
+      "@loxora/sqlite": ["packages/sqlite/src/index.ts"],
+      "@loxora/mcp": ["packages/mcp/src/index.ts"]
     }
   },
   "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts"]

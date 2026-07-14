@@ -17,7 +17,7 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome lint .",
-    "test": "npm run build && node --test packages/core/dist/test/boundary.test.js packages/sqlite/dist/test/lifecycle.test.js packages/sqlite/dist/test/lineage.test.js packages/sqlite/dist/test/navigation.test.js packages/sqlite/dist/test/impact.test.js",
+    "test": "npm run build && node --test packages/core/dist/test/boundary.test.js packages/sqlite/dist/test/lifecycle.test.js packages/sqlite/dist/test/lineage.test.js packages/sqlite/dist/test/navigation.test.js packages/sqlite/dist/test/impact.test.js packages/sqlite/dist/test/context-package.test.js packages/mcp/dist/test/mcp.test.js",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit"
   },
   "devDependencies": {
