@@ -1,0 +1,136 @@
+{
+  "fixtureVersion": "hackathon-demo-v1",
+  "reviewer": "Ocomic",
+  "scope": "project",
+  "projects": {
+    "identity": {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "name": "identity-contract",
+      "purpose": "Shared token contract and compatibility semantics",
+      "spaceId": "10000000-0000-4000-8000-000000000002",
+      "space": "Authentication Space",
+      "spaceDescription": "Knowledge for authentication contracts",
+      "collectionId": "10000000-0000-4000-8000-000000000003",
+      "collection": "Token Contract Collection",
+      "collectionDescription": "Accepted token-format knowledge",
+      "nodeId": "10000000-0000-4000-8000-000000000004",
+      "node": "Token Format"
+    },
+    "portal": {
+      "id": "20000000-0000-4000-8000-000000000001",
+      "name": "customer-portal",
+      "purpose": "Customer authentication client consuming the shared token contract",
+      "spaceId": "20000000-0000-4000-8000-000000000002",
+      "space": "Authentication Space",
+      "spaceDescription": "Knowledge for portal authentication",
+      "collectionId": "20000000-0000-4000-8000-000000000003",
+      "collection": "Authentication Client Collection",
+      "collectionDescription": "Client parsing and validation knowledge",
+      "nodeId": "20000000-0000-4000-8000-000000000004",
+      "node": "Token Parser"
+    }
+  },
+  "sources": [
+    {
+      "alias": "identity.v1-contract",
+      "id": "11000000-0000-4000-8000-000000000001",
+      "evidenceId": "12000000-0000-4000-8000-000000000001",
+      "project": "identity",
+      "path": "identity-contract/token-contract-v1.md",
+      "title": "Token contract V1",
+      "summary": "V1 requires customer_id"
+    },
+    {
+      "alias": "identity.v2-proposal",
+      "id": "11000000-0000-4000-8000-000000000002",
+      "evidenceId": "12000000-0000-4000-8000-000000000002",
+      "project": "identity",
+      "path": "identity-contract/token-contract-v2-proposal.md",
+      "title": "Token contract V2 proposal",
+      "summary": "V2 replaces customer_id with subject_id"
+    },
+    {
+      "alias": "identity.v2-decision",
+      "id": "11000000-0000-4000-8000-000000000003",
+      "evidenceId": "12000000-0000-4000-8000-000000000003",
+      "project": "identity",
+      "path": "identity-contract/token-contract-v2-decision.md",
+      "title": "Token contract V2 decision",
+      "summary": "Migration rationale for V2"
+    },
+    {
+      "alias": "identity.rollback",
+      "id": "11000000-0000-4000-8000-000000000004",
+      "evidenceId": "12000000-0000-4000-8000-000000000004",
+      "project": "identity",
+      "path": "identity-contract/rollback-decision.md",
+      "title": "Rollback decision",
+      "summary": "Observed consumer rejection requires restoration"
+    },
+    {
+      "alias": "identity.v3-restoration",
+      "id": "11000000-0000-4000-8000-000000000005",
+      "evidenceId": "12000000-0000-4000-8000-000000000005",
+      "project": "identity",
+      "path": "identity-contract/token-contract-v3-restoration.md",
+      "title": "Token contract V3 restoration",
+      "summary": "V3 restores customer_id compatibility"
+    },
+    {
+      "alias": "portal.parser",
+      "id": "21000000-0000-4000-8000-000000000001",
+      "evidenceId": "22000000-0000-4000-8000-000000000001",
+      "project": "portal",
+      "path": "customer-portal/token-parser.ts",
+      "title": "Token parser",
+      "summary": "Authentication client rejects tokens without customer_id"
+    },
+    {
+      "alias": "portal.requirement",
+      "id": "21000000-0000-4000-8000-000000000002",
+      "evidenceId": "22000000-0000-4000-8000-000000000002",
+      "project": "portal",
+      "path": "customer-portal/customer-id-requirement.md",
+      "title": "Customer ID requirement",
+      "summary": "customer_id is required for authenticated sessions"
+    },
+    {
+      "alias": "portal.dependency",
+      "id": "21000000-0000-4000-8000-000000000003",
+      "evidenceId": "22000000-0000-4000-8000-000000000003",
+      "project": "portal",
+      "path": "customer-portal/identity-contract-dependency.md",
+      "title": "Identity contract dependency",
+      "summary": "Token Parser depends on Token Format"
+    },
+    {
+      "alias": "portal.401",
+      "id": "21000000-0000-4000-8000-000000000004",
+      "evidenceId": "22000000-0000-4000-8000-000000000004",
+      "project": "portal",
+      "path": "customer-portal/authentication-401.json",
+      "title": "Authentication 401",
+      "summary": "Prepared observed failure after V2"
+    },
+    {
+      "alias": "portal.deferred-plan",
+      "id": "21000000-0000-4000-8000-000000000005",
+      "evidenceId": "22000000-0000-4000-8000-000000000005",
+      "project": "portal",
+      "path": "customer-portal/deferred-subject-id-migration.md",
+      "title": "Deferred subject ID migration",
+      "summary": "Migration waits for consumer compatibility"
+    }
+  ],
+  "artifacts": {
+    "identityV1Proposal": "13000000-0000-4000-8000-000000000001",
+    "portalV1Proposal": "23000000-0000-4000-8000-000000000001",
+    "relationshipProposal": "30000000-0000-4000-8000-000000000001",
+    "v2Proposal": "13000000-0000-4000-8000-000000000002",
+    "rollbackEvent": "14000000-0000-4000-8000-000000000001",
+    "v3Proposal": "13000000-0000-4000-8000-000000000003",
+    "planned": "24000000-0000-4000-8000-000000000001",
+    "v2Assessment": "31000000-0000-4000-8000-000000000001",
+    "v3Assessment": "31000000-0000-4000-8000-000000000002"
+  }
+}

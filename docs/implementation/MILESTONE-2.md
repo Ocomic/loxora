@@ -1,6 +1,6 @@
 # Milestone 2: Supersession, Restoration, and Deterministic History
 
-**Status:** Implemented locally for the Hackathon MVP
+**Status:** Implemented and merged for the Hackathon MVP
 
 **Decision Owner:** Ocomic
 

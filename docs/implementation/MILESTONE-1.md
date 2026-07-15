@@ -1,6 +1,6 @@
 # Milestone 1: Persistent Lifecycle Foundation
 
-**Status:** Implemented locally for the Hackathon MVP
+**Status:** Implemented and merged for the Hackathon MVP
 
 **Decision Owner:** Ocomic
 

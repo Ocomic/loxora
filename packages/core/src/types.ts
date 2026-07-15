@@ -23,6 +23,7 @@ export type CrossProjectRelationshipReviewDecisionId = Brand<
 >;
 export type CrossProjectRelationshipId = Brand<string, "CrossProjectRelationshipId">;
 export type ImpactAssessmentId = Brand<string, "ImpactAssessmentId">;
+export type PlannedKnowledgeId = Brand<string, "PlannedKnowledgeId">;
 export type Scope = Brand<string, "Scope">;
 
 export type ProposalStatus = "Submitted" | "Accepted" | "Rejected";
@@ -70,7 +71,8 @@ export type AuditEventType =
   | "CrossProjectRelationshipReviewDecisionRecorded"
   | "CrossProjectRelationshipAccepted"
   | "CrossProjectRelationshipRejected"
-  | "ImpactAssessmentCreated";
+  | "ImpactAssessmentCreated"
+  | "PlannedKnowledgeCreated";
 
 export interface Project {
   readonly id: ProjectId;
@@ -267,7 +269,8 @@ export type NavigationEntityKind =
   | "Revision"
   | "Evidence"
   | "Source"
-  | "Proposal";
+  | "Proposal"
+  | "PlannedKnowledge";
 
 export interface NavigationSegment {
   readonly kind: NavigationEntityKind;
@@ -277,7 +280,7 @@ export interface NavigationSegment {
 
 export interface NavigationPath {
   readonly segments: readonly NavigationSegment[];
-  readonly temporalView: "Current" | "Historical" | null;
+  readonly temporalView: "Current" | "Historical" | "Planned" | null;
 }
 
 export type ProjectionFreshness = "Fresh" | "Stale" | "Missing";
@@ -357,6 +360,7 @@ export interface ProjectMap extends NavigationCounts {
   readonly outgoingDependencies: readonly CrossProjectDependencySummary[];
   readonly incomingDependents: readonly CrossProjectDependencySummary[];
   readonly relatedProjectIds: readonly ProjectId[];
+  readonly plannedKnowledgeCount: number;
 }
 
 export interface CrossProjectDependencySummary {
@@ -391,8 +395,9 @@ export interface NodeNavigation {
 
 export interface EvidenceBacklink {
   readonly proposalId: ProposalId | null;
+  readonly plannedKnowledgeId: PlannedKnowledgeId | null;
   readonly revisionId: RevisionId | null;
-  readonly temporalView: "Current" | "Historical" | null;
+  readonly temporalView: "Current" | "Historical" | "Planned" | null;
   readonly path: NavigationPath;
 }
 

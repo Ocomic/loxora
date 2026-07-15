@@ -64,7 +64,7 @@ Before proposing architecture or implementation, read:
 
 Record such ideas in `docs/planning/open-questions.md`.
 
-Milestones 1 through 4 are complete and merged. Milestone 5 is explicitly authorized by Ocomic on July 14, 2026 to implement only the deterministic ephemeral Context Package Core operation and one read-only stdio MCP tool described in `docs/implementation/MILESTONE-5.md`. Planned Knowledge, HTTP, UI, search, import, export, authentication, production permissions, synchronization, additional MCP tools, persistent Context Packages, and later milestones remain outside that authorization.
+Milestones 1 through 5 are complete and merged. Milestone 6 is explicitly authorized by Ocomic on July 15, 2026 for the bounded final local demo described in `docs/implementation/MILESTONE-6.md`: curated fixtures, deterministic reset, minimal non-canonical Planned Knowledge, Review Inbox, the local `@loxora/demo` application, one Playwright flow, and real Context/MCP parity. Export, generalized import, additional MCP tools, authentication, production permissions, synchronization, search, embeddings, graph visualization, persistent Context Packages, and production deployment remain outside that authorization.
 
 ## Knowledge evolution
 

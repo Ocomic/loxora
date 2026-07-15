@@ -1,6 +1,6 @@
 # Build Week / Hackathon
 
-**Status:** Draft planning document
+**Status:** Demo-ready Hackathon implementation
 **Working title:** Loxora MVP differentiation
 
 ## Planning index
@@ -12,8 +12,10 @@
 - [Pre-Hackathon Boundary Checklist](./PRE-HACKATHON-BOUNDARY.md)
 - [Sample Projects and Evidence Map](./SAMPLE-PROJECTS-AND-EVIDENCE.md)
 - [RFC-007 — Initial Architecture and Hackathon MVP Boundaries](../rfcs/RFC-007-initial-architecture-and-mvp-boundaries.md)
+- [Demo Runbook](../implementation/DEMO-RUNBOOK.md)
+- [Milestone 6 implementation](../implementation/MILESTONE-6.md)
 
-The approved-in-principle MVP story leads with knowledge lifecycle and evidence-backed cross-project impact. Repository import is supporting infrastructure and must not become the central demo narrative.
+The implemented demo leads with knowledge lifecycle, evidence-backed cross-project impact, and equivalent UI/MCP Context. Repository import is supporting infrastructure and is not the demo narrative. Deterministic export remains deferred, so the implementation is demo-ready rather than a complete portability release.
 
 ## Context
 

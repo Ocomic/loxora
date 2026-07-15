@@ -1,6 +1,6 @@
 # Hackathon MVP Acceptance Matrix
 
-**Status:** Proposed
+**Status:** Milestone 6 demo-ready review
 
 The MVP is demo-ready only when every Required row passes or is explicitly re-approved through a scope change.
 
@@ -27,7 +27,7 @@ The MVP is demo-ready only when every Required row passes or is explicitly re-ap
 | Impact | Restricted details are not treated as absent. | Mark one target detail restricted and verify an inaccessible signal without content leakage. | Required |
 | Context | Budget and lifecycle filters are deterministic. | Repeat identical input and compare stable ordering, entries, omissions, and estimator metadata. | Required |
 | MCP | UI and MCP return equivalent ordered Context Package knowledge. | Call both with identical inputs and compare normalized core output. | Required |
-| Portability | Export can reconstruct MVP project knowledge without an external service. | Export, import into an empty instance, and compare normalized knowledge and lineage. | Required |
+| Portability | Export can reconstruct MVP project knowledge without an external service. | Explicitly deferred after Milestone 6; this remains an open portability gap and prevents claiming permanent MVP completeness. | Deferred gap |
 | Non-hardcoding | Core behavior works with alternate IDs and revised fixture wording. | Repeat the scenario variant without source changes. | Required |
 | General search | FTS or general search returns lifecycle and location metadata. | Run a keyword search if the feature remains in scope. | Cuttable |
 | Visualization | A graph view renders dependency paths. | Compare it with the canonical ordered relationship path. | Cuttable |

@@ -1,0 +1,32 @@
+{
+  "name": "@loxora/demo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@loxora/core": "0.0.0",
+    "@loxora/mcp": "0.0.0",
+    "@loxora/sqlite": "0.0.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-router-dom": "7.18.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@vitejs/plugin-react": "6.0.3",
+    "vite": "8.1.4"
+  },
+  "scripts": {
+    "build:web": "vite build"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  }
+}

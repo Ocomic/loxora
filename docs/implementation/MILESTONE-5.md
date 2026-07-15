@@ -1,6 +1,6 @@
 # Milestone 5: Deterministic Context Package and Read-only MCP
 
-**Status:** Implemented locally on `agent/milestone-5-context-package-mcp`
+**Status:** Implemented and merged for the Hackathon MVP
 **Decision Owner:** Ocomic
 **Authorization date:** July 14, 2026
 **Scope:** Hackathon MVP Milestone 5 only

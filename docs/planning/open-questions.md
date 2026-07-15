@@ -2,6 +2,10 @@
 
 **Status:** Living planning document
 
+## Post-demo portability
+
+Milestone 6 is demo-ready, but deterministic project-owned export/import remains unresolved and explicitly deferred. The repository must not claim permanent MVP portability until a lossless inspectable export can reconstruct canonical knowledge, lineage, relationships, assessments, Evidence, and plans without an external service.
+
 ## Knowledge lifecycle
 
 - Final set of Knowledge States

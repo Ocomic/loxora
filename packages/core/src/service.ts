@@ -405,6 +405,13 @@ export class LifecycleService {
     return this.store.getKnowledgeHistory({ ...input, scope: this.scope(input.scope) });
   }
 
+  public async getRollbackEvent(input: {
+    readonly projectId: ProjectId;
+    readonly rollbackEventId: RollbackEventId;
+  }): Promise<RollbackEvent | null> {
+    return this.store.getRollbackEvent(input);
+  }
+
   public async getCurrentKnowledge(input: {
     readonly projectId: ProjectId;
     readonly nodeId: NodeId;

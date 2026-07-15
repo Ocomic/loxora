@@ -58,6 +58,6 @@ Approval of setup does not authorize Hackathon runtime implementation.
 - **Decision date:** July 13, 2026
 - **Accepted architecture:** RFC-007, ADR-001, and ADR-002 for the Hackathon MVP only
 - **Authorized implementation:** only work explicitly named by a milestone task
-- **Current authorization:** Milestone 5 Context Package and read-only MCP, authorized by Ocomic on July 14, 2026
+- **Current authorization:** Milestone 6 final local demo experience, authorized by Ocomic on July 15, 2026
 
-This record closes the pre-Hackathon boundary. Milestones 1–4 are complete and merged. Milestone 5 is limited to an ephemeral deterministic Context Package Core operation, one read-only stdio MCP tool, and their tests and documentation. It does not authorize Planned Knowledge, UI, HTTP, additional tools, search, import, export, authentication, production permissions, synchronization, or later milestones.
+This record closes the pre-Hackathon boundary. Milestones 1–5 are complete and merged. Milestone 6 authorizes only the curated two-Project demo, deterministic reset, explicit non-canonical Planned Knowledge, Review Inbox, local loopback HTTP/UI, browser proof, and real single-tool MCP parity. It does not authorize export, generalized import, additional MCP tools, authentication, production permissions, synchronization, search, embeddings, graph visualization, persistent Context Packages, or production deployment.

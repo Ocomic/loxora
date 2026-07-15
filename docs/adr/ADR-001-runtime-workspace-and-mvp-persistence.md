@@ -77,7 +77,7 @@ These are unnecessary for the required relationship paths and would add operatio
 
 ## Implementation status
 
-Milestones 1–4 implement the asynchronous Core ports, SQLite adapter, lifecycle, navigation, and reviewed cross-project impact. Milestone 5 adds an ephemeral Context Package operation in Core and a single read-only stdio MCP adapter. The adapter opens an existing schema-004 database in SQLite read-only and query-only modes, runs no migrations, and delegates selection and budgeting to Core. Context Packages are not persisted and produce no Audit Events.
+Milestones 1–4 implement the asynchronous Core ports, SQLite adapter, lifecycle, navigation, and reviewed cross-project impact. Milestone 5 adds an ephemeral Context Package operation in Core and a single read-only stdio MCP adapter. Milestone 6 adds schema 005 Planned Knowledge and one local Node/React/Vite demo package while preserving SQLite isolation and asynchronous Core ports. SQLite remains the replaceable Hackathon persistence implementation, not permanent architecture; deterministic export remains deferred.
 
 ## Rollback
 

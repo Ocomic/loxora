@@ -3,6 +3,8 @@ import type {
   CrossProjectImpactStore,
   LifecycleStore,
   NavigationStore,
+  PlannedKnowledgeStore,
+  ReviewInboxStore,
 } from "@loxora/core";
 import { SqliteLifecycleStore } from "./adapter.js";
 
@@ -12,7 +14,13 @@ export async function openSqliteLifecycleStore(path: string): Promise<LifecycleS
 
 export async function openSqliteStore(
   path: string,
-): Promise<LifecycleStore & NavigationStore & CrossProjectImpactStore> {
+): Promise<
+  LifecycleStore &
+    NavigationStore &
+    CrossProjectImpactStore &
+    PlannedKnowledgeStore &
+    ReviewInboxStore
+> {
   return new SqliteLifecycleStore(path);
 }
 

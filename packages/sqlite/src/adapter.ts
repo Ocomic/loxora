@@ -48,11 +48,18 @@ import {
   type SpaceId,
   type CrossProjectImpactStore,
   type CrossProjectRelationshipId,
+  type PlannedKnowledge,
+  type PlannedKnowledgeId,
+  type PlannedKnowledgeStatus,
+  type PlannedKnowledgeStore,
+  type ReviewInboxItem,
+  type ReviewInboxStore,
 } from "@loxora/core";
 import { DatabaseSync } from "node:sqlite";
 import { runMigrations } from "./migrations.js";
 import { SqliteNavigationProjectionStore } from "./navigation.js";
 import { SqliteCrossProjectImpactStore } from "./impact.js";
+import { SqlitePlannedKnowledgeStore } from "./planned.js";
 
 interface ProposalRow {
   id: string;
@@ -196,11 +203,17 @@ export interface SqliteOpenOptions {
 }
 
 export class SqliteLifecycleStore
-  implements LifecycleStore, NavigationStore, CrossProjectImpactStore
+  implements
+    LifecycleStore,
+    NavigationStore,
+    CrossProjectImpactStore,
+    PlannedKnowledgeStore,
+    ReviewInboxStore
 {
   private readonly database: DatabaseSync;
   private readonly navigation: SqliteNavigationProjectionStore;
   private readonly impact: SqliteCrossProjectImpactStore;
+  private readonly planned: SqlitePlannedKnowledgeStore;
 
   public constructor(
     path: string,
@@ -234,6 +247,7 @@ export class SqliteLifecycleStore
       this.faults.afterNavigationGenerationWritten,
     );
     this.impact = new SqliteCrossProjectImpactStore(this.database, this.faults);
+    this.planned = new SqlitePlannedKnowledgeStore(this.database);
   }
 
   public async createProject(project: Project, auditEvent: AuditEvent): Promise<void> {
@@ -902,6 +916,30 @@ export class SqliteLifecycleStore
     input: Parameters<NavigationStore["rebuildNavigationProjection"]>[0],
   ): Promise<RebuildNavigationProjectionResult> {
     return this.navigation.rebuildNavigationProjection(input);
+  }
+
+  public createPlannedKnowledge(item: PlannedKnowledge, auditEvent: AuditEvent) {
+    return this.planned.createPlannedKnowledge(item, auditEvent);
+  }
+  public getProjectPlans(input: {
+    projectId: ProjectId;
+    scope: Scope;
+    nodeId?: NodeId;
+    statuses?: readonly PlannedKnowledgeStatus[];
+  }) {
+    return this.planned.getProjectPlans(input);
+  }
+  public getPlannedKnowledge(input: {
+    ownerProjectId: ProjectId;
+    plannedKnowledgeId: PlannedKnowledgeId;
+  }) {
+    return this.planned.getPlannedKnowledge(input);
+  }
+  public getReviewInbox(input: {
+    projectIds: readonly ProjectId[];
+    scope: Scope;
+  }): Promise<readonly ReviewInboxItem[]> {
+    return this.planned.getReviewInbox(input);
   }
 
   public getCurrentEndpoint(input: Parameters<CrossProjectImpactStore["getCurrentEndpoint"]>[0]) {

@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": ".",
+    "outDir": "dist",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx"
+  },
+  "references": [{ "path": "../core" }, { "path": "../sqlite" }, { "path": "../mcp" }],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts"]
+}

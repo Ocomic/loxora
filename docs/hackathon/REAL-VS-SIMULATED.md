@@ -1,6 +1,6 @@
 # Real Versus Curated Demo Ledger
 
-**Status:** Proposed
+**Status:** Implemented demo ledger
 
 The demo may use curated scenario content, but it must not use prerecorded product behavior.
 
@@ -31,7 +31,7 @@ The demo may use curated scenario content, but it must not use prerecorded produ
 | Evidence linkage | Results link to persisted Source and Evidence references. |
 | Context Package | Selection, ordering, lifecycle filtering, deduplication, and budgeting execute at request time. |
 | UI/MCP equivalence | Both surfaces call the same core operation and return equivalent ordered knowledge. |
-| Export | A deterministic export contains enough MVP data to reconstruct project knowledge without an external service. |
+| Export | Deferred. Milestone 6 does not claim portability completion. |
 
 ## Prohibited simulation
 

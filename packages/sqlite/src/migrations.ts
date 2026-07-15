@@ -48,12 +48,23 @@ function crossProjectImpactMigration(): Migration {
   };
 }
 
+function plannedKnowledgeMigration(): Migration {
+  return {
+    id: "005_planned_knowledge",
+    sql: readFileSync(
+      new URL("../../migrations/005_planned_knowledge.sql", import.meta.url),
+      "utf8",
+    ),
+  };
+}
+
 export function migrationCatalog(): readonly Migration[] {
   return [
     initialMigration(),
     lineageMigration(),
     navigationMigration(),
     crossProjectImpactMigration(),
+    plannedKnowledgeMigration(),
   ];
 }
 

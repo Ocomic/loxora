@@ -1,6 +1,8 @@
 # Hackathon Demo Script
 
-**Status:** Proposed
+**Status:** Implemented demo narrative
+
+The executable click sequence, exact commands, and recovery paths are maintained in [the Demo Runbook](../implementation/DEMO-RUNBOOK.md).
 
 ## Demonstration goal
 

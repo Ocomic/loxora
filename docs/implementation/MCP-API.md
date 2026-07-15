@@ -1,5 +1,9 @@
 # Read-only MCP API
 
+## Demo parity proof
+
+After building a Current package in the local demo, run `npm run demo:mcp:proof`. The command launches the real stdio server, invokes only `loxora_get_context` with `var/demo/last-context-request.json`, and compares fingerprint, ordered entries, Revisions, Evidence, paths, estimates, budget status, and warnings with direct Core output. Schema 005 databases remain compatible because the adapter requires migration 004 as its minimum and runs query-only.
+
 `@loxora/mcp` exposes exactly one stdio tool: `loxora_get_context`. Its schema maps directly to the Context Package Core contract. The adapter does not implement lifecycle selection, dependency traversal, Assessment applicability, deduplication, or budgeting.
 
 ## Local setup

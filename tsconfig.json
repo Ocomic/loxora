@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/core" },
     { "path": "./packages/sqlite" },
-    { "path": "./packages/mcp" }
+    { "path": "./packages/mcp" },
+    { "path": "./packages/demo" }
   ]
 }

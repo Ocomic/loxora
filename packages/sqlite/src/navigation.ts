@@ -85,7 +85,9 @@ type SqlRow = Record<
   | "node_title"
   | "reverted_revision_id"
   | "semantic_source_revision_id"
-  | "recorded_at",
+  | "recorded_at"
+  | "node_project_id"
+  | "planned_id",
   string
 >;
 
@@ -197,6 +199,15 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
       .prepare(`SELECT p.id proposal_id, p.proposed_node_id node_id FROM proposal_evidence pe
       JOIN knowledge_proposals p ON p.id=pe.proposal_id WHERE pe.evidence_reference_id=? AND pe.project_id=? ORDER BY p.id`)
       .all(input.evidenceReferenceId, input.projectId) as SqlRow[];
+    const plannedRows = this.hasTable("planned_knowledge_evidence")
+      ? (this.database
+          .prepare(`SELECT p.id planned_id,n.node_project_id,n.node_id FROM planned_knowledge_evidence pe
+      JOIN planned_knowledge_items p ON p.id=pe.planned_knowledge_id
+      JOIN planned_knowledge_nodes n ON n.planned_knowledge_id=p.id
+      WHERE pe.evidence_reference_id=? AND pe.evidence_project_id=?
+      ORDER BY p.id,n.node_project_id,n.node_id`)
+          .all(input.evidenceReferenceId, input.projectId) as SqlRow[])
+      : [];
     const backlinks: EvidenceBacklink[] = [];
     for (const item of revisionRows) {
       const node = await this.nodePath(
@@ -209,6 +220,7 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
         backlinks.push(
           freeze({
             proposalId: null,
+            plannedKnowledgeId: null,
             revisionId: item.revision_id as RevisionId,
             temporalView: item.temporal_view as "Current" | "Historical",
             path: node,
@@ -221,8 +233,22 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
         backlinks.push(
           freeze({
             proposalId: item.proposal_id as EvidenceBacklink["proposalId"],
+            plannedKnowledgeId: null,
             revisionId: null,
             temporalView: null,
+            path,
+          }),
+        );
+    }
+    for (const item of plannedRows) {
+      const path = await this.nodePath(item.node_project_id as ProjectId, item.node_id, "Planned");
+      if (path)
+        backlinks.push(
+          freeze({
+            proposalId: null,
+            plannedKnowledgeId: item.planned_id as EvidenceBacklink["plannedKnowledgeId"],
+            revisionId: null,
+            temporalView: "Planned" as const,
             path,
           }),
         );
@@ -621,6 +647,13 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
         isCurrent: current_id === rest.id,
       })),
       sources,
+      plannedKnowledge: this.database
+        .prepare(
+          `SELECT p.* FROM planned_knowledge_items p
+           WHERE p.scope=? AND (p.owner_project_id=? OR p.related_project_id=?)
+           ORDER BY p.owner_project_id,p.id`,
+        )
+        .all(scope, projectId, projectId),
     };
     const activity = { rollbackEvents: activityRows, lifecycleEvents: lifecycleActivity };
     const crossProject = buildCrossProjectProjectMapProjection(this.database, projectId, scope);
@@ -637,6 +670,16 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
       activity: activityWithAssessments,
     });
     const allCounts = this.counts(nodeSummaries.map((item) => item.summary));
+    const plannedKnowledgeCount = Number(
+      (
+        this.database
+          .prepare(
+            `SELECT COUNT(*) count FROM planned_knowledge_items
+             WHERE scope=? AND (owner_project_id=? OR related_project_id=?)`,
+          )
+          .get(scope, projectId, projectId) as { count: number }
+      ).count,
+    );
     const lastActivity =
       (
         this.database
@@ -662,6 +705,7 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
       outgoingDependencies: crossProject.outgoingDependencies,
       incomingDependents: crossProject.incomingDependents,
       relatedProjectIds: crossProject.relatedProjectIds,
+      plannedKnowledgeCount,
     });
     return freeze({
       projectMap: map,
@@ -777,6 +821,13 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
   }
   private count(sql: string, id: string): number {
     return Number((this.database.prepare(sql).get(id) as { count: number }).count);
+  }
+  private hasTable(name: string): boolean {
+    return (
+      this.database
+        .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?")
+        .get(name) !== undefined
+    );
   }
   private source(
     id: string,

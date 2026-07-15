@@ -1,8 +1,8 @@
 # Sample Projects and Evidence Map
 
-**Status:** Proposed specification
+**Status:** Implemented fixture specification (`fixtures/hackathon-demo-v1`)
 
-This document defines the curated demo inputs and their minimum navigation paths. It does not create the projects, fixtures, or a functioning import format.
+This document describes the curated raw fixture inputs and minimum navigation paths. Reset consumes them through real Core operations; no canonical database or computed result is committed.
 
 ## Project: `identity-contract`
 
@@ -12,22 +12,18 @@ This document defines the curated demo inputs and their minimum navigation paths
 
 ```text
 Project Map
-└── Contract Space
+└── Authentication Space
     └── Token Contract Collection
-        ├── Token Contract Node
-        ├── Compatibility Incident Node
-        └── Deferred Migration Plan Node
+        └── Token Format Node
 ```
 
 ### Knowledge and Evidence
 
 | Artifact | Node | Temporal view | Lifecycle or plan state | Evidence role |
 |---|---|---|---|---|
-| V1 contract document | Token Contract | Past after V2 | Superseded/Historical | Establishes required `customer_id`. |
-| V2 contract proposal | Token Contract | Past after rollback | Superseded/Historical | Replaces `customer_id` with `subject_id`. |
-| V3 restoration decision | Token Contract | Current | Canonical restored revision | Restores V1-compatible semantics as a new revision. |
-| Compatibility incident | Compatibility Incident | Past and relevant to Current rationale | Reviewed evidence | Records authentication rejection after V2. |
-| Deferred migration plan | Deferred Migration Plan | Planned | Deferred | Revisit `subject_id` after consumer compatibility. |
+| V1 contract document | Token Format | Past after V2 | Superseded/Historical | Establishes required `customer_id`. |
+| V2 contract proposal | Token Format | Past after rollback | Superseded/Historical | Replaces `customer_id` with `subject_id`. |
+| V3 restoration decision | Token Format | Current | Canonical restored revision | Restores V1-compatible semantics as a new revision. |
 
 ## Project: `customer-portal`
 
@@ -39,24 +35,24 @@ Project Map
 Project Map
 └── Authentication Space
     └── Authentication Client Collection
-        ├── Authentication Client Node
-        └── Token Dependency Node
+        └── Token Parser Node
 ```
 
 ### Knowledge and Evidence
 
 | Artifact | Node | Temporal view | Lifecycle state | Evidence role |
 |---|---|---|---|---|
-| Authentication-client document or snippet | Authentication Client | Current | Canonical | Shows the client requires `customer_id` to map a customer. |
-| Dependency declaration or import reference | Token Dependency | Current | Canonical | Connects the client to the provided token contract. |
-| Authentication rejection/401 record | Authentication Client | Past incident, current rationale | Historical evidence | Shows V2 tokens cannot satisfy client requirements. |
+| Authentication-client document or snippet | Token Parser | Current | Canonical | Shows the client requires `customer_id` to map a customer. |
+| Dependency declaration | Token Parser | Current | Relationship Evidence | Connects the client to Token Format. |
+| Authentication rejection/401 record | Token Parser | Incident Evidence | Assessment Evidence | Shows V2 tokens cannot satisfy client requirements. |
+| Deferred subject migration | Token Parser and Token Format | Planned | Deferred | Requires subject mapping and compatibility tests. |
 
 ## Cross-project relationship
 
 ```text
-customer-portal / Authentication Client
+customer-portal / Token Parser
 → depends on
-identity-contract / Token Contract
+identity-contract / Token Format
 ```
 
 The relationship must record:
