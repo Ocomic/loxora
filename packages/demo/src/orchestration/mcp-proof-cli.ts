@@ -45,17 +45,40 @@ try {
     revisions: value.entries.map((entry) => entry.revisionIds),
     evidence: value.entries.map((entry) => entry.evidence.map((evidence) => evidence.id)),
     paths: value.entries.map((entry) => entry.navigationPaths),
+    assessments: value.entries.map((entry) => ({
+      id: entry.impactAssessmentId,
+      severity: entry.impactSeverity,
+      relationshipFreshness: entry.relationshipBindingFreshness,
+      assessmentFreshness: entry.assessmentFreshness,
+    })),
     estimate: value.estimatedUsage,
     warnings: value.warnings,
     budgetStatus: value.budgetStatus,
   });
-  const passed = JSON.stringify(normalized(direct)) === JSON.stringify(normalized(mcp));
+  const directNormalized = normalized(direct);
+  const mcpNormalized = normalized(mcp);
+  const same = (key: keyof typeof directNormalized) =>
+    JSON.stringify(directNormalized[key]) === JSON.stringify(mcpNormalized[key]);
+  const comparisons = {
+    fingerprint: same("fingerprint"),
+    entries: same("entryIds"),
+    revisions: same("revisions"),
+    evidence: same("evidence"),
+    dependencyPaths: same("paths"),
+    impactAssessments: same("assessments"),
+    budget: same("estimate") && same("budgetStatus"),
+    warnings: same("warnings"),
+  };
+  const passed = Object.values(comparisons).every(Boolean);
   const proof = {
     passed,
     fingerprint: direct.fingerprint,
+    uiFingerprint: direct.fingerprint,
+    mcpFingerprint: mcp.fingerprint,
     tool: "loxora_get_context",
     comparedAt: new Date().toISOString(),
     entryCount: direct.entries.length,
+    comparisons,
   };
   writeFileSync(demo.proofPath, JSON.stringify(proof, null, 2));
   if (!passed) throw new Error("UI/Core/MCP parity failed");

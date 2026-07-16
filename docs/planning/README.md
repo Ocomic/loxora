@@ -16,6 +16,7 @@ No implementation plan is final until the foundational RFCs are reviewed.
 - [Milestone 4 cross-project impact](../implementation/MILESTONE-4.md)
 - [Milestone 5 Context Package and MCP](../implementation/MILESTONE-5.md)
 - [Milestone 6 final demo experience](../implementation/MILESTONE-6.md)
+- [Milestone 6.1 Guided Demo UX and visual polish](../implementation/MILESTONE-6-1.md)
 - [Demo Runbook](../implementation/DEMO-RUNBOOK.md)
 - [Planned Knowledge Core API](../implementation/PLANNED-KNOWLEDGE-API.md)
 - [Local application API](../implementation/LOCAL-APP-API.md)

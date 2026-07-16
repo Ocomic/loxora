@@ -1,58 +1,67 @@
+import { useId } from "react";
 import { Link } from "react-router-dom";
-import { post } from "../api.js";
-import { useApi } from "../hooks/useApi.js";
-interface Status {
-  stage: string;
-  fixtureVersion: string;
-  highestMigrationId: string;
-  projects: { id: string; name: string; nodeId: string; freshness: unknown }[];
-  availableActions: string[];
-  mcpReady: boolean;
-  lastFailure: string | null;
-}
+import { ErrorState, LoadingState } from "../components/AsyncState.js";
+import { DemoActionButton, withMode } from "../components/DemoActionButton.js";
+import { useDemoState } from "../components/DemoState.js";
+import { RelationshipCard } from "../components/RelationshipCard.js";
 export function HomeScreen() {
-  const { data, error, reload } = useApi<Status>("/api/demo/status");
-  if (error) return <p role="alert">{error}</p>;
-  if (!data) return <p>Loading diagnostics…</p>;
+  const { status: data, error, refresh, mode } = useDemoState();
+  const projectsHeadingId = useId();
+  if (error) return <ErrorState message={error} retry={() => void refresh()} />;
+  if (!data) return <LoadingState label="Loading the local demo…" />;
   return (
     <>
       <div className="hero">
         <p className="eyebrow">Local-first, reviewed project knowledge</p>
-        <h1>Final Hackathon Demo</h1>
-        <p>Follow the real lifecycle from prepared evidence to MCP-equivalent context.</p>
-        <div className="stage">
-          <span>Derived stage</span>
-          <strong>{data.stage}</strong>
+        <h1>Projects should never lose their memory.</h1>
+        <p className="hero-copy">
+          Know what is current. Understand what changed. See which projects are affected.
+        </p>
+        <div className="hero-actions">
+          <DemoActionButton action={data.guided.primaryAction} />
+          <span className="stage">
+            <span>Current demo state</span>
+            <strong>{data.guided.progressDetail}</strong>
+          </span>
         </div>
       </div>
-      <section className="actions">
-        <button
-          type="button"
-          onClick={async () => {
-            await post("/api/demo/reset", { stage: "Prepared" });
-            await reload();
-          }}
-        >
-          Reset to Prepared
-        </button>
-        {data.availableActions.map((action) => (
-          <span className="pill" key={action}>
-            {action}
-          </span>
-        ))}
+      <section aria-labelledby={projectsHeadingId}>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Two real projects</p>
+            <h2 id={projectsHeadingId}>Project knowledge at a glance</h2>
+          </div>
+        </div>
+        <div className="grid project-grid">
+          {data.projects.map((project) => (
+            <article className="card" key={project.id}>
+              <p className="eyebrow">Project Map</p>
+              <h2>{project.name}</h2>
+              <p>{project.purpose}</p>
+              <dl className="compact-facts">
+                <div>
+                  <dt>Critical knowledge</dt>
+                  <dd>{project.nodeTitle}</dd>
+                </div>
+                <div>
+                  <dt>Planned items</dt>
+                  <dd>{project.plannedKnowledgeCount}</dd>
+                </div>
+              </dl>
+              {project.relationship ? (
+                <RelationshipCard relationship={project.relationship} />
+              ) : (
+                <p className="callout neutral">Dependency appears after reviewed V1 knowledge.</p>
+              )}
+              <Link className="text-link" to={withMode(`/projects/${project.id}`, mode)}>
+                Open Project Map →
+              </Link>
+            </article>
+          ))}
+        </div>
       </section>
-      <section className="grid">
-        {data.projects.map((project) => (
-          <article className="card" key={project.id}>
-            <p className="eyebrow">Project Map</p>
-            <h2>{project.name}</h2>
-            <p className="mono">{project.id}</p>
-            <Link to={`/projects/${project.id}`}>Open Project Map →</Link>
-          </article>
-        ))}
-      </section>
-      <section className="diagnostics">
-        <h2>Diagnostics</h2>
+      <details className="diagnostics">
+        <summary>Local demo diagnostics</summary>
         <dl>
           <div>
             <dt>Fixture</dt>
@@ -67,8 +76,13 @@ export function HomeScreen() {
             <dd>{data.mcpReady ? "Ready" : "Build required"}</dd>
           </div>
         </dl>
-        {data.lastFailure ? <p role="alert">{data.lastFailure}</p> : null}
-      </section>
+        <p>Database: {data.databaseConnected ? "Connected" : "Unavailable"}</p>
+        {data.lastFailure ? (
+          <p className="callout error" role="alert">
+            {data.lastFailure}
+          </p>
+        ) : null}
+      </details>
     </>
   );
 }

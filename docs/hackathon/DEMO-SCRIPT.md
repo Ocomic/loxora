@@ -4,6 +4,8 @@
 
 The executable click sequence, exact commands, and recovery paths are maintained in [the Demo Runbook](../implementation/DEMO-RUNBOOK.md).
 
+Milestone 6.1 presents this same real sequence through a nine-step Guided Demo. Every step explains the operation, expected change, significance, and verified result. Explore mode remains available without changing canonical state.
+
 ## Demonstration goal
 
 Show that Loxora preserves the correct current project understanding, explains its history, and follows evidence-backed impact across related projects.
@@ -98,3 +100,5 @@ The two surfaces must be equivalent because they call the same core operation.
 ## Closing statement
 
 Loxora did not merely remember three versions. It selected the correct current revision, preserved the rollback lineage, kept a future plan separate, and explained why a decision in one project affected another.
+
+The final parity screen then proves—in human-readable comparison rows—that the local UI and the real `loxora_get_context` MCP tool received the same lifecycle-filtered project understanding.

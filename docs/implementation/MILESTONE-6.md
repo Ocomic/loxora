@@ -5,6 +5,8 @@
 **Authorization date:** July 15, 2026
 **Scope:** Hackathon MVP Milestone 6 only
 
+**Presentation continuation:** Milestone 6.1 adds a Guided Demo and visual-polish layer without changing Milestone 6 domain or persistence behavior. See [Milestone 6.1](./MILESTONE-6-1.md).
+
 Milestone 6 adds the final local inspector and demo controller. The `@loxora/demo` package composes the existing asynchronous Core services, SQLite adapters, read-only MCP adapter, a loopback Node HTTP server, and a React/Vite client. It does not redefine lifecycle, navigation, impact, Context Package, or MCP selection rules.
 
 The real flow is Prepared → reviewed V1 provider/consumer → reviewed `DependsOn` → breaking V2 → High exact impact → Rollback Event → reviewed V3 restoration → separate Deferred Planned Knowledge → Current Context Package → real `loxora_get_context` parity.

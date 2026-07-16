@@ -17,7 +17,7 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome lint .",
-    "test": "npm run build && node --test packages/core/dist/test/boundary.test.js packages/sqlite/dist/test/lifecycle.test.js packages/sqlite/dist/test/lineage.test.js packages/sqlite/dist/test/navigation.test.js packages/sqlite/dist/test/impact.test.js packages/sqlite/dist/test/context-package.test.js packages/sqlite/dist/test/planned.test.js packages/mcp/dist/test/mcp.test.js packages/demo/dist/test/boundary.test.js",
+    "test": "npm run build && node --test packages/core/dist/test/boundary.test.js packages/sqlite/dist/test/lifecycle.test.js packages/sqlite/dist/test/lineage.test.js packages/sqlite/dist/test/navigation.test.js packages/sqlite/dist/test/impact.test.js packages/sqlite/dist/test/context-package.test.js packages/sqlite/dist/test/planned.test.js packages/mcp/dist/test/mcp.test.js packages/demo/dist/test/boundary.test.js packages/demo/dist/test/guided.test.js",
     "demo:reset": "npm run build --silent && node packages/demo/dist/src/orchestration/reset-cli.js",
     "demo:start": "npm run build --silent && node packages/demo/dist/src/server/server.js",
     "demo:verify": "node packages/demo/dist/src/orchestration/verify-cli.js",

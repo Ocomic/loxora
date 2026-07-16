@@ -14,8 +14,9 @@
 - [RFC-007 — Initial Architecture and Hackathon MVP Boundaries](../rfcs/RFC-007-initial-architecture-and-mvp-boundaries.md)
 - [Demo Runbook](../implementation/DEMO-RUNBOOK.md)
 - [Milestone 6 implementation](../implementation/MILESTONE-6.md)
+- [Milestone 6.1 Guided Demo UX](../implementation/MILESTONE-6-1.md)
 
-The implemented demo leads with knowledge lifecycle, evidence-backed cross-project impact, and equivalent UI/MCP Context. Repository import is supporting infrastructure and is not the demo narrative. Deterministic export remains deferred, so the implementation is demo-ready rather than a complete portability release.
+The implemented Guided Demo leads with knowledge lifecycle, evidence-backed cross-project impact, and equivalent UI/MCP Context. Explore mode keeps the underlying project surfaces inspectable. Repository import is supporting infrastructure and is not the demo narrative. Deterministic export remains deferred, so the implementation is demo-ready rather than a complete portability release.
 
 ## Context
 

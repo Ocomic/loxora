@@ -20,7 +20,16 @@ import { openSqliteStore } from "@loxora/sqlite";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
-import { DEMO_STAGES, type DemoStage, type RuntimeState } from "../shared/contracts.js";
+import {
+  DEMO_STAGES,
+  GUIDED_STEPS,
+  type DemoAction,
+  type DemoActionId,
+  type DemoResultReceipt,
+  type DemoStage,
+  type GuidedDemoState,
+  type RuntimeState,
+} from "../shared/contracts.js";
 import { fixtureText, loadManifest, type DemoManifest } from "./manifest.js";
 
 type Store = Awaited<ReturnType<typeof openSqliteStore>>;
@@ -43,8 +52,25 @@ export interface DemoStatus {
   readonly stage: DemoStage;
   readonly databaseConnected: boolean;
   readonly highestMigrationId: string;
-  readonly projects: readonly { id: string; name: string; nodeId: string; freshness: unknown }[];
-  readonly availableActions: readonly string[];
+  readonly projects: readonly {
+    id: string;
+    name: string;
+    purpose: string;
+    nodeId: string;
+    nodeTitle: string;
+    plannedKnowledgeCount: number;
+    freshness: unknown;
+    relationship: {
+      direction: "DependsOn" | "DependedOnBy";
+      severity: string | null;
+      relationshipBindingFreshness: string;
+      assessmentFreshness: string | null;
+      endpointLabel: string;
+    } | null;
+  }[];
+  readonly availableActions: readonly DemoAction[];
+  readonly guided: GuidedDemoState;
+  readonly preparedContextRequest: Readonly<Record<string, unknown>>;
   readonly mcpReady: boolean;
   readonly lastFailure: string | null;
   readonly currentImpact: unknown;
@@ -92,6 +118,7 @@ export class DemoCoordinator {
         artifactIds: seeded.artifactIds,
         lastAction: `reset:${stage}`,
         parity: null,
+        lastResult: null,
       };
       await candidate.close();
       removeSqliteFiles(previous);
@@ -131,16 +158,35 @@ export class DemoCoordinator {
     const lifecycle = new LifecycleService(store);
     const navigation = new NavigationService(store);
     const stage = await this.deriveStage();
-    const projects = await Promise.all(
-      Object.values(this.manifest.projects).map(async (project) => ({
+    const maps = await Promise.all(
+      Object.values(this.manifest.projects).map((project) =>
+        navigation.getProjectMap({ projectId: project.id as ProjectId }),
+      ),
+    );
+    const projects = Object.values(this.manifest.projects).map((project, index) => {
+      const map = maps[index];
+      const relation = map?.outgoingDependencies[0] ?? map?.incomingDependents[0] ?? null;
+      return {
         id: project.id,
         name: project.name,
+        purpose: map?.purpose ?? project.purpose,
         nodeId: project.nodeId,
-        freshness:
-          (await navigation.getProjectMap({ projectId: project.id as ProjectId }))?.freshness ??
-          null,
-      })),
-    );
+        nodeTitle: project.node,
+        plannedKnowledgeCount: map?.plannedKnowledgeCount ?? 0,
+        freshness: map?.freshness ?? null,
+        relationship: relation
+          ? {
+              direction: relation.direction,
+              severity: relation.latestSeverity,
+              relationshipBindingFreshness: relation.relationshipBindingFreshness,
+              assessmentFreshness: relation.assessmentFreshness,
+              endpointLabel:
+                relation.endpointPath?.segments.map((segment) => segment.label).join(" / ") ??
+                "Restricted endpoint",
+            }
+          : null,
+      };
+    });
     const access = {
       readableProjectIds: [this.portal.id as ProjectId, this.identity.id as ProjectId],
     };
@@ -156,6 +202,7 @@ export class DemoCoordinator {
       assessmentId: this.manifest.artifacts.v2Assessment as ImpactAssessmentId,
       access,
     });
+    const guided = await this.guidedState(stage);
     void lifecycle;
     return Object.freeze({
       fixtureVersion: this.manifest.fixtureVersion,
@@ -163,7 +210,9 @@ export class DemoCoordinator {
       databaseConnected: true,
       highestMigrationId: "005_planned_knowledge",
       projects: Object.freeze(projects),
-      availableActions: Object.freeze(actions(stage)),
+      availableActions: guided.availableActions,
+      guided,
+      preparedContextRequest: Object.freeze(this.defaultContextRequest()),
       mcpReady: existsSync(resolve(process.cwd(), "packages", "mcp", "dist", "src", "server.js")),
       lastFailure: this.lastFailure,
       currentImpact,
@@ -199,8 +248,17 @@ export class DemoCoordinator {
     );
     if (decision === "Accepted") {
       await this.resume();
-      if (result.proposal.kind === "Restoration") await this.assessImpact();
+      if (result.proposal.kind === "Restoration") await this.assessImpact(false);
     }
+    await this.recordReceipt(
+      result.proposal.kind === "Successor"
+        ? "review-v2"
+        : result.proposal.kind === "Restoration"
+          ? "review-v3"
+          : "review-v1",
+      decision === "Accepted" ? [result.revision?.id ?? ""] : [],
+      decision,
+    );
     return result;
   }
 
@@ -229,10 +287,15 @@ export class DemoCoordinator {
     if (result.relationship)
       this.mergeArtifacts({ relationship: result.relationship.id }, "review-relationship");
     if (decision === "Accepted") await this.resume();
+    await this.recordReceipt(
+      "review-dependency",
+      result.relationship ? [result.relationship.id] : [],
+      decision,
+    );
     return result;
   }
 
-  public async assessImpact(): Promise<unknown> {
+  public async assessImpact(recordReceipt = true): Promise<unknown> {
     const store = this.requiredStore();
     const dependency = (
       await this.impact().getProjectDependencies({
@@ -285,6 +348,7 @@ export class DemoCoordinator {
       "assess-impact",
     );
     await this.rebuild();
+    if (recordReceipt) await this.recordReceipt("assess-impact", [assessment.id]);
     return assessment;
   }
 
@@ -312,6 +376,7 @@ export class DemoCoordinator {
     });
     this.mergeArtifacts({ rollbackEvent: result.rollbackEvent.id }, "rollback");
     await this.resume();
+    await this.recordReceipt("record-rollback", [result.rollbackEvent.id]);
     return result;
   }
 
@@ -329,16 +394,7 @@ export class DemoCoordinator {
   }
 
   public async buildContextPackage(input?: Record<string, unknown>): Promise<ContextPackage> {
-    const transportRequest = input ?? {
-      projectId: this.portal.id,
-      focusNodeIds: [this.portal.nodeId],
-      temporalViews: ["Current"],
-      includeRelatedProjects: true,
-      relationshipTypes: ["DependsOn"],
-      maxDependencyDepth: 1,
-      taskLabel: "Update customer-portal authentication safely",
-      estimatedTokenBudget: 12000,
-    };
+    const transportRequest = input ?? this.defaultContextRequest();
     const { readableProjectIds, revealRestrictedProjectIds, ...mcpRequest } =
       transportRequest as Record<string, unknown>;
     const result = await new ContextPackageService(this.requiredStore()).buildContextPackage({
@@ -353,6 +409,7 @@ export class DemoCoordinator {
     } as never);
     writeFileSync(this.contextRequestPath, JSON.stringify(mcpRequest, null, 2));
     this.mergeArtifacts({ lastContextFingerprint: result.fingerprint }, "context-package");
+    await this.recordReceipt("build-context", [result.fingerprint]);
     return result;
   }
 
@@ -420,6 +477,111 @@ export class DemoCoordinator {
         projectId: project.id as ProjectId,
         actorId: this.manifest.reviewer,
       });
+  }
+
+  private defaultContextRequest(): Record<string, unknown> {
+    return {
+      projectId: this.portal.id,
+      focusNodeIds: [this.portal.nodeId],
+      temporalViews: ["Current"],
+      includeRelatedProjects: true,
+      relationshipTypes: ["DependsOn"],
+      maxDependencyDepth: 1,
+      taskLabel: "Update customer-portal authentication safely",
+      estimatedTokenBudget: 12000,
+    };
+  }
+
+  private async guidedState(stage: DemoStage): Promise<GuidedDemoState> {
+    const runtime = this.readRuntime();
+    const contextReady =
+      existsSync(this.contextRequestPath) && Boolean(runtime.artifactIds.lastContextFingerprint);
+    const parity = existsSync(this.proofPath)
+      ? (JSON.parse(readFileSync(this.proofPath, "utf8")) as { passed?: boolean }).passed === true
+      : false;
+    const lifecycle = new LifecycleService(this.requiredStore());
+    const inbox = await new ReviewInboxService(this.requiredStore()).getReviewInbox({
+      projectIds: [this.identity.id as ProjectId, this.portal.id as ProjectId],
+    });
+    const currents = await Promise.all([
+      lifecycle.getCurrentKnowledge({
+        projectId: this.identity.id as ProjectId,
+        nodeId: this.identity.nodeId as NodeId,
+      }),
+      lifecycle.getCurrentKnowledge({
+        projectId: this.portal.id as ProjectId,
+        nodeId: this.portal.nodeId as NodeId,
+      }),
+    ]);
+    const acceptedV1 = currents.filter(Boolean).length;
+    const initialSubmitted = inbox.filter(
+      (item) => item.kind === "KnowledgeProposal" && item.proposal?.kind === "Initial",
+    ).length;
+    let interrupted: string | null =
+      stage === "Prepared" ? preparedInterruption(acceptedV1, initialSubmitted) : null;
+    const configuration = guidedConfiguration(stage, contextReady, parity, this.identity);
+    if (!interrupted && configuration.requiresProposal) {
+      const expected = configuration.requiresProposal;
+      const exists = inbox.some((item) =>
+        expected === "Relationship"
+          ? item.kind === "CrossProjectRelationshipProposal"
+          : item.kind === "KnowledgeProposal" && item.proposal?.kind === expected,
+      );
+      if (!exists)
+        interrupted =
+          "The next prepared artifact is missing. Resume preparation after revalidating canon.";
+    }
+    const state = parity ? "Complete" : interrupted ? "Interrupted" : "Active";
+    const actions = interrupted
+      ? [action("resume", "Resume preparation", "/", "Mutation", "/api/demo/resume"), resetAction()]
+      : configuration.actions;
+    const primaryAction = interrupted ? actions[0] : configuration.actions[0];
+    if (!primaryAction) throw new Error("Guided presentation has no primary action");
+    const receipt = parity
+      ? proofReceipt(this.manifest.fixtureVersion, stage, this.proofPath)
+      : validateReceipt(runtime.lastResult ?? null, this.manifest.fixtureVersion, stage, runtime);
+    return Object.freeze({
+      canonicalStage: stage,
+      currentStepId: configuration.currentStepId,
+      completedStepIds: Object.freeze(configuration.completedStepIds),
+      availableStepIds: Object.freeze(configuration.availableStepIds),
+      state,
+      progressDetail:
+        stage === "Prepared"
+          ? `${acceptedV1} of 2 initial revisions accepted`
+          : configuration.detail,
+      primaryAction,
+      secondaryAction: interrupted ? resetAction() : (configuration.actions[1] ?? null),
+      availableActions: Object.freeze(actions),
+      interruption: interrupted,
+      contextReady,
+      parityPassed: parity,
+      lastResult: receipt,
+    });
+  }
+
+  private async recordReceipt(
+    actionId: DemoActionId,
+    artifactIds: readonly string[],
+    decision: "Accepted" | "Rejected" = "Accepted",
+  ): Promise<void> {
+    const stage = await this.deriveStage();
+    const copy = receiptCopy(actionId, decision);
+    const runtime = this.readRuntime();
+    this.writeRuntime({
+      ...runtime,
+      lastAction: actionId,
+      lastResult: {
+        fixtureVersion: this.manifest.fixtureVersion,
+        actionId,
+        stage,
+        title: copy.title,
+        message: copy.message,
+        facts: copy.facts,
+        artifactIds: Object.freeze(artifactIds.filter(Boolean)),
+        tone: decision === "Rejected" ? "Warning" : "Success",
+      },
+    });
   }
   private impact(): CrossProjectImpactService {
     return new CrossProjectImpactService(this.requiredStore(), {
@@ -855,25 +1017,284 @@ class SeedSession {
   }
 }
 
-function actions(stage: DemoStage): string[] {
+interface GuidedConfiguration {
+  readonly currentStepId: string;
+  readonly completedStepIds: string[];
+  readonly availableStepIds: string[];
+  readonly detail: string;
+  readonly actions: DemoAction[];
+  readonly requiresProposal?: "Initial" | "Successor" | "Restoration" | "Relationship";
+}
+
+export function guidedConfiguration(
+  stage: DemoStage,
+  contextReady: boolean,
+  parity: boolean,
+  identity: { readonly id: string; readonly nodeId: string },
+): GuidedConfiguration {
+  const ids = GUIDED_STEPS.map((step) => step.id);
+  const step = (index: number, actions: DemoAction[], detail: string): GuidedConfiguration => ({
+    currentStepId: ids[index] ?? ids[0] ?? "establish-knowledge",
+    completedStepIds: ids.slice(0, index),
+    availableStepIds: ids.slice(0, index + 1),
+    detail,
+    actions,
+  });
   switch (stage) {
     case "Prepared":
-      return ["Review V1 proposals"];
+      return {
+        ...step(
+          0,
+          [action("review-v1", "Review the next V1 Proposal", "/reviews"), resetAction()],
+          "Establish both V1 revisions",
+        ),
+        requiresProposal: "Initial",
+      };
     case "V1Accepted":
-      return ["Review DependsOn"];
+      return {
+        ...step(
+          1,
+          [
+            action("review-dependency", "Review the DependsOn relationship", "/reviews"),
+            resetAction(),
+          ],
+          "Both projects have Current V1 knowledge",
+        ),
+        requiresProposal: "Relationship",
+      };
     case "DependencyAccepted":
-      return ["Review V2"];
+      return {
+        ...step(
+          2,
+          [action("review-v2", "Review breaking V2", "/reviews"), resetAction()],
+          "The projects are connected",
+        ),
+        requiresProposal: "Successor",
+      };
     case "V2Accepted":
-      return ["Assess V2 impact"];
+      return step(
+        3,
+        [
+          action(
+            "assess-impact",
+            "Create the High impact assessment",
+            "/impact",
+            "Mutation",
+            "/api/demo/assess-impact",
+          ),
+          resetAction(),
+        ],
+        "V2 is Current and the relationship binding is Stale",
+      );
     case "ImpactAssessed":
-      return ["Record rollback"];
+      return step(
+        4,
+        [
+          action(
+            "record-rollback",
+            "Record the rollback",
+            "/impact",
+            "Mutation",
+            "/api/demo/rollback",
+          ),
+          resetAction(),
+        ],
+        "The V2 compatibility impact is High",
+      );
     case "RollbackRecorded":
-      return ["Review V3 restoration"];
+      return {
+        ...step(
+          5,
+          [action("review-v3", "Review restoration V3", "/reviews"), resetAction()],
+          "Rollback is recorded; V2 remains Current until V3 is accepted",
+        ),
+        requiresProposal: "Restoration",
+      };
     case "V3Restored":
-      return ["Build Context Package", "Run MCP proof"];
+      if (contextReady)
+        return step(
+          8,
+          [action("view-mcp-proof", "Verify MCP parity", "/proof"), resetAction()],
+          "Current Context is ready for the real MCP proof",
+        );
+      return step(
+        6,
+        [
+          action(
+            "inspect-temporal",
+            "Compare Current, History, and Planned",
+            `/projects/${identity.id}/nodes/${identity.nodeId}?view=history`,
+          ),
+          action("build-context", "Continue to Context Package", "/context"),
+          resetAction(),
+        ],
+        "Compatibility is restored through a new V3 Revision",
+      );
+    case "Complete":
+      return {
+        ...step(8, [resetAction()], "UI and MCP Context match exactly"),
+        completedStepIds: ids,
+        availableStepIds: ids,
+      };
     default:
-      return ["Reset to Prepared"];
+      return step(0, [resetAction()], parity ? "Demo complete" : "Guided state unavailable");
   }
+}
+
+function action(
+  id: DemoActionId,
+  label: string,
+  href: string,
+  intent: "Navigate" | "Mutation" = "Navigate",
+  endpoint?: string,
+): DemoAction {
+  return Object.freeze({
+    id,
+    label,
+    href,
+    intent,
+    ...(endpoint ? { endpoint } : {}),
+    enabled: true,
+  });
+}
+
+function resetAction(): DemoAction {
+  return action("reset", "Reset to Prepared", "/", "Mutation", "/api/demo/reset");
+}
+
+function receiptCopy(actionId: DemoActionId, decision: "Accepted" | "Rejected") {
+  if (decision === "Rejected")
+    return {
+      title: "Proposal rejected",
+      message:
+        "No canonical Revision or Relationship was created. Reset to resume the guided path.",
+      facts: [{ label: "Knowledge safety", value: "Current knowledge is unchanged" }],
+    };
+  const copies: Record<
+    DemoActionId,
+    { title: string; message: string; facts: { label: string; value: string }[] }
+  > = {
+    "review-v1": {
+      title: "Knowledge accepted",
+      message: "The Proposal, Review Decision, Evidence, and immutable Revision are traceable.",
+      facts: [{ label: "Current", value: "A reviewed V1 Revision" }],
+    },
+    "review-dependency": {
+      title: "Projects connected",
+      message: "The accepted DependsOn relationship preserves both reviewed endpoint Revisions.",
+      facts: [{ label: "Direction", value: "Token Parser DependsOn Token Format" }],
+    },
+    "review-v2": {
+      title: "Breaking revision accepted",
+      message: "Current changed from V1 to V2 while V1 remains preserved in History.",
+      facts: [
+        { label: "Current changed", value: "V1 → V2" },
+        { label: "Cross-project consequence", value: "Relationship binding is Stale" },
+      ],
+    },
+    "assess-impact": {
+      title: "High compatibility impact detected",
+      message: "The consumer still requires customer_id while provider V2 supplies subject_id.",
+      facts: [
+        { label: "Severity", value: "High" },
+        { label: "Observed result", value: "Authentication rejects the token" },
+      ],
+    },
+    "record-rollback": {
+      title: "Rollback recorded",
+      message: "V2 was not deleted and V1 was not reactivated. Restoration now requires review.",
+      facts: [{ label: "Canonical state", value: "V2 remains Current until V3 acceptance" }],
+    },
+    "review-v3": {
+      title: "Compatibility restored",
+      message: "V3 is a new restoration Revision; V1 and V2 remain Historical.",
+      facts: [
+        { label: "Current", value: "V3 Restoration" },
+        { label: "History", value: "V1 → V2 → V3" },
+      ],
+    },
+    "build-context": {
+      title: "Context Package ready",
+      message: "Core selected Current knowledge, the dependency path, Evidence, and budget result.",
+      facts: [{ label: "Temporal safety", value: "V1 and V2 are not Current instructions" }],
+    },
+    "view-mcp-proof": {
+      title: "UI and MCP context match exactly",
+      message: "The normalized read-only MCP result matches direct Core output.",
+      facts: [{ label: "Tool", value: "loxora_get_context" }],
+    },
+    "inspect-temporal": {
+      title: "Temporal views inspected",
+      message: "Current, History, and Planned remain separate.",
+      facts: [],
+    },
+    resume: {
+      title: "Preparation resumed",
+      message: "The missing next artifact was prepared from canonical state.",
+      facts: [],
+    },
+    reset: {
+      title: "Demo reset",
+      message: "The deterministic Prepared state is active.",
+      facts: [],
+    },
+  };
+  return copies[actionId];
+}
+
+export function validateReceipt(
+  receipt: DemoResultReceipt | null,
+  fixtureVersion: string,
+  stage: DemoStage,
+  runtime: RuntimeState,
+): DemoResultReceipt | null {
+  if (!receipt || receipt.fixtureVersion !== fixtureVersion) return null;
+  const allowed: Partial<Record<DemoActionId, readonly DemoStage[]>> = {
+    "review-v1": ["Prepared", "V1Accepted"],
+    "review-dependency": ["DependencyAccepted"],
+    "review-v2": ["V2Accepted"],
+    "assess-impact": ["ImpactAssessed"],
+    "record-rollback": ["RollbackRecorded"],
+    "review-v3": ["V3Restored"],
+    "build-context": ["V3Restored"],
+  };
+  if (!(allowed[receipt.actionId] ?? [receipt.stage]).includes(stage)) return null;
+  const known = new Set(Object.values(runtime.artifactIds));
+  if (receipt.artifactIds.some((id) => !known.has(id))) return null;
+  return receipt;
+}
+
+export function preparedInterruption(acceptedV1: number, initialSubmitted: number): string | null {
+  return acceptedV1 + initialSubmitted < 2
+    ? "A required V1 Proposal was rejected or is missing. Reset restores the guided path."
+    : null;
+}
+
+function proofReceipt(
+  fixtureVersion: string,
+  stage: DemoStage,
+  proofPath: string,
+): DemoResultReceipt | null {
+  if (!existsSync(proofPath)) return null;
+  const proof = JSON.parse(readFileSync(proofPath, "utf8")) as {
+    passed?: boolean;
+    fingerprint?: string;
+  };
+  if (!proof.passed) return null;
+  const copy = receiptCopy("view-mcp-proof", "Accepted");
+  return Object.freeze({
+    fixtureVersion,
+    actionId: "view-mcp-proof",
+    stage,
+    title: copy.title,
+    message: copy.message,
+    facts: Object.freeze([
+      ...copy.facts,
+      { label: "Fingerprint", value: proof.fingerprint ?? "Matched" },
+    ]),
+    artifactIds: Object.freeze([]),
+    tone: "Success",
+  });
 }
 function sanitize(error: unknown): string {
   return error instanceof Error
