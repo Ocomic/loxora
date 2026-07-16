@@ -1,6 +1,6 @@
 # Milestone 6: Final Hackathon Demo Experience
 
-**Status:** Implemented on `agent/milestone-6-demo-experience`
+**Status:** Implemented and merged into `main` — Hackathon demo-ready
 **Decision Owner:** Ocomic
 **Authorization date:** July 15, 2026
 **Scope:** Hackathon MVP Milestone 6 only

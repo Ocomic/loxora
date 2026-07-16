@@ -64,7 +64,7 @@ Before proposing architecture or implementation, read:
 
 Record such ideas in `docs/planning/open-questions.md`.
 
-Milestones 1 through 5 are complete and merged. Milestone 6 is explicitly authorized by Ocomic on July 15, 2026 for the bounded final local demo described in `docs/implementation/MILESTONE-6.md`: curated fixtures, deterministic reset, minimal non-canonical Planned Knowledge, Review Inbox, the local `@loxora/demo` application, one Playwright flow, and real Context/MCP parity. Export, generalized import, additional MCP tools, authentication, production permissions, synchronization, search, embeddings, graph visualization, persistent Context Packages, and production deployment remain outside that authorization.
+Milestones 1 through 6 are complete and merged into `main`. Milestone 6 was authorized by Ocomic on July 15, 2026 and delivered the bounded final local demo described in `docs/implementation/MILESTONE-6.md`: curated fixtures, deterministic reset, minimal non-canonical Planned Knowledge, Review Inbox, the local `@loxora/demo` application, one Playwright flow, and real Context/MCP parity. Export, generalized import, additional MCP tools, authentication, production permissions, synchronization, search, embeddings, graph visualization, persistent Context Packages, and production deployment remain outside the completed Hackathon MVP scope.
 
 ## Knowledge evolution
 
