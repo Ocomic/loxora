@@ -247,7 +247,7 @@ export class DemoCoordinator {
       "review-knowledge",
     );
     if (decision === "Accepted") {
-      await this.resume();
+      await this.resumeAfterCanonicalTransition();
       if (result.proposal.kind === "Restoration") await this.assessImpact(false);
     }
     await this.recordReceipt(
@@ -286,7 +286,7 @@ export class DemoCoordinator {
     });
     if (result.relationship)
       this.mergeArtifacts({ relationship: result.relationship.id }, "review-relationship");
-    if (decision === "Accepted") await this.resume();
+    if (decision === "Accepted") await this.resumeAfterCanonicalTransition();
     await this.recordReceipt(
       "review-dependency",
       result.relationship ? [result.relationship.id] : [],
@@ -375,12 +375,18 @@ export class DemoCoordinator {
       ].filter((id) => id.startsWith("12")) as EvidenceReferenceId[],
     });
     this.mergeArtifacts({ rollbackEvent: result.rollbackEvent.id }, "rollback");
-    await this.resume();
+    await this.resumeAfterCanonicalTransition();
     await this.recordReceipt("record-rollback", [result.rollbackEvent.id]);
     return result;
   }
 
   public async resume(): Promise<DemoStatus> {
+    await this.prepareNextArtifact();
+    this.lastFailure = null;
+    return this.status();
+  }
+
+  private async prepareNextArtifact(): Promise<void> {
     const session = new SeedSession(
       this.requiredStore(),
       this.manifest,
@@ -390,7 +396,15 @@ export class DemoCoordinator {
     await session.resumeOne();
     this.mergeArtifacts(session.artifactIds, "resume");
     await this.rebuild();
-    return this.status();
+  }
+
+  private async resumeAfterCanonicalTransition(): Promise<void> {
+    try {
+      await this.prepareNextArtifact();
+      this.lastFailure = null;
+    } catch (error) {
+      this.lastFailure = `Next artifact preparation failed: ${sanitize(error)}`;
+    }
   }
 
   public async buildContextPackage(input?: Record<string, unknown>): Promise<ContextPackage> {

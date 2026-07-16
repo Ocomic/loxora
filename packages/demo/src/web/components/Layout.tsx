@@ -1,5 +1,6 @@
 import { type PropsWithChildren, useId } from "react";
 import { NavLink } from "react-router-dom";
+import { BrandLogo } from "./BrandLogo.js";
 import { DemoActionButton, withMode } from "./DemoActionButton.js";
 import { DemoStateProvider, useDemoState } from "./DemoState.js";
 import { GuidancePanel } from "./GuidancePanel.js";
@@ -22,8 +23,8 @@ function DemoShell({ children }: PropsWithChildren) {
         Skip to content
       </a>
       <header className="topbar">
-        <NavLink to={withMode("/", mode)} className="brand">
-          Loxora
+        <NavLink to={withMode("/", mode)} className="brand" aria-label="Loxora home">
+          <BrandLogo />
         </NavLink>
         <fieldset className="mode-switch">
           <legend className="sr-only">Demo mode</legend>

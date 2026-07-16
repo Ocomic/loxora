@@ -47,6 +47,13 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
 
   await acceptFirst(page);
   await expect(page.getByText("The projects are connected", { exact: true })).toBeVisible();
+  await expect(page.locator('.guided-stepper li[aria-current="step"]')).toContainText(
+    "Introduce a breaking change",
+  );
+  await expect(page.locator(".result-summary")).toHaveCSS("display", "block");
+  expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
+    await page.locator("body").evaluate((element) => element.clientWidth),
+  );
   await acceptFirst(page);
   await expect(page.getByRole("heading", { name: "Breaking revision accepted" })).toBeVisible();
   await expect(page.getByText("V1 → V2", { exact: true })).toBeVisible();

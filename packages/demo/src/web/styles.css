@@ -1,25 +1,28 @@
 :root {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #f2f6fb;
-  background: #07111c;
+  color: #f5f7ff;
+  background: #030716;
   font-synthesis: none;
-  --bg-canvas: #07111c;
-  --bg-subtle: #0d1a29;
-  --surface: #122235;
-  --surface-raised: #182c42;
-  --text-primary: #f2f6fb;
-  --text-secondary: #a9b7c8;
-  --border: #2d455f;
-  --focus: #77e0d1;
-  --current: #35c6ae;
+  --bg-canvas: #030716;
+  --bg-subtle: #071127;
+  --surface: #0b1730;
+  --surface-raised: #112344;
+  --text-primary: #f5f7ff;
+  --text-secondary: #b1bed8;
+  --border: #294574;
+  --focus: #22dff6;
+  --current: #20d9e8;
   --historical: #a8b3c2;
-  --planned: #c4a2ff;
+  --planned: #a985ff;
   --warning: #f2b84b;
   --impact-high: #ff8061;
   --danger: #ff7185;
-  --evidence: #76b6ff;
-  --success: #5ada9a;
+  --evidence: #55b9ff;
+  --success: #35e0bd;
+  --brand-cyan: #16e7ff;
+  --brand-blue: #1677ff;
+  --brand-violet: #6d21ff;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
@@ -35,7 +38,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: radial-gradient(circle at 15% -10%, #183a57 0, var(--bg-canvas) 38rem);
+  background:
+    radial-gradient(circle at 12% -8%, #123b75 0, transparent 34rem),
+    radial-gradient(circle at 88% 5%, #32156b66 0, transparent 28rem), var(--bg-canvas);
   color: var(--text-primary);
 }
 button,
@@ -49,12 +54,12 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 a {
-  color: #8fe6d8;
+  color: #61dfff;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
 }
 a:hover {
-  color: #b7fff4;
+  color: #a5f3ff;
 }
 :focus-visible {
   outline: 3px solid var(--focus);
@@ -67,7 +72,7 @@ a:hover {
   top: -4rem;
   z-index: 20;
   background: var(--focus);
-  color: #041b1a;
+  color: #03121e;
   padding: 0.75rem 1rem;
   font-weight: 800;
 }
@@ -83,7 +88,7 @@ a:hover {
   align-items: center;
   gap: 1rem;
   padding: 0.65rem 3vw;
-  background: #07111cf2;
+  background: #030716f2;
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(14px);
 }
@@ -94,6 +99,23 @@ a:hover {
   letter-spacing: -0.03em;
   margin-right: auto;
   text-decoration: none;
+}
+.brand-lockup {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.6rem;
+}
+.brand-mark {
+  display: block;
+  filter: drop-shadow(0 0 10px #1677ff66);
+  height: 2.6rem;
+  width: 2.9rem;
+}
+.brand-wordmark {
+  color: #fff;
+  font-size: 1.42rem;
+  letter-spacing: -0.045em;
+  text-shadow: 0 0 18px #1677ff55;
 }
 .mode-switch {
   display: inline-flex;
@@ -111,7 +133,7 @@ a:hover {
   cursor: pointer;
 }
 .mode-switch button[aria-pressed="true"] {
-  background: var(--surface-raised);
+  background: linear-gradient(135deg, #123e68, #25205d);
   color: var(--text-primary);
 }
 .stage-chip {
@@ -151,7 +173,7 @@ a:hover {
   top: 64px;
   z-index: 8;
   overflow-x: auto;
-  background: #0a1724f5;
+  background: #061126f5;
   border-bottom: 1px solid var(--border);
 }
 .guided-stepper ol {
@@ -194,9 +216,9 @@ a:hover {
   color: var(--text-primary);
 }
 .guided-stepper li.current > span {
-  background: var(--current);
-  border-color: var(--current);
-  color: #031b18;
+  background: linear-gradient(135deg, var(--brand-cyan), var(--brand-blue));
+  border-color: var(--brand-cyan);
+  color: #020817;
   font-weight: 900;
 }
 .app-layout {
@@ -383,9 +405,9 @@ p {
   cursor: pointer;
 }
 .button.primary {
-  background: var(--current);
-  color: #041c19;
-  box-shadow: 0 8px 25px #35c6ae26;
+  background: linear-gradient(135deg, var(--brand-cyan), #27c9f5 48%, var(--brand-blue));
+  color: #020817;
+  box-shadow: 0 8px 28px #1677ff38;
 }
 .button.secondary {
   background: var(--surface-raised);
@@ -847,7 +869,11 @@ pre {
   color: var(--danger);
 }
 .result-summary {
+  display: block;
   margin-top: 2rem;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .state-panel {
   display: flex;
