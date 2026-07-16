@@ -4,7 +4,11 @@ export function ResultSummary() {
   const receipt = useDemoState().status?.guided.lastResult;
   if (!receipt) return null;
   return (
-    <output className={`result-summary ${receipt.tone.toLowerCase()}`}>
+    <section
+      className={`result-summary ${receipt.tone.toLowerCase()}`}
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <p className="eyebrow">Result confirmed from real state</p>
       <h2>{receipt.title}</h2>
       <p>{receipt.message}</p>
@@ -18,6 +22,6 @@ export function ResultSummary() {
           ))}
         </dl>
       ) : null}
-    </output>
+    </section>
   );
 }

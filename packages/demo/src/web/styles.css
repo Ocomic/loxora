@@ -88,9 +88,8 @@ a:hover {
   align-items: center;
   gap: 1rem;
   padding: 0.65rem 3vw;
-  background: #030716f2;
+  background: #030716;
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(14px);
 }
 .brand {
   color: var(--text-primary);
@@ -103,19 +102,11 @@ a:hover {
 .brand-lockup {
   align-items: center;
   display: inline-flex;
-  gap: 0.6rem;
 }
-.brand-mark {
+.brand-logo-image {
   display: block;
-  filter: drop-shadow(0 0 10px #1677ff66);
-  height: 2.6rem;
-  width: 2.9rem;
-}
-.brand-wordmark {
-  color: #fff;
-  font-size: 1.42rem;
-  letter-spacing: -0.045em;
-  text-shadow: 0 0 18px #1677ff55;
+  height: auto;
+  width: 9.25rem;
 }
 .mode-switch {
   display: inline-flex;
@@ -234,6 +225,7 @@ main {
 }
 .guidance-panel {
   align-self: start;
+  contain: paint;
   position: sticky;
   top: 132px;
 }
@@ -982,6 +974,9 @@ pre {
   }
   .mode-switch {
     order: 2;
+  }
+  .brand-logo-image {
+    width: 8rem;
   }
   .stage-chip {
     order: 4;

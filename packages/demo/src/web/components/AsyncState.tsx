@@ -1,9 +1,9 @@
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
   return (
-    <output className="state-panel">
+    <div className="state-panel" aria-live="polite" aria-atomic="true">
       <span className="spinner" aria-hidden="true" />
       {label}
-    </output>
+    </div>
   );
 }
 export function ErrorState({ message, retry }: { message: string; retry?: () => void }) {

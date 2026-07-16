@@ -8,6 +8,13 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
 }) => {
   await request.post("/api/demo/reset", { data: { stage: "Prepared" } });
   await page.goto("/?mode=guided");
+  const logo = page.locator(".brand-logo-image");
+  await expect(logo).toHaveAttribute("src", "/loxora-logo.png");
+  await expect
+    .poll(() =>
+      logo.evaluate((image: HTMLImageElement) => `${image.naturalWidth}x${image.naturalHeight}`),
+    )
+    .toBe("1080x420");
   await expect(
     page.getByRole("heading", { name: "Projects should never lose their memory." }),
   ).toBeVisible();
@@ -57,6 +64,11 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await acceptFirst(page);
   await expect(page.getByRole("heading", { name: "Breaking revision accepted" })).toBeVisible();
   await expect(page.getByText("V1 → V2", { exact: true })).toBeVisible();
+  await expect(page.locator("output")).toHaveCount(0);
+  await expect(page.locator(".topbar")).toHaveCSS("backdrop-filter", "none");
+  expect(await page.locator(".result-summary").evaluate((element) => element.tagName)).toBe(
+    "SECTION",
+  );
 
   await page.getByRole("link", { name: "Impact" }).click();
   await page
@@ -104,6 +116,7 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   const summary = page.locator(".context-result");
   await expect(summary.getByRole("heading", { name: "Context Package ready" })).toBeVisible();
   await expect(summary).toHaveCSS("display", "block");
+  expect(await summary.evaluate((element) => element.tagName)).toBe("SECTION");
   await expect(page.getByText(/This package was built by Core/)).toBeVisible();
   await expect(page.getByText(/Complete the server-provided lifecycle steps/)).toHaveCount(0);
   await expect(summary.locator(".summary-metrics")).toBeVisible();

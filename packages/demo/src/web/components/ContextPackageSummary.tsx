@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { EvidenceSummary } from "./EvidenceSummary.js";
 import { TechnicalDetails } from "./TechnicalDetails.js";
 import { TemporalBadge } from "./TemporalBadge.js";
@@ -35,10 +36,11 @@ export interface ContextPackageLike {
 
 export function ContextPackageSummary({ value }: { value: ContextPackageLike }) {
   const assessments = value.entries.filter((entry) => entry.impactSeverity).length;
+  const headingId = useId();
   return (
-    <output className="context-result">
+    <section className="context-result" aria-labelledby={headingId}>
       <p className="eyebrow">Core result</p>
-      <h2>Context Package ready</h2>
+      <h2 id={headingId}>Context Package ready</h2>
       <div className="summary-metrics">
         <strong>
           {value.entries.length}
@@ -105,7 +107,7 @@ export function ContextPackageSummary({ value }: { value: ContextPackageLike }) 
         <p className="mono">sha256: {value.fingerprint}</p>
         <pre>{JSON.stringify(value, null, 2)}</pre>
       </TechnicalDetails>
-    </output>
+    </section>
   );
 }
 
