@@ -815,6 +815,12 @@ pre {
 .parity-result {
   margin-top: 1.5rem;
 }
+.context-result {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .budget-summary {
   justify-content: space-between;
   background: var(--bg-subtle);

@@ -45,7 +45,7 @@ The browser presents nine guided steps while canonical eligibility remains serve
 
 The local UI now uses semantic tokens for Current, Historical, Planned, Warning, High Impact, Error, Evidence, and Success. Human labels lead; identifiers and normalized JSON remain in technical disclosures. Keyboard-visible focus, a skip link, semantic controls, reduced-motion behavior, responsive guidance, linked breadcrumbs, and text-plus-color state labels support reliable presentation at 1920×1080, 1440×900, and 1280×720.
 
-The header uses a compact circuit-elephant brand mark and the cyan, blue, violet, and near-black palette of the Loxora identity. Result Receipts are block-level presentation surfaces so successful review feedback cannot fragment the page layout. Follow-up fixture preparation is isolated from the accepted canonical transition: if preparation fails after acceptance, canon remains accepted and the Guided UI offers safe Resume recovery instead of misreporting the review as failed.
+The header uses a compact circuit-elephant brand mark and the cyan, blue, violet, and near-black palette of the Loxora identity. Result Receipts and Core Context results are block-level presentation surfaces so successful output cannot fragment the page layout. A completed Context build is distinguished from an unavailable future action, and reset invalidates any browser-local result that is no longer backed by server Context readiness. Follow-up fixture preparation is isolated from the accepted canonical transition: if preparation fails after acceptance, canon remains accepted and the Guided UI offers safe Resume recovery instead of misreporting the review as failed.
 
 ## Preserved behavior
 

@@ -103,8 +103,17 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await page.getByRole("button", { name: "Build Current Context Package" }).click();
   const summary = page.locator(".context-result");
   await expect(summary.getByRole("heading", { name: "Context Package ready" })).toBeVisible();
+  await expect(summary).toHaveCSS("display", "block");
+  await expect(page.getByText(/This package was built by Core/)).toBeVisible();
+  await expect(page.getByText(/Complete the server-provided lifecycle steps/)).toHaveCount(0);
   await expect(summary.locator(".summary-metrics")).toBeVisible();
   await expect(summary.locator(".technical-details")).toBeVisible();
+  expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
+    await page.locator("body").evaluate((element) => element.clientWidth),
+  );
+  await page.reload();
+  await expect(page.getByText(/prepared Context request is ready/)).toBeVisible();
+  await expect(page.getByText(/Complete the server-provided lifecycle steps/)).toHaveCount(0);
 
   execFileSync(
     process.execPath,

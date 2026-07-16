@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { post } from "../api.js";
 import {
   ContextPackageSummary,
@@ -12,6 +12,10 @@ export function ContextScreen() {
   const [result, setResult] = useState<ContextPackageLike | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const contextReady = status?.guided.contextReady ?? false;
+  useEffect(() => {
+    if (!contextReady) setResult(null);
+  }, [contextReady]);
   if (!status) return <LoadingState label="Loading prepared Context request…" />;
   const action = status.guided.availableActions.find((item) => item.id === "build-context");
   const request = status.preparedContextRequest;
@@ -60,6 +64,12 @@ export function ContextScreen() {
           >
             {pending ? "Building from Core…" : "Build Current Context Package"}
           </button>
+        ) : contextReady ? (
+          <p className="callout success">
+            {result
+              ? "This package was built by Core. Continue to the read-only MCP parity proof."
+              : "The prepared Context request is ready for the read-only MCP parity proof."}
+          </p>
         ) : (
           <p className="callout warning">
             Complete the server-provided lifecycle steps before building Context.
