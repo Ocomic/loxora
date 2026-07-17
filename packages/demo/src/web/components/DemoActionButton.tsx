@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { DemoAction } from "../../shared/contracts.js";
 import { post } from "../api.js";
 import { useDemoState } from "./DemoState.js";
@@ -12,6 +12,7 @@ export function DemoActionButton({
   secondary?: boolean;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { refresh, mode, mutationPending, setMutationPending } = useDemoState();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +20,15 @@ export function DemoActionButton({
     if (!action.enabled || pending || mutationPending) return;
     if (action.intent === "Navigate") {
       if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-      navigate(withMode(action.href, mode));
+      const targetHref = withMode(action.href, mode);
+      const targetUrl = new URL(targetHref, window.location.origin);
+      if (`${location.pathname}${location.search}` === `${targetUrl.pathname}${targetUrl.search}`) {
+        const target = document.querySelector<HTMLElement>("[data-guided-action-target='true']");
+        target?.scrollIntoView({ behavior: "auto", block: "start" });
+        target?.focus({ preventScroll: true });
+        return;
+      }
+      navigate(targetHref);
       return;
     }
     if (!action.endpoint) return;

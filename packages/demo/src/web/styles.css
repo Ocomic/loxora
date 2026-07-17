@@ -724,6 +724,13 @@ pre {
 .proposal-card {
   border-left: 4px solid var(--evidence);
 }
+.proposal-card[data-guided-action-target="true"] {
+  scroll-margin-top: 7rem;
+}
+.proposal-card[data-guided-action-target="true"]:focus {
+  outline: 3px solid var(--current);
+  outline-offset: 4px;
+}
 .proposal-summary {
   font-size: 1.05rem;
   color: var(--text-secondary);

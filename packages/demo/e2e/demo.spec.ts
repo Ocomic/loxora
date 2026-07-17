@@ -44,6 +44,16 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await expect(
     page.getByRole("button", { name: "Review the next V1 Proposal" }).last(),
   ).toBeVisible();
+  await page
+    .locator(".result-summary")
+    .getByRole("button", { name: "Review the next V1 Proposal" })
+    .click();
+  await expect(page.locator("[data-guided-action-target='true']")).toBeFocused();
+  await expect(
+    page.locator("[data-guided-action-target='true']").getByRole("button", {
+      name: "Accept and continue",
+    }),
+  ).toBeVisible();
   await page.reload();
   await expect(
     page
@@ -55,6 +65,13 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
     page.getByText("Both projects have Current V1 knowledge", { exact: true }),
   ).toBeVisible();
 
+  await page
+    .locator(".result-summary")
+    .getByRole("button", { name: "Review the DependsOn relationship" })
+    .click();
+  const relationshipReview = page.locator("[data-guided-action-target='true']");
+  await expect(relationshipReview).toBeFocused();
+  await expect(relationshipReview).toContainText("Cross-project dependency");
   await acceptFirst(page);
   await expect(page.getByText("The projects are connected", { exact: true })).toBeVisible();
   await expect(page.locator('.guided-stepper li[aria-current="step"]')).toContainText(
@@ -64,6 +81,10 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
     await page.locator("body").evaluate((element) => element.clientWidth),
   );
+  await page.locator(".result-summary").getByRole("button", { name: "Review breaking V2" }).click();
+  const breakingReview = page.locator("[data-guided-action-target='true']");
+  await expect(breakingReview).toBeFocused();
+  await expect(breakingReview).toContainText("Breaking contract change");
   await acceptFirst(page);
   await expect(page.getByRole("heading", { name: "Breaking revision accepted" })).toBeVisible();
   await expect(page.getByText("V1 → V2", { exact: true })).toBeVisible();

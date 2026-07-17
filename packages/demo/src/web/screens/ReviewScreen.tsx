@@ -84,8 +84,14 @@ export function ReviewScreen() {
         />
       ) : null}
       <section className="stack review-list">
-        {data?.map((item) => (
-          <ProposalCard item={item} pending={pending === item.id} decide={decide} key={item.id} />
+        {data?.map((item, index) => (
+          <ProposalCard
+            item={item}
+            pending={pending === item.id}
+            primary={index === 0}
+            decide={decide}
+            key={item.id}
+          />
         ))}
       </section>
     </>
@@ -95,10 +101,12 @@ export function ReviewScreen() {
 function ProposalCard({
   item,
   pending,
+  primary,
   decide,
 }: {
   item: InboxItem;
   pending: boolean;
+  primary: boolean;
   decide: (item: InboxItem, decision: "Accepted" | "Rejected") => Promise<void>;
 }) {
   const { mutationPending } = useDemoState();
@@ -107,7 +115,11 @@ function ProposalCard({
   const kind = relation ? "Relationship" : (proposal?.kind ?? "Knowledge");
   const copy = proposalCopy(kind);
   return (
-    <article className="card proposal-card">
+    <article
+      className="card proposal-card"
+      data-guided-action-target={primary ? "true" : undefined}
+      tabIndex={primary ? -1 : undefined}
+    >
       <div className="row">
         <span className="status-badge evidence">{copy.type}</span>
         <TemporalBadge value="Proposed" />
