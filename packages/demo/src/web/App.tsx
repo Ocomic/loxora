@@ -10,6 +10,7 @@ import { ProjectScreen } from "./screens/ProjectScreen.js";
 import { ProofScreen } from "./screens/ProofScreen.js";
 import { ReviewScreen } from "./screens/ReviewScreen.js";
 import { SpaceScreen } from "./screens/SpaceScreen.js";
+import { TemporalComparisonScreen } from "./screens/TemporalComparisonScreen.js";
 import { SourceScreen } from "./screens/SourceScreen.js";
 export function App() {
   return (
@@ -20,6 +21,7 @@ export function App() {
         <Route path="/impact" element={<ImpactScreen />} />
         <Route path="/context" element={<ContextScreen />} />
         <Route path="/proof" element={<ProofScreen />} />
+        <Route path="/guided/temporal" element={<TemporalComparisonScreen />} />
         <Route path="/projects/:id" element={<ProjectScreen />} />
         <Route path="/projects/:projectId/spaces/:spaceId" element={<SpaceScreen />} />
         <Route

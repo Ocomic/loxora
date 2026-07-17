@@ -59,8 +59,11 @@ Approval of setup does not authorize Hackathon runtime implementation.
 - **Accepted architecture:** RFC-007, ADR-001, and ADR-002 for the Hackathon MVP only
 - **Authorized implementation:** only work explicitly named by a milestone task
 - **Latest completed authorization:** Milestone 6 final local demo experience, authorized by Ocomic on July 15, 2026 and merged into `main`
-- **Latest bounded authorization:** Milestone 6.1 Guided Demo UX and visual polish, authorized by Ocomic on July 16, 2026; implemented locally, presentation-only, and not yet published
+- **Latest completed authorization:** Milestone 6.1 Guided Demo UX and visual polish, authorized by Ocomic on July 16, 2026 and merged into `main`
+- **Latest bounded authorization:** Milestone 6.2 Jury Flow and general-audience clarity, authorized by Ocomic on July 17, 2026; implemented and merged into `main`, presentation-only
 
 This record closes the pre-Hackathon boundary. Milestones 1–6 are complete and merged into `main`. Milestone 6 delivered only the curated two-Project demo, deterministic reset, explicit non-canonical Planned Knowledge, Review Inbox, local loopback HTTP/UI, browser proof, and real single-tool MCP parity. It did not authorize or implement export, generalized import, additional MCP tools, authentication, production permissions, synchronization, search, embeddings, graph visualization, persistent Context Packages, or production deployment.
 
 Milestone 6.1 improves only how that behavior is explained and navigated. Presentation metadata cannot authorize canonical operations.
+
+Milestone 6.2 preserves the same boundary. Its Temporal Review receipt and Result Receipts are operational presentation metadata that must be revalidated against canon and cannot authorize canonical operations.

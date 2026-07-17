@@ -18,15 +18,15 @@ export function TemporalLegend() {
     <aside className="temporal-legend" aria-label="Temporal state legend">
       <div>
         <TemporalBadge value="Current" />
-        <span>Active project understanding</span>
+        <span>Currently valid knowledge</span>
       </div>
       <div>
         <TemporalBadge value="Historical" />
-        <span>Preserved previous understanding</span>
+        <span>Earlier version preserved for traceability</span>
       </div>
       <div>
         <TemporalBadge value="Planned" />
-        <span>Intended future change</span>
+        <span>Planned change, never current guidance</span>
       </div>
     </aside>
   );

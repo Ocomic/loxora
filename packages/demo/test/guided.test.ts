@@ -3,11 +3,14 @@ import test from "node:test";
 import {
   guidedConfiguration,
   preparedInterruption,
+  temporalReviewMatches,
   validateReceipt,
 } from "../src/orchestration/coordinator.js";
-import type { DemoResultReceipt, RuntimeState } from "../src/shared/contracts.js";
-
-const identity = { id: "identity", nodeId: "token-format" };
+import type {
+  DemoResultReceipt,
+  RuntimeState,
+  TemporalReviewReceipt,
+} from "../src/shared/contracts.js";
 
 test("maps every canonical stage to a bounded guided step and server action", () => {
   const expected = [
@@ -18,17 +21,46 @@ test("maps every canonical stage to a bounded guided step and server action", ()
     ["ImpactAssessed", "record-rollback", "record-rollback"],
     ["RollbackRecorded", "restore-knowledge", "review-v3"],
     ["V3Restored", "compare-time", "inspect-temporal"],
-    ["Complete", "verify-mcp", "reset"],
+    ["Complete", "compare-time", "inspect-temporal"],
   ] as const;
   for (const [stage, step, action] of expected) {
-    const result = guidedConfiguration(stage, false, stage === "Complete", identity);
+    const result = guidedConfiguration(stage, false, false, stage === "Complete");
     assert.equal(result.currentStepId, step);
     assert.equal(result.actions[0]?.id, action);
-    assert.equal(result.availableStepIds.includes("verify-mcp"), stage === "Complete");
+    assert.equal(result.availableStepIds.includes("verify-mcp"), false);
   }
-  const contextReady = guidedConfiguration("V3Restored", true, false, identity);
+  const temporalReady = guidedConfiguration("V3Restored", true, false, false);
+  assert.equal(temporalReady.currentStepId, "build-context");
+  assert.equal(temporalReady.actions[0]?.id, "build-context");
+  const contextReady = guidedConfiguration("V3Restored", true, true, false);
   assert.equal(contextReady.currentStepId, "verify-mcp");
   assert.equal(contextReady.actions[0]?.id, "view-mcp-proof");
+  const complete = guidedConfiguration("Complete", true, true, true);
+  assert.equal(complete.currentStepId, "verify-mcp");
+  assert.equal(complete.actions[0]?.id, "reset");
+  assert.deepEqual(complete.availableStepIds, complete.completedStepIds);
+});
+
+test("Temporal review presentation receipt requires the exact canonical artifacts", () => {
+  const receipt: TemporalReviewReceipt = {
+    fixtureVersion: "fixture-v1",
+    projectId: "project",
+    nodeId: "node",
+    revisionIds: ["v1", "v2", "v3"],
+    plannedKnowledgeId: "plan",
+    reviewedAt: "2026-07-17T09:00:00.000Z",
+  };
+  assert.equal(
+    temporalReviewMatches(receipt, { ...receipt, reviewedAt: "2026-07-17T10:00:00.000Z" }),
+    true,
+  );
+  assert.equal(
+    temporalReviewMatches(receipt, { ...receipt, revisionIds: ["v1", "v2", "v4"] }),
+    false,
+  );
+  assert.equal(temporalReviewMatches(receipt, { ...receipt, plannedKnowledgeId: "other" }), false);
+  assert.equal(temporalReviewMatches(receipt, { ...receipt, fixtureVersion: "fixture-v2" }), false);
+  assert.equal(temporalReviewMatches(null, receipt), false);
 });
 
 test("Prepared guidance distinguishes zero, one, two, and interrupted V1 states", () => {

@@ -7,6 +7,7 @@ import { RelationshipCard } from "../components/RelationshipCard.js";
 export function HomeScreen() {
   const { status: data, error, refresh, mode } = useDemoState();
   const projectsHeadingId = useId();
+  const novelHeadingId = useId();
   if (error) return <ErrorState message={error} retry={() => void refresh()} />;
   if (!data) return <LoadingState label="Loading the local demo…" />;
   return (
@@ -59,6 +60,38 @@ export function HomeScreen() {
             </article>
           ))}
         </div>
+      </section>
+      <section className="novel-preview" aria-labelledby={novelHeadingId}>
+        <div>
+          <p className="eyebrow">Concept preview · not a second implemented workflow</p>
+          <h2 id={novelHeadingId}>Beyond software: continuity for novels</h2>
+          <p>
+            The same lifecycle can keep a story bible trustworthy while characters, world rules, and
+            chapters evolve.
+          </p>
+        </div>
+        <dl className="novel-mapping">
+          <div>
+            <dt>Project</dt>
+            <dd>Novel or series</dd>
+          </div>
+          <div>
+            <dt>Currently valid</dt>
+            <dd>Story canon</dd>
+          </div>
+          <div>
+            <dt>Earlier versions</dt>
+            <dd>Previous drafts</dd>
+          </div>
+          <div>
+            <dt>Planned changes</dt>
+            <dd>Future plot direction</dd>
+          </div>
+          <div>
+            <dt>Impact</dt>
+            <dd>Affected chapters and characters</dd>
+          </div>
+        </dl>
       </section>
       <details className="diagnostics">
         <summary>Local demo diagnostics</summary>

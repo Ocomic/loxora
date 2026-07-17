@@ -1,5 +1,5 @@
-import { type PropsWithChildren, useId } from "react";
-import { NavLink } from "react-router-dom";
+import { type PropsWithChildren, useEffect, useId, useLayoutEffect } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { BrandLogo } from "./BrandLogo.js";
 import { DemoActionButton, withMode } from "./DemoActionButton.js";
 import { DemoStateProvider, useDemoState } from "./DemoState.js";
@@ -9,9 +9,41 @@ import { ResultSummary } from "./ResultSummary.js";
 export function Layout({ children }: PropsWithChildren) {
   return (
     <DemoStateProvider>
+      <ScrollToTop />
       <DemoShell>{children}</DemoShell>
     </DemoStateProvider>
   );
+}
+
+function ScrollToTop() {
+  const location = useLocation();
+  useEffect(() => {
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    return () => {
+      window.history.scrollRestoration = previous;
+    };
+  }, []);
+  return <RouteScrollReset key={`${location.pathname}${location.search}`} />;
+}
+
+function RouteScrollReset() {
+  useLayoutEffect(() => {
+    const previousBehavior = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = "auto";
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo(0, 0);
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.style.scrollBehavior = previousBehavior;
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.documentElement.style.scrollBehavior = previousBehavior;
+    };
+  }, []);
+  return null;
 }
 
 function DemoShell({ children }: PropsWithChildren) {
@@ -41,7 +73,7 @@ function DemoShell({ children }: PropsWithChildren) {
         </fieldset>
         <div className="stage-chip">
           <span>Canonical stage</span>
-          <strong>{status?.stage ?? "Loading"}</strong>
+          <strong>{humanStage(status?.stage)}</strong>
         </div>
         {status ? (
           <DemoActionButton
@@ -81,4 +113,18 @@ function DemoShell({ children }: PropsWithChildren) {
       </div>
     </>
   );
+}
+
+function humanStage(stage: string | undefined): string {
+  const labels: Record<string, string> = {
+    Prepared: "Prepared for review",
+    V1Accepted: "Both V1 revisions accepted",
+    DependencyAccepted: "Projects connected",
+    V2Accepted: "Breaking V2 is current",
+    ImpactAssessed: "High impact assessed",
+    RollbackRecorded: "Rollback recorded",
+    V3Restored: "Compatibility restored",
+    Complete: "Demo proof complete",
+  };
+  return stage ? (labels[stage] ?? stage) : "Loading";
 }

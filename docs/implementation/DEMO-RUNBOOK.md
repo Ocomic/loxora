@@ -23,11 +23,13 @@ The server derives progress from real state. The browser never enables a canonic
 | 4. Assess cross-project impact | Create Assessment | High impact, Relationship Stale, Assessment Fresh |
 | 5. Record rollback | Record Rollback Event | V2 preserved; V1 not reactivated |
 | 6. Restore compatible knowledge | Accept V3 | V3 Current; V1/V2 Historical |
-| 7. Compare time | Open Node temporal views | Current, History, and Deferred Planned remain separate |
-| 8. Build Context | Build prepared Current request | Human summary, V3 dependency bundle, budget result |
+| 7. Compare time | Open the Guided temporal comparison and confirm it | Revalidated Current, V1→V2→V3 History, and Deferred Planned remain separate |
+| 8. Build Context | Follow the newly available Context action | Human summary, V3 dependency bundle, historical exclusion, budget result |
 | 9. Verify MCP | Run proof command | Exact normalized UI/Core/MCP match |
 
 Explore mode remains available throughout. It changes navigation only. Returning to Guided mode uses the server-derived current step.
+
+Each successful result includes the next server-authorized action. Step 8 cannot appear until the server has revalidated the exact V3 Current revision, the complete V1→V2→V3 lineage, the Deferred plan, and the fixture version.
 
 ## MCP proof
 
@@ -58,6 +60,8 @@ npm run demo:mcp:proof
 ```
 
 Verify at 1920×1080, 1440×900, and 1280×720: no horizontal scrolling, visible primary action, keyboard focus, temporal text labels, one-viewport High Impact, Context summary before JSON, and understandable parity.
+
+For a jury run, execute the MCP proof once before presenting and leave its verified receipt available. Repeat the command live only when requested.
 
 ## Screenshot checklist
 

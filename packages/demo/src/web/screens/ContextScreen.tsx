@@ -8,7 +8,7 @@ import { useDemoState } from "../components/DemoState.js";
 import { LoadingState } from "../components/AsyncState.js";
 
 export function ContextScreen() {
-  const { status, refresh } = useDemoState();
+  const { status, refresh, mutationPending, setMutationPending } = useDemoState();
   const [result, setResult] = useState<ContextPackageLike | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,9 +20,10 @@ export function ContextScreen() {
   const action = status.guided.availableActions.find((item) => item.id === "build-context");
   const request = status.preparedContextRequest;
   const build = async () => {
-    if (!action?.enabled) return;
+    if (!action?.enabled || mutationPending) return;
     try {
       setPending(true);
+      setMutationPending(true);
       setError(null);
       setResult(await post<ContextPackageLike>("/api/context-packages", request));
       await refresh();
@@ -31,6 +32,7 @@ export function ContextScreen() {
       await refresh();
     } finally {
       setPending(false);
+      setMutationPending(false);
     }
   };
   return (
@@ -59,7 +61,7 @@ export function ContextScreen() {
           <button
             className="button primary"
             type="button"
-            disabled={pending}
+            disabled={pending || mutationPending}
             onClick={() => void build()}
           >
             {pending ? "Building from Core…" : "Build Current Context Package"}
@@ -82,7 +84,7 @@ export function ContextScreen() {
         </p>
       ) : null}
       {result ? (
-        <ContextPackageSummary value={result} />
+        <ContextPackageSummary value={result} narrative={status.guided.contextNarrative} />
       ) : (
         <p className="callout neutral">
           The human-readable package summary will appear before fingerprints and normalized JSON.

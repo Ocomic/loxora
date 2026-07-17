@@ -11,7 +11,7 @@ export function GuidancePanel() {
   const content = (
     <div className="guidance-content">
       <p className="eyebrow">
-        Step {step.number} of {GUIDED_STEPS.length}
+        Phase {guided.currentPhase.number} of 3 · Step {step.number} of {GUIDED_STEPS.length}
       </p>
       <h2>{step.title}</h2>
       <p className="stage-progress">{guided.progressDetail}</p>

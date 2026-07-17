@@ -1,9 +1,11 @@
 # Milestone 6.1: Guided Demo UX and Visual Polish
 
-**Status:** Implemented locally on `agent/milestone-6-1-guided-demo-ux`
+**Status:** Implemented and merged into `main` — Hackathon demo-ready
 **Decision Owner:** Ocomic
 **Authorization date:** July 16, 2026
 **Scope:** Hackathon Milestone 6.1 presentation and UX only
+
+**Continuation:** Milestone 6.2 closes the jury-flow transition and general-audience clarity gaps without broadening this presentation-only boundary. See [Milestone 6.2](./MILESTONE-6-2.md).
 
 ## Outcome
 

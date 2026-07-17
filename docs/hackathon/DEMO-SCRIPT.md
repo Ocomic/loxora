@@ -4,7 +4,7 @@
 
 The executable click sequence, exact commands, and recovery paths are maintained in [the Demo Runbook](../implementation/DEMO-RUNBOOK.md).
 
-Milestone 6.1 presents this same real sequence through a nine-step Guided Demo. Every step explains the operation, expected change, significance, and verified result. Explore mode remains available without changing canonical state.
+Milestones 6.1 and 6.2 present this same real sequence through a nine-step Guided Demo. Every step explains the operation, expected change, significance, verified result, and next server-authorized action. Explore mode remains available without changing canonical state.
 
 ## Demonstration goal
 
@@ -77,6 +77,8 @@ Request history. Show the ordered V1 → V2 → V3 lineage, applicability, propo
 Open Planned Knowledge. Show a separate Deferred plan to revisit the `subject_id` migration after `customer-portal` is compatible.
 
 Make explicit that historical V2 and the deferred plan are different records. Neither is current.
+
+Confirm the combined temporal comparison. The server must revalidate V3 Current, the exact V1→V2→V3 lineage, the Deferred plan, and the fixture before Step 8 becomes available.
 
 ### 12. Build a Context Package in the UI
 

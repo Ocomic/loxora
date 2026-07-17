@@ -25,7 +25,7 @@ export function ImpactScreen() {
           provider and consumer Revisions selected for the question.
         </p>
       </header>
-      {action ? (
+      {action && !status.guided.lastResult ? (
         <section className="next-action-card">
           <div>
             <p className="eyebrow">Next real operation</p>

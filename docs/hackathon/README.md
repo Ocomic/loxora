@@ -15,8 +15,9 @@
 - [Demo Runbook](../implementation/DEMO-RUNBOOK.md)
 - [Milestone 6 implementation](../implementation/MILESTONE-6.md)
 - [Milestone 6.1 Guided Demo UX](../implementation/MILESTONE-6-1.md)
+- [Milestone 6.2 Jury Flow and general-audience clarity](../implementation/MILESTONE-6-2.md)
 
-The implemented Guided Demo leads with knowledge lifecycle, evidence-backed cross-project impact, and equivalent UI/MCP Context. Explore mode keeps the underlying project surfaces inspectable. Repository import is supporting infrastructure and is not the demo narrative. Deterministic export remains deferred, so the implementation is demo-ready rather than a complete portability release.
+The implemented Guided Demo leads with knowledge lifecycle, evidence-backed cross-project impact, explicit temporal separation, and equivalent UI/MCP Context. Milestone 6.2 keeps every verified result connected to a visible server-authorized next step and adds a clearly labeled novel-continuity concept preview. Explore mode keeps the underlying project surfaces inspectable. Repository import is supporting infrastructure and is not the demo narrative. Deterministic export remains deferred, so the implementation is demo-ready rather than a complete portability release.
 
 ## Context
 

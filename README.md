@@ -4,7 +4,7 @@
 
 Loxora is an experimental, local-first and model-independent project knowledge and context layer.
 
-**Status:** Guided Hackathon demo-ready implementation — Milestone 6.1
+**Status:** Guided Hackathon demo-ready implementation — Milestone 6.2
 **Working title:** Loxora
 
 This repository contains foundational RFCs, accepted Hackathon-only architecture decisions, persistent lifecycle lineage, progressive navigation, reviewed cross-project impact, deterministic Context Packages, one read-only MCP tool, explicit Planned Knowledge, and a guided local demo inspector. The Hackathon decisions do not establish permanent long-term Loxora architecture.
@@ -34,4 +34,4 @@ See `docs/hackathon/README.md` for the complete planning index.
 
 Loxora is documentation-driven. Architecture decisions should be documented before implementation whenever reasonably possible.
 
-RFC-007, ADR-001, and ADR-002 are accepted only for the Hackathon MVP. Runtime implementation remains limited to explicitly authorized milestones. Start with `docs/implementation/DEMO-RUNBOOK.md`, `docs/implementation/MILESTONE-6-1.md`, and the API documents under `docs/implementation/`. Deterministic export remains an explicit portability gap.
+RFC-007, ADR-001, and ADR-002 are accepted only for the Hackathon MVP. Runtime implementation remains limited to explicitly authorized milestones. Start with `docs/implementation/DEMO-RUNBOOK.md`, `docs/implementation/MILESTONE-6-2.md`, and the API documents under `docs/implementation/`. Deterministic export remains an explicit portability gap.

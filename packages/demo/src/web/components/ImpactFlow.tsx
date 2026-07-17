@@ -70,6 +70,14 @@ export function ImpactFlow({
           <TemporalBadge value={`Assessment ${path.assessmentFreshness}`} />
         ) : null}
       </div>
+      <p className="freshness-explanation">
+        {path.relationshipBindingFreshness === "Stale"
+          ? "The accepted dependency remains unchanged and traceable to its earlier reviewed revisions."
+          : "The accepted dependency matches the currently selected endpoint revisions."}
+        {path.assessmentFreshness === "Fresh"
+          ? " The impact assessment applies exactly to the revisions shown here."
+          : " No fresh exact assessment applies to both revisions shown here."}
+      </p>
       {path.assessment ? (
         <div className="impact-explanation">
           <h3>Why this matters</h3>

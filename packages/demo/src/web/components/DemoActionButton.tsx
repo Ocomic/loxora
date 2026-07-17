@@ -12,18 +12,27 @@ export function DemoActionButton({
   secondary?: boolean;
 }) {
   const navigate = useNavigate();
-  const { refresh, mode } = useDemoState();
+  const { refresh, mode, mutationPending, setMutationPending } = useDemoState();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const run = async () => {
-    if (!action.enabled || pending) return;
+    if (!action.enabled || pending || mutationPending) return;
     if (action.intent === "Navigate") {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
       navigate(withMode(action.href, mode));
       return;
     }
     if (!action.endpoint) return;
+    if (
+      action.id === "reset" &&
+      !window.confirm(
+        "Reset the demo to its deterministic Prepared state? Accepted demo progress will be replaced.",
+      )
+    )
+      return;
     try {
       setPending(true);
+      setMutationPending(true);
       setError(null);
       await post(action.endpoint, action.id === "reset" ? { stage: "Prepared" } : {});
       await refresh();
@@ -33,6 +42,7 @@ export function DemoActionButton({
       await refresh();
     } finally {
       setPending(false);
+      setMutationPending(false);
     }
   };
   return (
@@ -40,7 +50,7 @@ export function DemoActionButton({
       <button
         className={secondary ? "button secondary" : "button primary"}
         type="button"
-        disabled={!action.enabled || pending}
+        disabled={!action.enabled || pending || (action.intent === "Mutation" && mutationPending)}
         aria-describedby={
           !action.enabled && action.disabledReason ? `${action.id}-reason` : undefined
         }

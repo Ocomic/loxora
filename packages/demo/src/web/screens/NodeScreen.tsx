@@ -109,19 +109,19 @@ export function NodeScreen() {
           className={view === "current" ? "active current" : "current"}
           to={withMode(`${nodePath}?view=current`, mode)}
         >
-          Current
+          Current · valid now
         </Link>
         <Link
           className={view === "history" ? "active historical" : "historical"}
           to={withMode(`${nodePath}?view=history`, mode)}
         >
-          History
+          History · earlier versions
         </Link>
         <Link
           className={view === "planned" ? "active planned" : "planned"}
           to={withMode(`${nodePath}?view=planned`, mode)}
         >
-          Planned
+          Planned · future intent
         </Link>
       </nav>
       <TemporalLegend />
@@ -143,6 +143,7 @@ function CurrentView({ value, mode }: { value: CurrentResult; mode: "guided" | "
         <TemporalBadge value="Current" />
         <TemporalBadge value={value.revisionRole} />
       </div>
+      <p className="plain-state-label">Currently valid knowledge for tasks and agents</p>
       <h2>
         {value.node.title} · {roleVersion(value.revisionRole)}
       </h2>
@@ -174,6 +175,9 @@ function HistoryView({ value, mode }: { value: HistoryResult; mode: "guided" | "
         <TemporalBadge value="Historical" />
         <span>{value.entries.length} accepted Revisions in lineage order</span>
       </div>
+      <p className="plain-state-label">
+        Earlier versions preserved for explanation, not current guidance
+      </p>
       <h2>How project understanding changed</h2>
       <ol className="lineage-overview" aria-label="Accepted Revision lineage">
         {value.entries.map((entry, index) => (
@@ -228,6 +232,7 @@ function PlannedView({ value, mode }: { value: PlanResult[]; mode: "guided" | "e
         <TemporalBadge value="Planned" />
         <span>Future intent, never Current instructions</span>
       </div>
+      <p className="plain-state-label">Planned change, not implemented or currently valid</p>
       {value.map((plan) => (
         <article className="plan-card" key={plan.id}>
           <div className="row">

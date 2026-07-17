@@ -41,6 +41,9 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await page.getByRole("button", { name: "Review the next V1 Proposal" }).first().click();
   await acceptFirst(page);
   await expect(page.getByRole("heading", { name: "Knowledge accepted" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Review the next V1 Proposal" }).last(),
+  ).toBeVisible();
   await page.reload();
   await expect(
     page
@@ -95,23 +98,23 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await page.getByRole("link", { name: "Review Inbox" }).click();
   await acceptFirst(page);
   await expect(page.getByRole("heading", { name: "Compatibility restored" })).toBeVisible();
-
-  const identity = "10000000-0000-4000-8000-000000000001";
-  const tokenFormat = "10000000-0000-4000-8000-000000000004";
-  await page.goto(`/projects/${identity}/nodes/${tokenFormat}?view=current&mode=guided`);
-  await expect(page.getByText("Current", { exact: true }).first()).toBeVisible();
-  await page.getByRole("link", { name: "History" }).click();
+  await page.getByRole("button", { name: "Compare Current, History, and Planned" }).last().click();
+  await expect(page.getByRole("heading", { name: "Compare knowledge across time" })).toBeVisible();
+  const temporalComparison = page.getByLabel("Temporal knowledge comparison");
   await expect(
-    page.getByRole("heading", { name: "How project understanding changed" }),
+    temporalComparison.getByText("Currently valid knowledge", { exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".timeline-marker")).toHaveText(["V1", "V2", "V3"]);
-  await page.getByRole("link", { name: "Planned" }).click();
   await expect(
-    page.getByText("Future intent, never Current instructions", { exact: true }),
+    temporalComparison.getByText("Earlier versions remain traceable", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Blocked by", { exact: true })).toBeVisible();
-
-  await page.getByRole("link", { name: "Context Package" }).click();
+  await expect(
+    temporalComparison.getByText("Planned change, not current guidance", { exact: true }),
+  ).toBeVisible();
+  await expect(temporalComparison.getByRole("heading", { name: "V1 → V2 → V3" })).toBeVisible();
+  await page.getByRole("button", { name: "Confirm the temporal separation" }).click();
+  await expect(page.locator('.guided-stepper li[aria-current="step"]')).toContainText(
+    "Build the task-specific Context Package",
+  );
   await page.getByRole("button", { name: "Build Current Context Package" }).click();
   const summary = page.locator(".context-result");
   await expect(summary.getByRole("heading", { name: "Context Package ready" })).toBeVisible();
@@ -120,6 +123,9 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await expect(page.getByText(/This package was built by Core/)).toBeVisible();
   await expect(page.getByText(/Complete the server-provided lifecycle steps/)).toHaveCount(0);
   await expect(summary.locator(".summary-metrics")).toBeVisible();
+  await expect(summary.locator(".context-narrative")).toContainText(
+    "Use Token Format V3 when updating the Token Parser",
+  );
   await expect(summary.locator(".technical-details")).toBeVisible();
   expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
     await page.locator("body").evaluate((element) => element.clientWidth),
@@ -151,6 +157,7 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await page.reload();
   await expect(page.getByText("UI and MCP Context match exactly", { exact: true })).toBeVisible();
 
+  page.once("dialog", (dialog) => dialog.accept());
   await page.locator(".topbar").getByRole("button", { name: "Reset to Prepared" }).click();
   await expect(
     page

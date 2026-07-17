@@ -167,6 +167,19 @@ a:hover {
   background: #061126f5;
   border-bottom: 1px solid var(--border);
 }
+.guided-phase-summary {
+  width: min(94vw, 100rem);
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+.guided-phase-summary strong {
+  color: var(--text-primary);
+}
 .guided-stepper ol {
   display: grid;
   grid-template-columns: repeat(9, minmax(7rem, 1fr));
@@ -365,6 +378,11 @@ p {
 .project-grid .relationship-card {
   background: var(--bg-subtle);
   margin: 1rem 0;
+}
+.freshness-explanation {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 0;
 }
 .relationship-endpoint {
   color: var(--text-primary);
@@ -813,6 +831,22 @@ pre {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.context-narrative {
+  background: linear-gradient(135deg, #0a2337, #101a3f);
+  border: 1px solid #286a87;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.context-narrative-summary {
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 650;
+  max-width: 76ch;
+}
+.context-narrative .compact-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .budget-summary {
   justify-content: space-between;
   background: var(--bg-subtle);
@@ -873,6 +907,88 @@ pre {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.result-summary:focus-visible {
+  outline: 3px solid var(--brand-cyan);
+  outline-offset: 4px;
+}
+.result-next-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+}
+.result-next-action p {
+  margin: 0.25rem 0 0;
+  color: var(--text-secondary);
+}
+.temporal-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.temporal-summary {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  min-width: 0;
+}
+.plain-state-label {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+.compact-lineage {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+.compact-lineage li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.65rem;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem;
+}
+.compact-lineage li span:last-child {
+  grid-column: 2;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.novel-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 1.5rem;
+  background: linear-gradient(135deg, #10172f, #1c1238);
+  border: 1px solid #60478e;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+.novel-mapping {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+}
+.novel-mapping div {
+  background: #090f25b8;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+}
+.novel-mapping dt {
+  color: #c4a7ff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.novel-mapping dd {
+  margin: 0.2rem 0 0;
+}
 .state-panel {
   display: flex;
   flex-direction: column;
@@ -930,10 +1046,36 @@ pre {
   .guidance-content .callout {
     grid-column: 1;
   }
+  .guidance-content h2 {
+    font-size: 1.65rem;
+    margin: 0.25rem 0;
+  }
+  .guidance-content > p {
+    margin: 0.35rem 0;
+  }
+  .guidance-content .actions {
+    align-self: end;
+    grid-column: 1;
+    grid-row: 5;
+    margin-top: 0.4rem;
+  }
   .guidance-list {
     grid-column: 2;
     grid-row: 1 / span 5;
     margin: 0;
+    gap: 0.45rem;
+  }
+  .guidance-list div {
+    padding-left: 0.6rem;
+  }
+  .guidance-list dd {
+    font-size: 0.9rem;
+  }
+  .guided-stepper ol {
+    display: none;
+  }
+  .guided-phase-summary {
+    padding: 0.65rem 0;
   }
 }
 @media (max-width: 900px) {
@@ -966,6 +1108,18 @@ pre {
   }
   .fingerprint-compare > div:nth-child(2) {
     display: none;
+  }
+  .temporal-comparison,
+  .novel-preview {
+    grid-template-columns: 1fr;
+  }
+  .result-next-action {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .context-narrative .compact-facts,
+  .novel-mapping {
+    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 620px) {

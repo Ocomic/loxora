@@ -18,6 +18,7 @@ export type DemoActionId =
   | "record-rollback"
   | "review-v3"
   | "inspect-temporal"
+  | "confirm-temporal-review"
   | "build-context"
   | "view-mcp-proof"
   | "resume"
@@ -43,6 +44,39 @@ export interface GuidedStepDefinition {
   readonly expectedResult: string;
   readonly destination: string;
 }
+
+export interface GuidedPhaseDefinition {
+  readonly id: "establish" | "change-recover" | "use-prove";
+  readonly number: number;
+  readonly title: string;
+  readonly stepIds: readonly string[];
+}
+
+export const GUIDED_PHASES: readonly GuidedPhaseDefinition[] = Object.freeze([
+  {
+    id: "establish",
+    number: 1,
+    title: "Establish",
+    stepIds: Object.freeze(["establish-knowledge", "connect-projects"]),
+  },
+  {
+    id: "change-recover",
+    number: 2,
+    title: "Change & Recover",
+    stepIds: Object.freeze([
+      "breaking-change",
+      "assess-impact",
+      "record-rollback",
+      "restore-knowledge",
+    ]),
+  },
+  {
+    id: "use-prove",
+    number: 3,
+    title: "Use & Prove",
+    stepIds: Object.freeze(["compare-time", "build-context", "verify-mcp"]),
+  },
+]);
 
 export const GUIDED_STEPS: readonly GuidedStepDefinition[] = Object.freeze([
   {
@@ -148,9 +182,36 @@ export interface DemoResultReceipt {
   readonly tone: "Success" | "Warning";
 }
 
+export interface TemporalReviewReceipt {
+  readonly fixtureVersion: string;
+  readonly projectId: string;
+  readonly nodeId: string;
+  readonly revisionIds: readonly [string, string, string];
+  readonly plannedKnowledgeId: string;
+  readonly reviewedAt: string;
+}
+
+export interface ContextNarrative {
+  readonly task: string;
+  readonly summary: string;
+  readonly currentKnowledge: string;
+  readonly affectedProjects: readonly string[];
+  readonly dependency: string;
+  readonly assessment: string;
+  readonly historicalExclusion: string;
+}
+
+export interface TemporalReviewTarget {
+  readonly historyProjectId: string;
+  readonly historyNodeId: string;
+  readonly plannedProjectId: string;
+  readonly plannedNodeId: string;
+}
+
 export interface GuidedDemoState {
   readonly canonicalStage: DemoStage;
   readonly currentStepId: string;
+  readonly currentPhase: GuidedPhaseDefinition;
   readonly completedStepIds: readonly string[];
   readonly availableStepIds: readonly string[];
   readonly state: "Active" | "Interrupted" | "Complete";
@@ -160,6 +221,9 @@ export interface GuidedDemoState {
   readonly availableActions: readonly DemoAction[];
   readonly interruption: string | null;
   readonly contextReady: boolean;
+  readonly temporalReviewComplete: boolean;
+  readonly temporalReviewTarget: TemporalReviewTarget;
+  readonly contextNarrative: ContextNarrative;
   readonly parityPassed: boolean;
   readonly lastResult: DemoResultReceipt | null;
 }
@@ -170,4 +234,5 @@ export interface RuntimeState {
   lastAction: string;
   parity: { passed: boolean; fingerprint: string | null } | null;
   lastResult?: DemoResultReceipt | null;
+  temporalReview?: TemporalReviewReceipt | null;
 }

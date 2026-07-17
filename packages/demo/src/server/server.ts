@@ -77,6 +77,8 @@ async function api(
   }
   if (request.method === "POST" && url.pathname === "/api/demo/resume")
     return json(response, 200, await coordinator.resume());
+  if (request.method === "POST" && url.pathname === "/api/demo/temporal-reviewed")
+    return json(response, 200, await coordinator.confirmTemporalReview());
   if (request.method === "GET" && url.pathname === "/api/review-inbox") {
     const s = coordinator.services();
     return json(

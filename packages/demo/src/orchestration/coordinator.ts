@@ -22,13 +22,16 @@ import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import {
   DEMO_STAGES,
+  GUIDED_PHASES,
   GUIDED_STEPS,
+  type ContextNarrative,
   type DemoAction,
   type DemoActionId,
   type DemoResultReceipt,
   type DemoStage,
   type GuidedDemoState,
   type RuntimeState,
+  type TemporalReviewReceipt,
 } from "../shared/contracts.js";
 import { fixtureText, loadManifest, type DemoManifest } from "./manifest.js";
 
@@ -119,6 +122,7 @@ export class DemoCoordinator {
         lastAction: `reset:${stage}`,
         parity: null,
         lastResult: null,
+        temporalReview: null,
       };
       await candidate.close();
       removeSqliteFiles(previous);
@@ -386,6 +390,33 @@ export class DemoCoordinator {
     return this.status();
   }
 
+  public async confirmTemporalReview(): Promise<DemoStatus> {
+    const receipt = await this.currentTemporalReviewReceipt();
+    if (!receipt) throw new Error("Current, History, and Planned knowledge are not ready");
+    const runtime = this.readRuntime();
+    this.writeRuntime({
+      ...runtime,
+      lastAction: "confirm-temporal-review",
+      temporalReview: receipt,
+      lastResult: {
+        fixtureVersion: this.manifest.fixtureVersion,
+        actionId: "confirm-temporal-review",
+        stage: "V3Restored",
+        title: "Temporal views confirmed",
+        message:
+          "Currently valid knowledge, earlier versions, and the planned migration remain explicitly separate.",
+        facts: [
+          { label: "Currently valid", value: "V3 restoration" },
+          { label: "Earlier versions", value: "V1 → V2 → V3" },
+          { label: "Planned change", value: "Deferred subject_id migration" },
+        ],
+        artifactIds: [...receipt.revisionIds, receipt.plannedKnowledgeId],
+        tone: "Success",
+      },
+    });
+    return this.status();
+  }
+
   private async prepareNextArtifact(): Promise<void> {
     const session = new SeedSession(
       this.requiredStore(),
@@ -513,6 +544,9 @@ export class DemoCoordinator {
     const parity = existsSync(this.proofPath)
       ? (JSON.parse(readFileSync(this.proofPath, "utf8")) as { passed?: boolean }).passed === true
       : false;
+    const temporalReviewComplete = await this.validateTemporalReview(
+      runtime.temporalReview ?? null,
+    );
     const lifecycle = new LifecycleService(this.requiredStore());
     const inbox = await new ReviewInboxService(this.requiredStore()).getReviewInbox({
       projectIds: [this.identity.id as ProjectId, this.portal.id as ProjectId],
@@ -533,7 +567,7 @@ export class DemoCoordinator {
     ).length;
     let interrupted: string | null =
       stage === "Prepared" ? preparedInterruption(acceptedV1, initialSubmitted) : null;
-    const configuration = guidedConfiguration(stage, contextReady, parity, this.identity);
+    const configuration = guidedConfiguration(stage, temporalReviewComplete, contextReady, parity);
     if (!interrupted && configuration.requiresProposal) {
       const expected = configuration.requiresProposal;
       const exists = inbox.some((item) =>
@@ -545,7 +579,12 @@ export class DemoCoordinator {
         interrupted =
           "The next prepared artifact is missing. Resume preparation after revalidating canon.";
     }
-    const state = parity ? "Complete" : interrupted ? "Interrupted" : "Active";
+    const state =
+      parity && contextReady && temporalReviewComplete
+        ? "Complete"
+        : interrupted
+          ? "Interrupted"
+          : "Active";
     const actions = interrupted
       ? [action("resume", "Resume preparation", "/", "Mutation", "/api/demo/resume"), resetAction()]
       : configuration.actions;
@@ -554,9 +593,14 @@ export class DemoCoordinator {
     const receipt = parity
       ? proofReceipt(this.manifest.fixtureVersion, stage, this.proofPath)
       : validateReceipt(runtime.lastResult ?? null, this.manifest.fixtureVersion, stage, runtime);
+    const currentPhase =
+      GUIDED_PHASES.find((phase) => phase.stepIds.includes(configuration.currentStepId)) ??
+      GUIDED_PHASES[0];
+    if (!currentPhase) throw new Error("Guided presentation has no phase");
     return Object.freeze({
       canonicalStage: stage,
       currentStepId: configuration.currentStepId,
+      currentPhase,
       completedStepIds: Object.freeze(configuration.completedStepIds),
       availableStepIds: Object.freeze(configuration.availableStepIds),
       state,
@@ -569,9 +613,93 @@ export class DemoCoordinator {
       availableActions: Object.freeze(actions),
       interruption: interrupted,
       contextReady,
+      temporalReviewComplete,
+      temporalReviewTarget: Object.freeze({
+        historyProjectId: this.identity.id,
+        historyNodeId: this.identity.nodeId,
+        plannedProjectId: this.portal.id,
+        plannedNodeId: this.portal.nodeId,
+      }),
+      contextNarrative: this.contextNarrative(),
       parityPassed: parity,
       lastResult: receipt,
     });
+  }
+
+  private contextNarrative(): ContextNarrative {
+    return Object.freeze({
+      task: "Update customer-portal authentication safely",
+      summary:
+        "Use Token Format V3 when updating the Token Parser. V2 remains preserved as an earlier version and is not included as currently valid guidance.",
+      currentKnowledge: "Token Format V3 restoration and the current Token Parser requirement",
+      affectedProjects: Object.freeze([this.portal.name, this.identity.name]),
+      dependency: "Token Parser uses knowledge from Token Format",
+      assessment: "The exact V3/consumer assessment reports compatible Low impact",
+      historicalExclusion: "V1 and V2 remain traceable but are not Current instructions",
+    });
+  }
+
+  private async currentTemporalReviewReceipt(): Promise<TemporalReviewReceipt | null> {
+    const lifecycle = new LifecycleService(this.requiredStore());
+    const [current, history, plans] = await Promise.all([
+      lifecycle.getCurrentKnowledge({
+        projectId: this.identity.id as ProjectId,
+        nodeId: this.identity.nodeId as NodeId,
+      }),
+      lifecycle.getKnowledgeHistory({
+        projectId: this.identity.id as ProjectId,
+        nodeId: this.identity.nodeId as NodeId,
+      }),
+      new PlannedKnowledgeService(this.requiredStore()).getProjectPlans({
+        projectId: this.portal.id as ProjectId,
+        nodeId: this.portal.nodeId as NodeId,
+      }),
+    ]);
+    const plan = plans.find(
+      (entry) =>
+        entry.id === (this.manifest.artifacts.planned as PlannedKnowledgeId) &&
+        entry.status === "Deferred",
+    );
+    if (
+      !current ||
+      current.revisionRole !== "Restoration" ||
+      !history ||
+      history.entries.length !== 3 ||
+      !plan
+    )
+      return null;
+    const revisionIds = history.entries.map((entry) => entry.revision.id);
+    if (
+      !revisionIds[0] ||
+      !revisionIds[1] ||
+      !revisionIds[2] ||
+      current.revision.id !== revisionIds[2]
+    )
+      return null;
+    return Object.freeze({
+      fixtureVersion: this.manifest.fixtureVersion,
+      projectId: this.identity.id,
+      nodeId: this.identity.nodeId,
+      revisionIds: Object.freeze([revisionIds[0], revisionIds[1], revisionIds[2]]) as readonly [
+        string,
+        string,
+        string,
+      ],
+      plannedKnowledgeId: plan.id,
+      reviewedAt: new Date().toISOString(),
+    });
+  }
+
+  private async validateTemporalReview(receipt: TemporalReviewReceipt | null): Promise<boolean> {
+    if (
+      !receipt ||
+      receipt.fixtureVersion !== this.manifest.fixtureVersion ||
+      receipt.projectId !== this.identity.id ||
+      receipt.nodeId !== this.identity.nodeId
+    )
+      return false;
+    const actual = await this.currentTemporalReviewReceipt();
+    return temporalReviewMatches(receipt, actual);
   }
 
   private async recordReceipt(
@@ -1042,9 +1170,9 @@ interface GuidedConfiguration {
 
 export function guidedConfiguration(
   stage: DemoStage,
+  temporalReviewComplete: boolean,
   contextReady: boolean,
   parity: boolean,
-  identity: { readonly id: string; readonly nodeId: string },
 ): GuidedConfiguration {
   const ids = GUIDED_STEPS.map((step) => step.id);
   const step = (index: number, actions: DemoAction[], detail: string): GuidedConfiguration => ({
@@ -1131,20 +1259,56 @@ export function guidedConfiguration(
           [action("view-mcp-proof", "Verify MCP parity", "/proof"), resetAction()],
           "Current Context is ready for the real MCP proof",
         );
+      if (temporalReviewComplete)
+        return step(
+          7,
+          [action("build-context", "Build the Current Context Package", "/context"), resetAction()],
+          "Currently valid, earlier, and planned knowledge were compared",
+        );
       return step(
         6,
         [
-          action(
-            "inspect-temporal",
-            "Compare Current, History, and Planned",
-            `/projects/${identity.id}/nodes/${identity.nodeId}?view=history`,
-          ),
-          action("build-context", "Continue to Context Package", "/context"),
+          action("inspect-temporal", "Compare Current, History, and Planned", "/guided/temporal"),
           resetAction(),
+          action(
+            "confirm-temporal-review",
+            "Confirm the temporal separation",
+            "/context",
+            "Mutation",
+            "/api/demo/temporal-reviewed",
+          ),
         ],
         "Compatibility is restored through a new V3 Revision",
       );
     case "Complete":
+      if (!temporalReviewComplete)
+        return step(
+          6,
+          [
+            action("inspect-temporal", "Compare Current, History, and Planned", "/guided/temporal"),
+            resetAction(),
+            action(
+              "confirm-temporal-review",
+              "Confirm the temporal separation",
+              "/context",
+              "Mutation",
+              "/api/demo/temporal-reviewed",
+            ),
+          ],
+          "Reconfirm temporal separation before using the prepared Context and proof",
+        );
+      if (!contextReady)
+        return step(
+          7,
+          [action("build-context", "Build the Current Context Package", "/context"), resetAction()],
+          "Currently valid, earlier, and planned knowledge were compared",
+        );
+      if (!parity)
+        return step(
+          8,
+          [action("view-mcp-proof", "Verify MCP parity", "/proof"), resetAction()],
+          "Current Context is ready for the real MCP proof",
+        );
       return {
         ...step(8, [resetAction()], "UI and MCP Context match exactly"),
         completedStepIds: ids,
@@ -1242,6 +1406,11 @@ function receiptCopy(actionId: DemoActionId, decision: "Accepted" | "Rejected") 
       message: "Current, History, and Planned remain separate.",
       facts: [],
     },
+    "confirm-temporal-review": {
+      title: "Temporal views confirmed",
+      message: "Currently valid knowledge, earlier versions, and planned changes remain separate.",
+      facts: [],
+    },
     resume: {
       title: "Preparation resumed",
       message: "The missing next artifact was prepared from canonical state.",
@@ -1271,11 +1440,27 @@ export function validateReceipt(
     "record-rollback": ["RollbackRecorded"],
     "review-v3": ["V3Restored"],
     "build-context": ["V3Restored"],
+    "confirm-temporal-review": ["V3Restored"],
   };
   if (!(allowed[receipt.actionId] ?? [receipt.stage]).includes(stage)) return null;
   const known = new Set(Object.values(runtime.artifactIds));
   if (receipt.artifactIds.some((id) => !known.has(id))) return null;
   return receipt;
+}
+
+export function temporalReviewMatches(
+  receipt: TemporalReviewReceipt | null,
+  actual: TemporalReviewReceipt | null,
+): boolean {
+  return Boolean(
+    receipt &&
+      actual &&
+      receipt.fixtureVersion === actual.fixtureVersion &&
+      receipt.projectId === actual.projectId &&
+      receipt.nodeId === actual.nodeId &&
+      receipt.plannedKnowledgeId === actual.plannedKnowledgeId &&
+      actual.revisionIds.every((id, index) => id === receipt.revisionIds[index]),
+  );
 }
 
 export function preparedInterruption(acceptedV1: number, initialSubmitted: number): string | null {

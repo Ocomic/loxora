@@ -1,4 +1,5 @@
 import { useId } from "react";
+import type { ContextNarrative } from "../../shared/contracts.js";
 import { EvidenceSummary } from "./EvidenceSummary.js";
 import { TechnicalDetails } from "./TechnicalDetails.js";
 import { TemporalBadge } from "./TemporalBadge.js";
@@ -34,13 +35,49 @@ export interface ContextPackageLike {
   readonly warnings: readonly string[];
 }
 
-export function ContextPackageSummary({ value }: { value: ContextPackageLike }) {
+export function ContextPackageSummary({
+  value,
+  narrative,
+}: {
+  value: ContextPackageLike;
+  narrative: ContextNarrative;
+}) {
   const assessments = value.entries.filter((entry) => entry.impactSeverity).length;
   const headingId = useId();
   return (
     <section className="context-result" aria-labelledby={headingId}>
       <p className="eyebrow">Core result</p>
       <h2 id={headingId}>Context Package ready</h2>
+      <div className="context-narrative">
+        <p className="eyebrow">What this package tells the task</p>
+        <p className="context-narrative-summary">{narrative.summary}</p>
+        <dl className="compact-facts">
+          <div>
+            <dt>Currently valid knowledge</dt>
+            <dd>{narrative.currentKnowledge}</dd>
+          </div>
+          <div>
+            <dt>Affected projects</dt>
+            <dd>{narrative.affectedProjects.join(" and ")}</dd>
+          </div>
+          <div>
+            <dt>Dependency</dt>
+            <dd>{narrative.dependency}</dd>
+          </div>
+          <div>
+            <dt>Impact assessment</dt>
+            <dd>{narrative.assessment}</dd>
+          </div>
+          <div>
+            <dt>Earlier versions excluded from current guidance</dt>
+            <dd>{narrative.historicalExclusion}</dd>
+          </div>
+          <div>
+            <dt>Budget</dt>
+            <dd>{value.budgetStatus}</dd>
+          </div>
+        </dl>
+      </div>
       <div className="summary-metrics">
         <strong>
           {value.entries.length}

@@ -36,13 +36,14 @@ interface InboxItem {
 
 export function ReviewScreen() {
   const { data, error, reload } = useApi<InboxItem[]>("/api/review-inbox");
-  const { refresh } = useDemoState();
+  const { refresh, mutationPending, setMutationPending } = useDemoState();
   const [pending, setPending] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const decide = async (item: InboxItem, decision: "Accepted" | "Rejected") => {
-    if (!item.allowedDecisions.includes(decision)) return;
+    if (!item.allowedDecisions.includes(decision) || mutationPending) return;
     try {
       setPending(item.id);
+      setMutationPending(true);
       setActionError(null);
       const relation = item.kind === "CrossProjectRelationshipProposal";
       await post(`/api/reviews/${relation ? "relationship" : "knowledge"}/${item.id}`, {
@@ -56,6 +57,7 @@ export function ReviewScreen() {
       await Promise.all([reload(), refresh()]);
     } finally {
       setPending(null);
+      setMutationPending(false);
     }
   };
   return (
@@ -99,6 +101,7 @@ function ProposalCard({
   pending: boolean;
   decide: (item: InboxItem, decision: "Accepted" | "Rejected") => Promise<void>;
 }) {
+  const { mutationPending } = useDemoState();
   const relation = item.kind === "CrossProjectRelationshipProposal";
   const proposal = item.proposal;
   const kind = relation ? "Relationship" : (proposal?.kind ?? "Knowledge");
@@ -145,7 +148,7 @@ function ProposalCard({
         <button
           className="button primary"
           type="button"
-          disabled={pending || !item.allowedDecisions.includes("Accepted")}
+          disabled={pending || mutationPending || !item.allowedDecisions.includes("Accepted")}
           onClick={() => void decide(item, "Accepted")}
         >
           {pending ? "Recording decision…" : "Accept and continue"}
@@ -153,7 +156,7 @@ function ProposalCard({
         <button
           className="button danger-secondary"
           type="button"
-          disabled={pending || !item.allowedDecisions.includes("Rejected")}
+          disabled={pending || mutationPending || !item.allowedDecisions.includes("Rejected")}
           onClick={() => void decide(item, "Rejected")}
         >
           Reject

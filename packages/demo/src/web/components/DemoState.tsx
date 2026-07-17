@@ -48,8 +48,10 @@ interface DemoStateValue {
   readonly error: string | null;
   readonly loading: boolean;
   readonly mode: DemoMode;
+  readonly mutationPending: boolean;
   readonly refresh: () => Promise<void>;
   readonly setMode: (mode: DemoMode) => void;
+  readonly setMutationPending: (pending: boolean) => void;
 }
 
 const DemoContext = createContext<DemoStateValue | null>(null);
@@ -68,6 +70,7 @@ export function DemoStateProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<DemoStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mutationPending, setMutationPending] = useState(false);
   const refresh = useCallback(async () => {
     try {
       setError(null);
@@ -98,8 +101,17 @@ export function DemoStateProvider({ children }: PropsWithChildren) {
     [location.pathname, location.search, navigate],
   );
   const value = useMemo(
-    () => ({ status, error, loading, mode, refresh, setMode }),
-    [status, error, loading, mode, refresh, setMode],
+    () => ({
+      status,
+      error,
+      loading,
+      mode,
+      mutationPending,
+      refresh,
+      setMode,
+      setMutationPending,
+    }),
+    [status, error, loading, mode, mutationPending, refresh, setMode],
   );
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
 }
