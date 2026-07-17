@@ -39,7 +39,7 @@ After building Context:
 npm run demo:mcp:proof
 ```
 
-Open MCP Proof and refresh. Confirm matching UI and MCP fingerprints plus Match rows for ordered entries, Revisions, Evidence, dependency paths, Impact Assessments, budget, and warnings.
+Open MCP Proof and run the command. Select **Verify MCP parity** again: the browser refreshes the server-derived proof state and opens the Demo Complete conclusion. Confirm matching UI and MCP fingerprints plus Match rows for ordered entries, Revisions, Evidence, dependency paths, Impact Assessments, budget, and warnings. The roadmap shown below is explicitly a presentation preview, not implemented functionality.
 
 ## Recovery
 

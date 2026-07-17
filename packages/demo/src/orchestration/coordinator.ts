@@ -1310,7 +1310,11 @@ export function guidedConfiguration(
           "Current Context is ready for the real MCP proof",
         );
       return {
-        ...step(8, [resetAction()], "UI and MCP Context match exactly"),
+        ...step(
+          8,
+          [action("view-demo-complete", "View the demo conclusion", "/complete"), resetAction()],
+          "UI and MCP Context match exactly",
+        ),
         completedStepIds: ids,
         availableStepIds: ids,
       };
@@ -1400,6 +1404,11 @@ function receiptCopy(actionId: DemoActionId, decision: "Accepted" | "Rejected") 
       title: "UI and MCP context match exactly",
       message: "The normalized read-only MCP result matches direct Core output.",
       facts: [{ label: "Tool", value: "loxora_get_context" }],
+    },
+    "view-demo-complete": {
+      title: "Demo complete",
+      message: "The reviewed lifecycle and equivalent UI/MCP Context proof are complete.",
+      facts: [],
     },
     "inspect-temporal": {
       title: "Temporal views inspected",

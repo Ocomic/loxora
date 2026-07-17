@@ -33,6 +33,7 @@ The server revalidates that V3 is Current, History is exactly V1→V2→V3, and 
 - Result focus and scrolling keep the verified result and next action together.
 - Home includes a clearly labeled concept preview mapping the same lifecycle to novel continuity. No novel fixture or second implemented workflow is claimed.
 - The browser remains a proof viewer; only `npm run demo:mcp:proof` invokes the real read-only MCP tool.
+- A server-confirmed proof now leads to a dedicated presentation-only conclusion with the demonstrated guarantees and a clearly labeled, non-implemented roadmap preview.
 
 ## Preserved boundaries
 

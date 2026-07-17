@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout.js";
 import { CollectionScreen } from "./screens/CollectionScreen.js";
+import { CompletionScreen } from "./screens/CompletionScreen.js";
 import { ContextScreen } from "./screens/ContextScreen.js";
 import { EvidenceScreen } from "./screens/EvidenceScreen.js";
 import { HomeScreen } from "./screens/HomeScreen.js";
@@ -21,6 +22,7 @@ export function App() {
         <Route path="/impact" element={<ImpactScreen />} />
         <Route path="/context" element={<ContextScreen />} />
         <Route path="/proof" element={<ProofScreen />} />
+        <Route path="/complete" element={<CompletionScreen />} />
         <Route path="/guided/temporal" element={<TemporalComparisonScreen />} />
         <Route path="/projects/:id" element={<ProjectScreen />} />
         <Route path="/projects/:projectId/spaces/:spaceId" element={<SpaceScreen />} />

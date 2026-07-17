@@ -24,8 +24,20 @@ export function DemoActionButton({
       const targetUrl = new URL(targetHref, window.location.origin);
       if (`${location.pathname}${location.search}` === `${targetUrl.pathname}${targetUrl.search}`) {
         const target = document.querySelector<HTMLElement>("[data-guided-action-target='true']");
-        target?.scrollIntoView({ behavior: "auto", block: "start" });
-        target?.focus({ preventScroll: true });
+        if (target) {
+          target.scrollIntoView({ behavior: "auto", block: "start" });
+          target.focus({ preventScroll: true });
+          return;
+        }
+        setPending(true);
+        setError(null);
+        try {
+          await refresh();
+        } catch (value) {
+          setError(value instanceof Error ? value.message : "Could not refresh demo state");
+        } finally {
+          setPending(false);
+        }
         return;
       }
       navigate(targetHref);

@@ -37,7 +37,8 @@ test("maps every canonical stage to a bounded guided step and server action", ()
   assert.equal(contextReady.actions[0]?.id, "view-mcp-proof");
   const complete = guidedConfiguration("Complete", true, true, true);
   assert.equal(complete.currentStepId, "verify-mcp");
-  assert.equal(complete.actions[0]?.id, "reset");
+  assert.equal(complete.actions[0]?.id, "view-demo-complete");
+  assert.equal(complete.actions[1]?.id, "reset");
   assert.deepEqual(complete.availableStepIds, complete.completedStepIds);
 });
 

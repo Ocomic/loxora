@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { DemoActionButton } from "./DemoActionButton.js";
 import { useDemoState } from "./DemoState.js";
 
 export function ResultSummary() {
+  const location = useLocation();
   const status = useDemoState().status;
   const receipt = status?.guided.lastResult;
   const resultRef = useRef<HTMLElement>(null);
@@ -24,7 +26,7 @@ export function ResultSummary() {
     }
     previousKey.current = receiptKey;
   }, [receiptKey, status]);
-  if (!receipt) return null;
+  if (!receipt || location.pathname === "/complete") return null;
   const nextAction =
     status?.guided.primaryAction.id === "reset" ? null : status?.guided.primaryAction;
   return (

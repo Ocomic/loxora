@@ -19,6 +19,7 @@ Only the presentation preference is stored in the browser. Canonical stage, acti
 - Impact displays provider, reverse traversal, consumer, severity, both freshness values, and Evidence.
 - Context explains the task, currently valid knowledge, affected Projects, dependency, Assessment, historical exclusion, and budget before normalized JSON.
 - MCP proof compares fingerprints, Revisions, Evidence, paths, Assessments, budget, and warnings.
+- A verified MCP proof opens a dedicated Demo Complete screen summarizing the demonstrated guarantees and clearly separating possible next development steps from implemented behavior.
 - Evidence and Source routes expose existing read APIs without fetching locators.
 
 Technical identifiers, correlations, locators, fingerprints, omissions, and normalized JSON remain available through disclosures.

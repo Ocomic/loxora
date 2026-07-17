@@ -154,6 +154,9 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await page.reload();
   await expect(page.getByText(/prepared Context request is ready/)).toBeVisible();
   await expect(page.getByText(/Complete the server-provided lifecycle steps/)).toHaveCount(0);
+  await page.locator(".result-summary").getByRole("button", { name: "Verify MCP parity" }).click();
+  await expect(page.getByRole("heading", { name: "MCP parity proof" })).toBeVisible();
+  await expect(page.getByText("npm run demo:mcp:proof", { exact: true })).toBeVisible();
 
   execFileSync(
     process.execPath,
@@ -170,13 +173,24 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
     ],
     { cwd: process.cwd(), stdio: "inherit" },
   );
-  await page.getByRole("link", { name: "MCP Proof" }).click();
+  await page.locator(".guidance-panel").getByRole("button", { name: "Verify MCP parity" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Project knowledge survived change—and stayed usable." }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "UI and MCP context match exactly" }),
   ).toBeVisible();
   await expect(page.getByText("✓ Match", { exact: true })).toHaveCount(8);
+  await expect(page.getByRole("heading", { name: "Where Loxora can go next" })).toBeVisible();
+  await expect(page.getByText(/not implemented in this demo/i)).toBeVisible();
+  expect(await page.locator("body").evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
+    await page.locator("body").evaluate((element) => element.clientWidth),
+  );
   await page.reload();
   await expect(page.getByText("UI and MCP Context match exactly", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Project knowledge survived change—and stayed usable." }),
+  ).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept());
   await page.locator(".topbar").getByRole("button", { name: "Reset to Prepared" }).click();

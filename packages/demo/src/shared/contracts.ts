@@ -21,6 +21,7 @@ export type DemoActionId =
   | "confirm-temporal-review"
   | "build-context"
   | "view-mcp-proof"
+  | "view-demo-complete"
   | "resume"
   | "reset";
 
