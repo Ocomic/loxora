@@ -246,8 +246,17 @@ export class DemoCoordinator {
       reason,
       evidenceReferenceIds: item.proposal.evidenceReferenceIds,
     });
+    const actionId =
+      result.proposal.kind === "Successor"
+        ? "review-v2"
+        : result.proposal.kind === "Restoration"
+          ? "review-v3"
+          : "review-v1";
     this.mergeArtifacts(
-      { [`revision:${proposalId}`]: result.revision?.id ?? "rejected" },
+      {
+        [`revision:${proposalId}`]: result.revision?.id ?? "rejected",
+        ...(decision === "Rejected" ? { [`rejected:${actionId}`]: proposalId } : {}),
+      },
       "review-knowledge",
     );
     if (decision === "Accepted") {
@@ -255,11 +264,7 @@ export class DemoCoordinator {
       if (result.proposal.kind === "Restoration") await this.assessImpact(false);
     }
     await this.recordReceipt(
-      result.proposal.kind === "Successor"
-        ? "review-v2"
-        : result.proposal.kind === "Restoration"
-          ? "review-v3"
-          : "review-v1",
+      actionId,
       decision === "Accepted" ? [result.revision?.id ?? ""] : [],
       decision,
     );
@@ -290,6 +295,8 @@ export class DemoCoordinator {
     });
     if (result.relationship)
       this.mergeArtifacts({ relationship: result.relationship.id }, "review-relationship");
+    if (decision === "Rejected")
+      this.mergeArtifacts({ "rejected:review-dependency": proposalId }, "reject-relationship");
     if (decision === "Accepted") await this.resumeAfterCanonicalTransition();
     await this.recordReceipt(
       "review-dependency",
@@ -387,6 +394,7 @@ export class DemoCoordinator {
   public async resume(): Promise<DemoStatus> {
     await this.prepareNextArtifact();
     this.lastFailure = null;
+    await this.recordReceipt("resume", []);
     return this.status();
   }
 
@@ -577,7 +585,7 @@ export class DemoCoordinator {
       );
       if (!exists)
         interrupted =
-          "The next prepared artifact is missing. Resume preparation after revalidating canon.";
+          "The required Proposal was rejected or is missing. The Decision remains preserved; prepare a new Proposal after revalidating canon.";
     }
     const state =
       parity && contextReady && temporalReviewComplete
@@ -586,7 +594,10 @@ export class DemoCoordinator {
           ? "Interrupted"
           : "Active";
     const actions = interrupted
-      ? [action("resume", "Resume preparation", "/", "Mutation", "/api/demo/resume"), resetAction()]
+      ? [
+          action("resume", "Prepare a new Proposal", "/", "Mutation", "/api/demo/resume"),
+          resetAction(),
+        ]
       : configuration.actions;
     const primaryAction = interrupted ? actions[0] : configuration.actions[0];
     if (!primaryAction) throw new Error("Guided presentation has no primary action");
@@ -906,6 +917,33 @@ class SeedSession {
         nodeId: this.portal.nodeId as NodeId,
       }),
     ]);
+    const inbox = await new ReviewInboxService(this.store).getReviewInbox({
+      projectIds: [this.identity.id as ProjectId, this.portal.id as ProjectId],
+    });
+    if (
+      !i &&
+      !inbox.some(
+        (item) =>
+          item.kind === "KnowledgeProposal" &&
+          item.proposal?.kind === "Initial" &&
+          item.proposal.projectId === this.identity.id,
+      )
+    ) {
+      await this.submitReplacementInitial("identity");
+      return;
+    }
+    if (
+      !p &&
+      !inbox.some(
+        (item) =>
+          item.kind === "KnowledgeProposal" &&
+          item.proposal?.kind === "Initial" &&
+          item.proposal.projectId === this.portal.id,
+      )
+    ) {
+      await this.submitReplacementInitial("portal");
+      return;
+    }
     if (i && p) {
       const deps = await this.impact.getProjectDependencies({
         projectId: this.portal.id as ProjectId,
@@ -914,12 +952,9 @@ class SeedSession {
           readableProjectIds: [this.portal.id as ProjectId, this.identity.id as ProjectId],
         },
       });
-      const inbox = await new ReviewInboxService(this.store).getReviewInbox({
-        projectIds: [this.identity.id as ProjectId, this.portal.id as ProjectId],
-      });
       if (deps.length === 0 && !inbox.some((x) => x.kind === "CrossProjectRelationshipProposal")) {
         const proposal = await this.impact.submitCrossProjectRelationshipProposal({
-          id: this.manifest.artifacts.relationshipProposal as never,
+          id: this.recoveryId("relationshipProposal", "review-dependency") as never,
           sourceProjectId: this.portal.id as ProjectId,
           sourceNodeId: this.portal.nodeId as NodeId,
           targetProjectId: this.identity.id as ProjectId,
@@ -939,7 +974,7 @@ class SeedSession {
         !inbox.some((x) => x.kind === "KnowledgeProposal" && x.proposal?.kind === "Successor")
       ) {
         const proposal = await this.lifecycle.submitSuccessorProposal({
-          id: this.manifest.artifacts.v2Proposal as ProposalId,
+          id: this.recoveryId("v2Proposal", "review-v2") as ProposalId,
           projectId: this.identity.id as ProjectId,
           nodeId: this.identity.nodeId as NodeId,
           expectedCurrentRevisionId: i.revision.id,
@@ -1002,8 +1037,8 @@ class SeedSession {
         identityCurrent?.revision.id === rollback.revertedRevisionId &&
         !inbox.some((x) => x.kind === "KnowledgeProposal" && x.proposal?.kind === "Restoration")
       ) {
-        await this.lifecycle.submitRestorationProposal({
-          id: this.manifest.artifacts.v3Proposal as ProposalId,
+        const proposal = await this.lifecycle.submitRestorationProposal({
+          id: this.recoveryId("v3Proposal", "review-v3") as ProposalId,
           projectId: this.identity.id as ProjectId,
           rollbackEventId: rollback.id,
           proposedContent: fixtureText("identity-contract/token-contract-v3-restoration.md"),
@@ -1018,8 +1053,37 @@ class SeedSession {
           proposerId: "identity-maintainer",
           changeReason: "Restore customer_id compatibility",
         });
+        this.artifactIds.v3Proposal = proposal.id;
       }
     }
+  }
+
+  private async submitReplacementInitial(key: "identity" | "portal"): Promise<void> {
+    const project = this.manifest.projects[key];
+    const identity = key === "identity";
+    const proposal = await this.lifecycle.submitKnowledgeProposal({
+      id: this.ids.next() as ProposalId,
+      projectId: project.id as ProjectId,
+      spaceId: project.spaceId as never,
+      collectionId: project.collectionId as never,
+      proposedNodeId: project.nodeId as NodeId,
+      proposedNodeTitle: project.node,
+      proposedContent: identity
+        ? fixtureText("identity-contract/token-contract-v1.md")
+        : `${fixtureText("customer-portal/token-parser.ts")}\n\n${fixtureText("customer-portal/customer-id-requirement.md")}`,
+      sourceReferenceIds: identity
+        ? [this.source("identity.v1-contract")]
+        : [this.source("portal.parser"), this.source("portal.requirement")],
+      evidenceReferenceIds: identity
+        ? [this.evidence("identity.v1-contract")]
+        : [this.evidence("portal.parser"), this.evidence("portal.requirement")],
+      proposerId: identity ? "identity-maintainer" : "portal-maintainer",
+    });
+    this.artifactIds[identity ? "identityV1Proposal" : "portalV1Proposal"] = proposal.id;
+  }
+
+  private recoveryId(artifactKey: string, actionId: DemoActionId): string {
+    return this.artifactIds[`rejected:${actionId}`] ? this.ids.next() : this.artifact(artifactKey);
   }
   public async rebuild(): Promise<void> {
     for (const p of Object.values(this.manifest.projects))
@@ -1349,8 +1413,11 @@ function receiptCopy(actionId: DemoActionId, decision: "Accepted" | "Rejected") 
     return {
       title: "Proposal rejected",
       message:
-        "No canonical Revision or Relationship was created. Reset to resume the guided path.",
-      facts: [{ label: "Knowledge safety", value: "Current knowledge is unchanged" }],
+        "The Rejected Review Decision is preserved. No canonical Revision or Relationship was created.",
+      facts: [
+        { label: "Knowledge safety", value: "Current knowledge is unchanged" },
+        { label: "Recovery", value: "Prepare a new Proposal for an independent review" },
+      ],
     };
   const copies: Record<
     DemoActionId,
@@ -1421,9 +1488,10 @@ function receiptCopy(actionId: DemoActionId, decision: "Accepted" | "Rejected") 
       facts: [],
     },
     resume: {
-      title: "Preparation resumed",
-      message: "The missing next artifact was prepared from canonical state.",
-      facts: [],
+      title: "New Proposal prepared",
+      message:
+        "The rejected Decision remains preserved. A new Proposal is ready for an independent review.",
+      facts: [{ label: "Canonical safety", value: "Current knowledge was not changed" }],
     },
     reset: {
       title: "Demo reset",
@@ -1441,6 +1509,10 @@ export function validateReceipt(
   runtime: RuntimeState,
 ): DemoResultReceipt | null {
   if (!receipt || receipt.fixtureVersion !== fixtureVersion) return null;
+  if (receipt.tone === "Warning") {
+    if (receipt.stage !== stage || receipt.artifactIds.length > 0) return null;
+    return receipt;
+  }
   const allowed: Partial<Record<DemoActionId, readonly DemoStage[]>> = {
     "review-v1": ["Prepared", "V1Accepted"],
     "review-dependency": ["DependencyAccepted"],
@@ -1474,7 +1546,7 @@ export function temporalReviewMatches(
 
 export function preparedInterruption(acceptedV1: number, initialSubmitted: number): string | null {
   return acceptedV1 + initialSubmitted < 2
-    ? "A required V1 Proposal was rejected or is missing. Reset restores the guided path."
+    ? "A required V1 Proposal was rejected or is missing. Preserve that Decision and prepare a new Proposal to continue."
     : null;
 }
 

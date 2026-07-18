@@ -117,6 +117,7 @@ function ProposalCard({
   return (
     <article
       className="card proposal-card"
+      data-proposal-id={item.id}
       data-guided-action-target={primary ? "true" : undefined}
       tabIndex={primary ? -1 : undefined}
     >

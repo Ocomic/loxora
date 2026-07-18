@@ -39,7 +39,7 @@ export function CompletionScreen() {
         aria-labelledby={completionTitleId}
       >
         <p className="eyebrow">Guided demo complete</p>
-        <h1 id={completionTitleId}>Project knowledge survived change—and stayed usable.</h1>
+        <h1 id={completionTitleId}>Project knowledge survived change and stayed usable.</h1>
         <p className="completion-lead">
           The demo flow proved reviewed canon, preserved history, planned intent, evidence-backed
           cross-project impact, restoration, and identical task context for the UI and MCP agent

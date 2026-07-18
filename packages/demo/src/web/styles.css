@@ -66,6 +66,10 @@ a:hover {
   outline-offset: 3px;
   border-radius: var(--radius-sm);
 }
+[data-route-focus-target="true"]:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
 .skip-link {
   position: fixed;
   left: 1rem;

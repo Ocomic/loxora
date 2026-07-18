@@ -96,4 +96,25 @@ test("Result Receipts require fixture, artifact, and Current-stage agreement", (
     validateReceipt({ ...receipt, artifactIds: ["missing"] }, "fixture-v1", "V2Accepted", runtime),
     null,
   );
+
+  const rejected: DemoResultReceipt = {
+    ...receipt,
+    actionId: "review-dependency",
+    stage: "V1Accepted",
+    title: "Proposal rejected",
+    message: "No relationship was created",
+    artifactIds: [],
+    tone: "Warning",
+  };
+  assert.equal(validateReceipt(rejected, "fixture-v1", "V1Accepted", runtime), rejected);
+  assert.equal(validateReceipt(rejected, "fixture-v1", "DependencyAccepted", runtime), null);
+  assert.equal(
+    validateReceipt(
+      { ...rejected, artifactIds: ["rejected-proposal"] },
+      "fixture-v1",
+      "V1Accepted",
+      runtime,
+    ),
+    null,
+  );
 });

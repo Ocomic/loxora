@@ -120,6 +120,8 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await acceptFirst(page);
   await expect(page.getByRole("heading", { name: "Compatibility restored" })).toBeVisible();
   await page.getByRole("button", { name: "Compare Current, History, and Planned" }).last().click();
+  const temporalHeading = page.locator("[data-route-focus-target='true']");
+  await expect(temporalHeading).toBeFocused();
   await expect(page.getByRole("heading", { name: "Compare knowledge across time" })).toBeVisible();
   const temporalComparison = page.getByLabel("Temporal knowledge comparison");
   await expect(
@@ -175,7 +177,7 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   );
   await page.locator(".guidance-panel").getByRole("button", { name: "Verify MCP parity" }).click();
   await expect(
-    page.getByRole("heading", { name: "Project knowledge survived change—and stayed usable." }),
+    page.getByRole("heading", { name: "Project knowledge survived change and stayed usable." }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "UI and MCP context match exactly" }),
@@ -189,7 +191,7 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
   await page.reload();
   await expect(page.getByText("UI and MCP Context match exactly", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Project knowledge survived change—and stayed usable." }),
+    page.getByRole("heading", { name: "Project knowledge survived change and stayed usable." }),
   ).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept());
@@ -200,6 +202,82 @@ test("Guided Demo remains server-derived from Prepared through real MCP parity",
       .getByText("0 of 2 initial revisions accepted", { exact: true }),
   ).toBeVisible();
 });
+
+test("Rejected demo Proposals remain preserved and can be replaced", async ({ page, request }) => {
+  await request.post("/api/demo/reset", { data: { stage: "Prepared" } });
+
+  const rejectReplaceAndAccept = async (kind: string, nextAction: string) => {
+    await page.goto("/reviews?mode=guided");
+    const before = (await (await request.get("/api/review-inbox")).json()) as InboxItem[];
+    const original = before.find((item) => inboxKind(item) === kind);
+    expect(original, `${kind} Proposal should be submitted`).toBeTruthy();
+    const originalCard = page.locator(`[data-proposal-id="${original?.id}"]`);
+    await originalCard.getByRole("button", { name: "Reject" }).click();
+    await expect(page.getByRole("heading", { name: "Proposal rejected" })).toBeVisible();
+    await expect(page.getByText(/Rejected Review Decision is preserved/)).toBeVisible();
+
+    await page
+      .locator(".result-summary")
+      .getByRole("button", { name: "Prepare a new Proposal" })
+      .click();
+    await expect(page.getByRole("heading", { name: "New Proposal prepared" })).toBeVisible();
+    await expect(page.getByText(/rejected Decision remains preserved/)).toBeVisible();
+
+    const after = (await (await request.get("/api/review-inbox")).json()) as InboxItem[];
+    const previousIds = new Set(before.map((item) => item.id));
+    const replacement = after.find((item) => inboxKind(item) === kind && !previousIds.has(item.id));
+    expect(replacement, `${kind} replacement should use a new ID`).toBeTruthy();
+
+    await page.locator(".result-summary").getByRole("button", { name: nextAction }).click();
+    const replacementCard = page.locator(`[data-proposal-id="${replacement?.id}"]`);
+    await expect(replacementCard).toBeVisible();
+    await replacementCard.getByRole("button", { name: "Accept and continue" }).click();
+  };
+
+  await rejectReplaceAndAccept("Initial", "Review the next V1 Proposal");
+  await expect
+    .poll(async () => (await (await request.get("/api/demo/status")).json()).guided.progressDetail)
+    .toBe("1 of 2 initial revisions accepted");
+
+  await page.goto("/reviews?mode=guided");
+  await acceptFirst(page);
+  await expect
+    .poll(async () => (await (await request.get("/api/demo/status")).json()).stage)
+    .toBe("V1Accepted");
+
+  await rejectReplaceAndAccept("Relationship", "Review the DependsOn relationship");
+  await expect
+    .poll(async () => (await (await request.get("/api/demo/status")).json()).stage)
+    .toBe("DependencyAccepted");
+
+  await rejectReplaceAndAccept("Successor", "Review breaking V2");
+  await expect
+    .poll(async () => (await (await request.get("/api/demo/status")).json()).stage)
+    .toBe("V2Accepted");
+
+  await request.post("/api/demo/assess-impact", { data: {} });
+  await request.post("/api/demo/rollback", { data: {} });
+  await expect
+    .poll(async () => (await (await request.get("/api/demo/status")).json()).stage)
+    .toBe("RollbackRecorded");
+
+  await rejectReplaceAndAccept("Restoration", "Review restoration V3");
+  await expect
+    .poll(async () => (await (await request.get("/api/demo/status")).json()).stage)
+    .toBe("V3Restored");
+});
+
+interface InboxItem {
+  readonly id: string;
+  readonly kind: string;
+  readonly proposal?: { readonly kind: string } | null;
+}
+
+function inboxKind(item: InboxItem): string {
+  return item.kind === "CrossProjectRelationshipProposal"
+    ? "Relationship"
+    : (item.proposal?.kind ?? "Unknown");
+}
 
 async function acceptFirst(page: import("@playwright/test").Page) {
   const button = page

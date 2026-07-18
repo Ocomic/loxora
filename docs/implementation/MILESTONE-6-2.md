@@ -34,6 +34,8 @@ The server revalidates that V3 is Current, History is exactly V1→V2→V3, and 
 - Home includes a clearly labeled concept preview mapping the same lifecycle to novel continuity. No novel fixture or second implemented workflow is claimed.
 - The browser remains a proof viewer; only `npm run demo:mcp:proof` invokes the real read-only MCP tool.
 - A server-confirmed proof now leads to a dedicated presentation-only conclusion with the demonstrated guarantees and a clearly labeled, non-implemented roadmap preview.
+- Rejecting an Initial, Relationship, Successor, or Restoration Proposal now produces a visible warning receipt and a server-authorized recovery action. The rejected decision remains immutable; recovery submits a distinct Proposal rather than retrying or overwriting it.
+- The asynchronous temporal comparison now receives focus only after Current, History, and Planned data are loaded, making the Step 7 navigation outcome immediately visible.
 
 ## Preserved boundaries
 
@@ -43,4 +45,4 @@ Deterministic export remains the explicit portability gap. A real novel continui
 
 ## Validation
 
-The required unit, boundary, lifecycle, browser, Context, and MCP parity checks are listed in the [Demo Runbook](./DEMO-RUNBOOK.md). The critical Playwright flow verifies all nine steps at 1280×720, including the explicit Step 7→8 transition, reset confirmation, and exact UI/MCP parity.
+The required unit, boundary, lifecycle, browser, Context, and MCP parity checks are listed in the [Demo Runbook](./DEMO-RUNBOOK.md). The critical Playwright flows verify all nine steps at 1280×720 and 1440×900, including the explicit Step 7→8 transition, reset confirmation, exact UI/MCP parity, and reject→replace→accept recovery for every demo Proposal kind.

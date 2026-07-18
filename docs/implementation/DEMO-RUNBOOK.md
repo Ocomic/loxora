@@ -29,7 +29,7 @@ The server derives progress from real state. The browser never enables a canonic
 
 Explore mode remains available throughout. It changes navigation only. Returning to Guided mode uses the server-derived current step.
 
-Each successful result includes the next server-authorized action. Step 8 cannot appear until the server has revalidated the exact V3 Current revision, the complete V1→V2→V3 lineage, the Deferred plan, and the fixture version.
+Each successful result includes the next server-authorized action. Opening Step 7 moves focus to the loaded temporal comparison so the navigation result is immediately visible. Step 8 cannot appear until the server has revalidated the exact V3 Current revision, the complete V1→V2→V3 lineage, the Deferred plan, and the fixture version.
 
 ## MCP proof
 
@@ -44,8 +44,8 @@ Open MCP Proof and run the command. Select **Verify MCP parity** again: the brow
 ## Recovery
 
 - Refresh: canonical stage and available actions are derived again.
-- Missing follow-up artifact: use **Resume preparation**.
-- Rejected Proposal: Current knowledge remains safe; reset to Prepared to restore the guided story.
+- Missing follow-up artifact: use **Prepare a new Proposal**.
+- Rejected Proposal: the Rejected Review Decision remains preserved and Current knowledge remains unchanged. Use **Prepare a new Proposal** to create a distinct replacement with a new identity, then review it independently. This recovery works for Initial, Relationship, Successor, and Restoration Proposals.
 - Stale or duplicate review: refresh the Inbox and follow the server-provided Current state.
 - Reset failure: the previous database is preserved; stop external MCP readers and retry.
 - MCP unavailable: the product UI remains usable and shows the exact recovery command.

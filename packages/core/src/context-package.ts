@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import type { Clock, LifecycleStore, NavigationStore } from "./ports.js";
 import type { CrossProjectImpactStore, ImpactPath, ReadableProjects } from "./cross-project.js";

@@ -36,6 +36,9 @@ function RouteScrollReset() {
     window.scrollTo(0, 0);
     const frame = window.requestAnimationFrame(() => {
       window.scrollTo(0, 0);
+      document
+        .querySelector<HTMLElement>("[data-route-focus-target='true']")
+        ?.focus({ preventScroll: true });
       document.documentElement.style.scrollBehavior = previousBehavior;
     });
     return () => {

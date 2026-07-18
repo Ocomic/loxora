@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { ErrorState, LoadingState } from "../components/AsyncState.js";
 import { DemoActionButton } from "../components/DemoActionButton.js";
 import { useDemoState } from "../components/DemoState.js";
@@ -43,6 +44,7 @@ function TemporalComparisonContent({
 }: {
   status: NonNullable<ReturnType<typeof useDemoState>["status"]>;
 }) {
+  const headingRef = useRef<HTMLElement>(null);
   const target = status.guided.temporalReviewTarget;
   const current = useApi<CurrentResult>(
     `/api/projects/${target.historyProjectId}/nodes/${target.historyNodeId}/current`,
@@ -53,6 +55,12 @@ function TemporalComparisonContent({
   const planned = useApi<PlanResult[]>(
     `/api/projects/${target.plannedProjectId}/nodes/${target.plannedNodeId}/planned`,
   );
+  const ready = Boolean(current.data && history.data && planned.data);
+  useEffect(() => {
+    if (!ready) return;
+    headingRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
+    headingRef.current?.focus({ preventScroll: true });
+  }, [ready]);
   const error = current.error ?? history.error ?? planned.error;
   if (error)
     return (
@@ -68,7 +76,12 @@ function TemporalComparisonContent({
   );
   return (
     <>
-      <header className="page-heading">
+      <header
+        ref={headingRef}
+        className="page-heading"
+        data-route-focus-target="true"
+        tabIndex={-1}
+      >
         <p className="eyebrow">Past attempts, present guidance, future intent</p>
         <h1>Compare knowledge across time</h1>
         <p>
