@@ -29,6 +29,8 @@ For licensing, commercial-service, managed-compute, or contribution-policy work,
 
 The long-term product vision is guidance, not implementation authorization.
 
+The first intended real-world post-Hackathon validation target is Ocomic/Play.Ocomic. Treat this as dogfooding of the generic core, not authorization to hard-code Ocomic-specific concepts into foundational architecture.
+
 ## Core rules
 
 - Documentation before implementation.
@@ -38,6 +40,10 @@ The long-term product vision is guidance, not implementation authorization.
 - Navigate before loading.
 - Use maps, indexes, summaries, and typed relationships before loading detailed knowledge.
 - Project knowledge belongs to the project, not to a model, IDE, chat, or individual.
+- Open-source code does not imply that all project knowledge is public.
+- Before adding product, business, security, infrastructure, roadmap, or project-specific decisions to the public repository, classify whether the information is safe and intended for public disclosure.
+- Sensitive Ocomic or future customer/project knowledge belongs in an appropriate private knowledge boundary; public docs should use sanitized/generalized summaries when needed.
+- Never place credentials, secrets, private customer data, or security-sensitive operational details in public repository documentation.
 - AI agents propose; shared knowledge requires appropriate review.
 - Prefer evidence over assumptions.
 - Preserve uncertainty instead of inventing certainty.
