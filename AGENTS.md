@@ -22,7 +22,12 @@ Before proposing architecture or implementation, read:
 8. `docs/rfcs/RFC-004-development-workflow.md`
 9. `docs/rfcs/RFC-005-project-preparation.md`
 10. `docs/rfcs/RFC-006-knowledge-navigation-and-progressive-context.md`
-11. `docs/planning/open-questions.md`
+11. `docs/planning/PRODUCT-VISION.md`
+12. `docs/planning/open-questions.md`
+
+For licensing, commercial-service, managed-compute, or contribution-policy work, also read `docs/planning/LICENSING-STRATEGY.md`.
+
+The long-term product vision is guidance, not implementation authorization.
 
 ## Core rules
 
@@ -44,6 +49,9 @@ Before proposing architecture or implementation, read:
 - Update or invalidate affected maps, indexes, summaries, and cross-project links when knowledge changes.
 - Avoid orphaned knowledge, broken links, duplicate concepts, and unexplained navigation dead ends.
 - Local-first and model independence are foundational constraints.
+- Optional cloud services must not become a hard dependency for the local core.
+- Long-term agents should request capabilities rather than hard-code providers or infrastructure.
+- Any future cost-incurring autonomous compute must sit behind user-governed policy, budget, and shutdown controls.
 - Team, organization, role, permission, and agent-identity support must remain possible.
 - Cross-project knowledge sharing must be explicit, typed, evidence-backed, and permission-aware.
 
