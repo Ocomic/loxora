@@ -79,6 +79,30 @@ These defaults do not resolve permanent storage, runtime, workspace, graph, sear
 - Profiles for books, games, research, and business projects.
 
 
+## Ocomic-first post-Hackathon validation
+
+The first practical product validation target should be Ocomic/Play.Ocomic rather than an abstract attempt to support every domain at once.
+
+Open questions include:
+
+- Which existing Ocomic project should be the first production dogfooding target.
+- Which Ocomic workflows provide the smallest useful end-to-end slice.
+- What belongs in a reusable software/creative-development profile versus project configuration.
+- How private Ocomic knowledge is stored and referenced without publishing it in this repository.
+- Which results from Ocomic dogfooding should graduate into generic Loxora concepts.
+- What success criteria demonstrate that Loxora is useful beyond the curated Hackathon demo.
+
+## Public/private knowledge boundary
+
+- Visibility classification for knowledge, decisions, evidence, plans, and generated summaries.
+- Public, private-project, private-organization, and local-only knowledge boundaries.
+- How public RFCs reference private decisions without leaking their contents.
+- Sanitized/public summaries of private architecture or commercial decisions.
+- Prevention of accidental publication by humans or agents.
+- Secret detection and security-sensitive information handling.
+- Export/import behavior when a project contains mixed visibility levels.
+- Whether visibility is metadata on nodes, revisions, evidence, projects, or multiple layers.
+
 ## Long-term product and commercialization
 
 The long-term direction is described in `docs/planning/PRODUCT-VISION.md`. The following remain open and require RFC/ADR work before implementation:
