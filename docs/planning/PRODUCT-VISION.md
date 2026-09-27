@@ -63,6 +63,56 @@ Agents must not receive unrestricted direct access to paid compute or privileged
 
 Costly or privileged actions should pass through policy, permission, and budget controls.
 
+### Open source does not imply public project knowledge
+
+The Loxora source code may be public while the projects managed by Loxora remain private.
+
+Public repository documentation should contain only information that is intentionally safe to publish, such as:
+- product principles,
+- public architecture contracts,
+- generic examples,
+- public RFCs and ADRs,
+- contributor guidance,
+- and intentionally disclosed roadmap information.
+
+Loxora must support project knowledge that is not published to the open-source repository, including:
+- unreleased product plans,
+- commercial strategy,
+- pricing and margin decisions,
+- private infrastructure details,
+- credentials and secrets,
+- security-sensitive information,
+- customer or partner information,
+- and project-specific decisions that should remain internal.
+
+A documentation-first workflow therefore needs a visibility decision before publication.
+
+A significant decision may be documented privately and referenced publicly only through a sanitized summary when necessary.
+
+The open-source repository must never become the canonical storage location for all knowledge managed by Loxora.
+
+## Ocomic-first validation
+
+The first practical post-Hackathon application of Loxora should be Ocomic and Play.Ocomic.
+
+This is a dogfooding strategy, not a permanent product restriction.
+
+The initial real-world workflows should prove that Loxora can help Ocomic with areas such as:
+- software and web-game development,
+- repository and architecture knowledge,
+- reusable Codex/agent context,
+- asset and 3D workflows,
+- content and operational workflows,
+- local and rented AI compute,
+- long-running agent tasks,
+- and cross-project knowledge between Ocomic projects.
+
+Ocomic-specific requirements should be used to validate the generic core, but the core should not hard-code Ocomic names, repositories, providers, infrastructure, or game-specific concepts.
+
+Where an Ocomic requirement is genuinely domain-specific, it should prefer a profile, capability, adapter, extension, or project configuration over a core primitive unless a broader reusable abstraction is demonstrated.
+
+The first production-quality profile may therefore be an Ocomic/software-and-creative-development profile while preserving the long-term goal of supporting other project types.
+
 ## Guided setup
 
 The initial experience should optimize for a useful local baseline rather than a provider-selection wizard.
@@ -343,6 +393,16 @@ A capability request may need to declare:
 Remote compute should receive only the minimum data needed for a job.
 
 ## Relationship to the current MVP
+
+The completed Hackathon MVP remains bounded as documented.
+
+The next practical validation target should be applying Loxora to real Ocomic/Play.Ocomic work before attempting to generalize every long-term use case.
+
+That Ocomic-first phase should be treated as production dogfooding:
+- solve real Ocomic problems,
+- measure where the current knowledge model helps or fails,
+- keep sensitive Ocomic knowledge outside the public repository,
+- and only promote reusable lessons into public core architecture after review.
 
 Nothing in this document authorizes implementation within the completed Hackathon MVP.
 
