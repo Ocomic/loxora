@@ -30,6 +30,15 @@ This repository contains foundational RFCs, accepted Hackathon-only architecture
 
 See `docs/hackathon/README.md` for the complete planning index.
 
+## Long-term direction
+
+The bounded Hackathon implementation is not the permanent product boundary. The non-implementation long-term direction is documented in:
+
+- `docs/planning/PRODUCT-VISION.md`
+- `docs/planning/LICENSING-STRATEGY.md`
+
+These documents guide future planning but do not authorize implementation.
+
 ## Important
 
 Loxora is documentation-driven. Architecture decisions should be documented before implementation whenever reasonably possible.
