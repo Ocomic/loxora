@@ -77,3 +77,39 @@ These defaults do not resolve permanent storage, runtime, workspace, graph, sear
 - Claim-level lifecycle.
 - Embeddings and broader retrieval strategy.
 - Profiles for books, games, research, and business projects.
+
+
+## Long-term product and commercialization
+
+The long-term direction is described in `docs/planning/PRODUCT-VISION.md`. The following remain open and require RFC/ADR work before implementation:
+
+- Capability registry and provider-independent capability contracts.
+- Local system scanner and supported baseline local model/runtime.
+- Packaging strategy for a useful first-run local installation.
+- Local, hybrid, and cloud-burst execution semantics.
+- Compute-router policy inputs and privacy classification.
+- Batch scheduling and interactive-vs-background priority rules.
+- Cost Guard, budget reservation, worker TTL, idle shutdown, and zombie-worker reaping.
+- Remote worker protocol for user-owned and rented NVIDIA compute.
+- Local usage accounting and hardware-vs-rental cost analysis.
+- Boundary between open-source Loxora Core and optional Hub/Cloud/Compute services.
+- Bring-your-own-provider and bring-your-own-API-key requirements.
+- Managed compute convenience-fee model and transparent cost reporting.
+- Web control-plane trust boundary and local-daemon authority.
+- Extension/marketplace trust, signing, review, and update model.
+- Data minimization and permission requirements for remote compute.
+
+## Licensing and contribution policy
+
+The repository currently uses MIT. The decision space is recorded in `docs/planning/LICENSING-STRATEGY.md`.
+
+Open questions include:
+
+- Remain MIT vs. move to Apache-2.0, MPL-2.0, AGPLv3, or another approved open-source license.
+- Whether protection against closed hosted forks is a product requirement.
+- Whether commercial dual licensing is desirable.
+- Contributor License Agreement or Developer Certificate of Origin strategy.
+- Copyright ownership and relicensing rights before substantial external contributions arrive.
+- Dependency-license compatibility for the eventual packaged local runtime.
+- Trademark policy for the Loxora name, logo, official hosted service, and compatibility claims.
+- Repository and license boundaries for optional proprietary hosted-service components.
