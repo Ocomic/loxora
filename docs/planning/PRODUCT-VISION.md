@@ -2,7 +2,7 @@
 
 **Status:** Product vision — non-implementation guidance  
 **Scope:** Post-Hackathon / long-term direction  
-**Last Updated:** September 2026
+**Last Updated:** October 2026
 
 ## Purpose
 
@@ -392,6 +392,220 @@ A capability request may need to declare:
 
 Remote compute should receive only the minimum data needed for a job.
 
+## Adaptive software and evolving user experience
+
+Loxora should not only remember user and project context. Long-term, it may become software that progressively adapts its workflows, interfaces, and available capabilities to the user's demonstrated needs.
+
+The target is not uncontrolled autonomous self-modification. The target is a governed adaptation loop:
+
+`Observe -> Learn -> Propose -> Adapt -> Evaluate -> Keep or Roll Back`
+
+### User model and usage patterns
+
+Loxora may derive a local user model from normal work patterns, including:
+- which capabilities are used frequently,
+- which models or execution targets are effective for particular task types,
+- which manual steps recur across missions,
+- which tools, integrations, and knowledge spaces are commonly used together,
+- which proposals are repeatedly accepted, modified, or rejected,
+- which interface surfaces are useful or ignored,
+- and which recurring information needs justify a persistent workspace.
+
+Such observations should remain explainable, reviewable, and local by default.
+
+Loxora should distinguish between observed behavior, inferred preferences, explicit user instructions, and accepted configuration. An inference must not silently become a permanent rule merely because a pattern was detected.
+
+### Learned skills and workflows
+
+Repeated work patterns may become proposed reusable skills or workflows.
+
+Example:
+
+A user repeatedly plans a feature, sends simple work to a local model, delegates implementation to a stronger coding agent, runs tests, verifies the build, and performs a review.
+
+Instead of requiring that sequence to be manually recreated forever, Loxora may propose a reusable workflow for future feature work.
+
+Generated skills and workflows should be:
+- inspectable,
+- editable,
+- versioned,
+- disableable,
+- scoped to appropriate projects or contexts,
+- and reversible.
+
+### Adaptive dashboards and workspaces
+
+Loxora may recognize that recurring information needs are better served by a persistent dashboard than by repeated one-off conversations.
+
+Examples include:
+- news monitoring,
+- browser research,
+- product and price tracking,
+- market or operational monitoring,
+- software-development status,
+- builds and deployments,
+- project health,
+- content-production pipelines,
+- and research workspaces.
+
+For example, repeated product research may lead Loxora to propose a workspace containing:
+- watched products,
+- current prices,
+- price history,
+- target-price alerts,
+- relevant news,
+- saved research,
+- comparison views,
+- and generated summaries.
+
+Repeated news or browser research may lead to a topic dashboard containing:
+- selected sources,
+- update streams,
+- summaries,
+- saved items,
+- change detection,
+- and user-defined alert rules.
+
+These surfaces should be built from reusable UI and capability primitives rather than implemented as one-off hard-coded product modes.
+
+### Prompt-configurable UI
+
+The user should eventually be able to modify their Loxora environment using natural language.
+
+Examples:
+
+> Make the price view more compact and only show products whose price changed.
+
+> Combine gaming and AI news into one section and move it above my missions.
+
+> Create an Ocomic workspace with development missions, repository status, builds, devlog work, and relevant industry updates.
+
+Loxora may translate such requests into versioned workspace configuration rather than requiring the user to manually edit layout files or application code.
+
+Potential reusable UI primitives include:
+- feeds,
+- tables,
+- cards,
+- charts,
+- timelines,
+- kanban boards,
+- mission queues,
+- knowledge views,
+- price trackers,
+- alert panels,
+- calendars,
+- status widgets,
+- and extension-provided custom widgets.
+
+The long-term product direction is therefore not a single fixed application layout. Loxora may provide a stable shell and design system while allowing workspaces to evolve around the user's projects and recurring needs.
+
+### Adaptation authority levels
+
+Adaptive behavior should be separated by risk and reversibility.
+
+#### Passive adaptation
+
+Low-risk changes may happen automatically when allowed by user settings.
+
+Examples:
+- ranking frequently used information higher,
+- selecting an already-authorized execution target,
+- adjusting contextual recommendations,
+- or remembering view preferences.
+
+#### Configuration adaptation
+
+Changes that create or materially alter workflows or interfaces should normally be proposed, previewed, or explicitly requested.
+
+Examples:
+- creating a dashboard,
+- adding an automation,
+- changing a workspace layout,
+- generating a reusable workflow,
+- or enabling a new recurring information surface.
+
+#### Structural adaptation
+
+Changes that affect executable code, privileged integrations, security boundaries, paid resources, or foundational architecture require explicit authorization and the normal Loxora decision process.
+
+Examples:
+- installing or enabling a new privileged connector,
+- generating and activating executable extensions,
+- modifying core application code,
+- changing security policy,
+- or introducing paid external services.
+
+Loxora must not treat a detected usage pattern as sufficient authorization for structural changes.
+
+### Versioning, evaluation, and rollback
+
+Material adaptations should use the same lifecycle principles as other Loxora knowledge and decisions.
+
+An adaptation proposal should be able to record:
+- the observation that motivated it,
+- the evidence or repeated pattern,
+- the proposed change,
+- expected benefit,
+- required permissions,
+- cost implications,
+- scope,
+- review state,
+- and resulting revision.
+
+After adoption, Loxora may evaluate whether the change is actually useful.
+
+If the adaptation increases friction, produces poor results, or is no longer wanted, the user should be able to restore a previous workspace, workflow, or configuration state without losing history.
+
+### Extension discovery driven by need
+
+Capability discovery may also become adaptive.
+
+If a user repeatedly performs browser-heavy research, Loxora may propose browser or research integrations.
+
+If a user repeatedly monitors products, Loxora may propose price-tracking capabilities.
+
+If a user repeatedly works with repositories, builds, or deployments, Loxora may propose development integrations.
+
+The system should explain why a capability is being proposed, what data it can access, whether it sends data externally, whether it incurs cost, and whether a local or self-hosted alternative exists.
+
+A detected need may justify a recommendation. It does not justify silent installation or expanded permissions.
+
+### Privacy boundary for personalization
+
+An adaptive user model can become highly valuable and therefore sensitive.
+
+The canonical personalization state should remain user-controlled and local by default.
+
+Loxora should avoid requiring raw behavioral telemetry to be uploaded to a hosted service merely to provide personalization.
+
+Future sync or hosted personalization may be optional, but the user should be able to inspect, export, disable, reset, and selectively scope adaptive state.
+
+The goal is for a long-lived Loxora installation to become more useful because it accumulates user-approved knowledge, workflows, skills, UI configuration, and capability mappings — without turning that accumulated context into a mandatory cloud dependency.
+
+### Long-term product implication
+
+Models, APIs, MCP servers, execution providers, and individual tools are replaceable.
+
+A mature Loxora installation may derive much of its long-term value from the user-specific system that develops around them:
+- project knowledge,
+- accepted decisions,
+- reusable skills,
+- workflows,
+- preferences,
+- dashboards,
+- automations,
+- capability mappings,
+- execution policies,
+- and interface configuration.
+
+This extends the existing Memory Loop concept beyond retrieval and reuse.
+
+A possible long-term loop is:
+
+`Retrieve -> Work -> Observe -> Reflect -> Learn -> Propose -> Adapt -> Reuse`
+
+This suggests a broader product direction: Loxora as local-first, model-independent **adaptive software**, not merely an agent launcher or static knowledge application.
+
 ## Relationship to the current MVP
 
 The completed Hackathon MVP remains bounded as documented.
@@ -414,5 +628,5 @@ The capabilities, compute router, multi-agent runtime, hosted services, marketpl
 
 The desired long-term experience is:
 
-> Tell Loxora what you want to accomplish. Loxora determines which knowledge, models, tools, integrations, permissions, and compute resources are required; prefers user-controlled local execution; asks before crossing cost or trust boundaries; and remains usable without a mandatory Loxora cloud.
+> Tell Loxora what you want to accomplish. Loxora determines which knowledge, models, tools, integrations, permissions, and compute resources are required; prefers user-controlled local execution; learns from user-approved patterns; can evolve workflows and workspaces around recurring needs; asks before crossing cost, trust, or structural-change boundaries; and remains usable without a mandatory Loxora cloud.
 
