@@ -1,3 +1,4 @@
+import type { WorkspaceExport } from "./export.js";
 import type {
   AuditEvent,
   CollectionId,
@@ -229,4 +230,11 @@ export interface ReviewKnowledgeProposalInput {
   readonly reason: string;
   readonly scope?: Scope;
   readonly evidenceReferenceIds: readonly EvidenceReferenceId[];
+}
+
+export interface WorkspaceExportStore {
+  /** Reads every persisted record of the workspace as a format-version-1 export (ADR-003). */
+  readWorkspaceExport(): Promise<WorkspaceExport>;
+  /** Restores an export into an empty store in one transaction; rejects a non-empty store. */
+  restoreWorkspaceExport(document: WorkspaceExport): Promise<void>;
 }

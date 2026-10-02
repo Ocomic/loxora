@@ -5,6 +5,7 @@ import type {
   NavigationStore,
   PlannedKnowledgeStore,
   ReviewInboxStore,
+  WorkspaceExportStore,
 } from "@loxora/core";
 import { SqliteLifecycleStore } from "./adapter.js";
 
@@ -19,7 +20,8 @@ export async function openSqliteStore(
     NavigationStore &
     CrossProjectImpactStore &
     PlannedKnowledgeStore &
-    ReviewInboxStore
+    ReviewInboxStore &
+    WorkspaceExportStore
 > {
   return new SqliteLifecycleStore(path);
 }
