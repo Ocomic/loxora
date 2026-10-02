@@ -1,6 +1,6 @@
 # Milestone 7: Deterministic Workspace Export
 
-**Status:** Implemented — awaiting review and merge
+**Status:** Implemented and merged into `main` (pull request #8)
 **Decision Owner:** Ocomic
 **Authorization date:** October 2, 2026
 **Change class:** C2 (RFC-008)
