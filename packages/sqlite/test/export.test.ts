@@ -17,9 +17,27 @@ import {
 import { DatabaseSync } from "node:sqlite";
 import { SqliteLifecycleStore } from "../src/adapter.js";
 
+const cleanups = new WeakMap<test.TestContext, (() => unknown)[]>();
+
+// t.after hooks run in registration order, so a temp directory registered
+// first would be removed while its database is still open. Windows refuses
+// that (EPERM); run cleanups in reverse order instead.
+function defer(t: test.TestContext, cleanup: () => unknown): void {
+  let stack = cleanups.get(t);
+  if (!stack) {
+    const created: (() => unknown)[] = [];
+    cleanups.set(t, created);
+    t.after(async () => {
+      for (const run of created.reverse()) await run();
+    });
+    stack = created;
+  }
+  stack.push(cleanup);
+}
+
 function tempDirectory(t: test.TestContext): string {
   const directory = mkdtempSync(join(tmpdir(), "loxora-export-"));
-  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  defer(t, () => rmSync(directory, { recursive: true, force: true }));
   return directory;
 }
 
@@ -89,7 +107,7 @@ function withSection(
 
 test("the export format covers every persisted table and column", async (t) => {
   const store = new SqliteLifecycleStore(join(tempDirectory(t), "schema.sqlite"));
-  t.after(() => store.close());
+  defer(t, () => store.close());
   const document = await store.readWorkspaceExport();
   for (const spec of WORKSPACE_EXPORT_SECTIONS)
     assert.deepEqual(workspaceExportRecords(document, spec), []);
@@ -100,7 +118,7 @@ test("the export format covers every persisted table and column", async (t) => {
 
 test("exporting the same workspace twice yields identical canonical bytes", async (t) => {
   const store = await seededStore(join(tempDirectory(t), "source.sqlite"));
-  t.after(() => store.close());
+  defer(t, () => store.close());
   const first = serializeWorkspaceExport(await store.readWorkspaceExport());
   const second = serializeWorkspaceExport(await store.readWorkspaceExport());
   assert.equal(first, second);
@@ -115,14 +133,14 @@ test("export, restore, and export again is byte-identical", async (t) => {
   const original = serializeWorkspaceExport(await source.readWorkspaceExport());
   await source.close();
   const target = new SqliteLifecycleStore(join(directory, "target.sqlite"));
-  t.after(() => target.close());
+  defer(t, () => target.close());
   await target.restoreWorkspaceExport(parseWorkspaceExport(original));
   assert.equal(serializeWorkspaceExport(await target.readWorkspaceExport()), original);
 });
 
 test("serialization does not depend on record order in the input", async (t) => {
   const store = await seededStore(join(tempDirectory(t), "source.sqlite"));
-  t.after(() => store.close());
+  defer(t, () => store.close());
   const document = await store.readWorkspaceExport();
   const spec = WORKSPACE_EXPORT_SECTIONS.find((entry) => entry.name === "auditEvents");
   assert.ok(spec);
@@ -137,7 +155,7 @@ test("serialization does not depend on record order in the input", async (t) => 
 test("restore rejects a non-empty target without writing", async (t) => {
   const directory = tempDirectory(t);
   const source = await seededStore(join(directory, "source.sqlite"));
-  t.after(() => source.close());
+  defer(t, () => source.close());
   const document = await source.readWorkspaceExport();
   const before = serializeWorkspaceExport(document);
   await assert.rejects(() => source.restoreWorkspaceExport(document), ValidationError);
@@ -146,7 +164,7 @@ test("restore rejects a non-empty target without writing", async (t) => {
 
 test("parsing rejects unknown versions, unknown fields, and duplicate keys", async (t) => {
   const store = await seededStore(join(tempDirectory(t), "source.sqlite"));
-  t.after(() => store.close());
+  defer(t, () => store.close());
   const document = await store.readWorkspaceExport();
   const text = serializeWorkspaceExport(document);
   assert.throws(
@@ -208,6 +226,6 @@ test("export refuses a schema that drifted from the export format", async (t) =>
   database.exec("ALTER TABLE projects ADD COLUMN unexported TEXT");
   database.close();
   const drifted = new SqliteLifecycleStore(path);
-  t.after(() => drifted.close());
+  defer(t, () => drifted.close());
   await assert.rejects(() => drifted.readWorkspaceExport(), IntegrityError);
 });
