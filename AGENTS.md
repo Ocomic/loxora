@@ -22,7 +22,14 @@ Before proposing architecture or implementation, read:
 8. `docs/rfcs/RFC-004-development-workflow.md`
 9. `docs/rfcs/RFC-005-project-preparation.md`
 10. `docs/rfcs/RFC-006-knowledge-navigation-and-progressive-context.md`
-11. `docs/planning/open-questions.md`
+11. `docs/planning/PRODUCT-VISION.md`
+12. `docs/planning/open-questions.md`
+
+For licensing, commercial-service, managed-compute, or contribution-policy work, also read `docs/planning/LICENSING-STRATEGY.md`.
+
+The long-term product vision is guidance, not implementation authorization.
+
+The first intended real-world post-Hackathon validation target is Ocomic/Play.Ocomic. Treat this as dogfooding of the generic core, not authorization to hard-code Ocomic-specific concepts into foundational architecture.
 
 ## Core rules
 
@@ -33,6 +40,10 @@ Before proposing architecture or implementation, read:
 - Navigate before loading.
 - Use maps, indexes, summaries, and typed relationships before loading detailed knowledge.
 - Project knowledge belongs to the project, not to a model, IDE, chat, or individual.
+- Open-source code does not imply that all project knowledge is public.
+- Before adding product, business, security, infrastructure, roadmap, or project-specific decisions to the public repository, classify whether the information is safe and intended for public disclosure.
+- Sensitive Ocomic or future customer/project knowledge belongs in an appropriate private knowledge boundary; public docs should use sanitized/generalized summaries when needed.
+- Never place credentials, secrets, private customer data, or security-sensitive operational details in public repository documentation.
 - AI agents propose; shared knowledge requires appropriate review.
 - Prefer evidence over assumptions.
 - Preserve uncertainty instead of inventing certainty.
@@ -44,6 +55,9 @@ Before proposing architecture or implementation, read:
 - Update or invalidate affected maps, indexes, summaries, and cross-project links when knowledge changes.
 - Avoid orphaned knowledge, broken links, duplicate concepts, and unexplained navigation dead ends.
 - Local-first and model independence are foundational constraints.
+- Optional cloud services must not become a hard dependency for the local core.
+- Long-term agents should request capabilities rather than hard-code providers or infrastructure.
+- Any future cost-incurring autonomous compute must sit behind user-governed policy, budget, and shutdown controls.
 - Team, organization, role, permission, and agent-identity support must remain possible.
 - Cross-project knowledge sharing must be explicit, typed, evidence-backed, and permission-aware.
 

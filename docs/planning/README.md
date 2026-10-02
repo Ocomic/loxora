@@ -6,6 +6,8 @@ No implementation plan is final until the foundational RFCs are reviewed.
 
 ## Current planning
 
+- [Long-term Product Vision](./PRODUCT-VISION.md)
+- [Licensing Strategy](./LICENSING-STRATEGY.md)
 - [Open Questions](./open-questions.md)
 - [Hackathon planning index](../hackathon/README.md)
 - [RFC-007 Hackathon MVP decision](../rfcs/RFC-007-initial-architecture-and-mvp-boundaries.md)
