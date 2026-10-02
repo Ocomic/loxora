@@ -227,7 +227,7 @@ These workflows validate generic UI abstractions. The Loxora UI must not become 
 
 Mission state should be modeled independently of the UI. The frontend must not infer critical execution state from logs.
 
-Conceptually, a mission may expose states such as:
+**Superseded by [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md) (accepted October 2, 2026).** The accepted model uses seven states (`queued`, `running`, `waiting`, `paused`, `completed`, `failed`, `cancelled`) with a typed Wait Reason on `waiting` (`provider_limit`, `input_required`, `approval_required`, `permission_required`, `budget_required`). RFC-009 maps each UI state below onto it. The original sketch is kept for history:
 
 ```text
 queued
@@ -241,14 +241,14 @@ cancelled
 completed
 ```
 
-The exact state model still requires design. It must not be implemented from this document alone without an approved architecture task (RFC or ADR).
+Implementation still requires an ADR for storage and interfaces and an authorized milestone (RFC-008, C2).
 
 ## Open questions
 
-- How does a mission relate to existing Loxora concepts (Project, Node, Planned Knowledge, Context Package, Proposal)? Is a mission itself knowledge, or execution state that produces knowledge?
-- Which component owns mission state while no multi-agent runtime exists — the local server, an adapter around external agents, or a separate process?
-- How are provider limits detected without hard-coding providers (capability metadata, adapter signals, user configuration)?
-- Which mission states are terminal, which are resumable, and which transitions require human authorization?
+- *Answered by RFC-009:* a mission is execution state that produces knowledge through review-gated paths, never knowledge itself.
+- *Answered by RFC-009:* the local server owns mission state; adapters report transitions.
+- *Partly answered by RFC-009:* provider limits are reported by adapters as a Wait Reason; how adapters detect them is open.
+- *Answered by RFC-009:* terminal states are completed, failed, and cancelled; waiting and paused are resumable; pausing, cancelling, and answering Attention Requests require a human.
 - Which external notification channels are acceptable, and how are they governed (C3: data leaving the machine)?
 - What is the smallest useful first slice: a read-only Mission Detail for externally started agent work, or a full Mission Control overview?
 - Which parts of the existing demo inspector are carried over, and which are retired?
@@ -256,6 +256,7 @@ The exact state model still requires design. It must not be implemented from thi
 ## Suggested next decision steps
 
 1. Owner review of this document.
-2. An RFC for mission concept and mission state model (C2), including its relationship to the knowledge lifecycle. Proposed as [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md).
-3. An RFC or ADR for the product UI shell and the transition away from the demo inspector (C2).
-4. A milestone under `docs/implementation/` for the first slice, validated against real Ocomic workflows.
+2. An RFC for mission concept and mission state model (C2), including its relationship to the knowledge lifecycle. Done: [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md), accepted October 2, 2026.
+3. An ADR for mission storage and the reporting interface (C2).
+4. An RFC or ADR for the product UI shell and the transition away from the demo inspector (C2).
+5. A milestone under `docs/implementation/` for the first slice, validated against real Ocomic workflows.

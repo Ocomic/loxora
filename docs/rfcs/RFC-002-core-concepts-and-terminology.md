@@ -1,8 +1,8 @@
 # RFC-002 — Core Concepts & Terminology
 
 **Status:** Draft  
-**Version:** 0.3  
-**Last Updated:** July 2026
+**Version:** 0.4  
+**Last Updated:** October 2026 (mission terms added by RFC-009)
 
 ## Purpose
 
@@ -232,6 +232,40 @@ A bridge between Loxora and an external tool or system. Connectors exchange info
 
 A human or AI entity capable of reading, proposing, reviewing, or consuming project knowledge.
 
+### Mission
+
+A goal-directed unit of work on one or more Projects, carried out by one or more Agents, whose progress, state, and outcome Loxora records.
+
+A Mission is execution state, not Knowledge. It produces knowledge only through Proposals and other review-gated paths (RFC-009).
+
+### Mission State
+
+The current position of a Mission in its lifecycle: queued, running, waiting, paused, completed, failed, or cancelled. Exactly one state is current at a time. Mission States are not Knowledge States.
+
+### Wait Reason
+
+The typed reason why a waiting Mission cannot currently proceed, such as a provider limit, required input, approval, permission, or budget.
+
+### Attention Request
+
+A structured request from a Mission to a human stating what is needed, why, which options exist, and what each option implies.
+
+### Mission Step
+
+An optional, ordered subdivision of a Mission used for progress display. Steps carry no lifecycle semantics of their own.
+
+### Worker Role
+
+The responsibility an Agent holds within a Mission, such as architecture, implementation, or review. A Worker Role is separate from the Agent and from the model that fulfills it.
+
+### Mission Outcome
+
+The recorded result of a Mission in a terminal state: outputs, validations, decisions made, and the Proposals it produced. A completed Mission does not make its results canonical.
+
+### Mission Event
+
+An append-only record of a Mission State transition or significant occurrence, with actor, time, reason, and optional Evidence.
+
 ### Conversation Digest
 
 A structured distillation of a conversation containing durable project knowledge such as decisions, requirements, rationale, rejected alternatives, open questions, discoveries, risks, and plans.
@@ -288,6 +322,7 @@ The following distinctions must remain explicit:
 - Proposal vs. Canonical Knowledge
 - Confidence vs. Evidence
 - Agent vs. Model
+- Mission vs. Knowledge
 - Shared vs. Unrestricted
 - Search result vs. Navigation Path
 
