@@ -1,7 +1,8 @@
 # ADR-004 — Local Knowledge Capture CLI and Workspace
 
-**Status:** Proposed
+**Status:** Accepted (initial version, with review triggers)
 **Date:** October 2, 2026
+**Decision Date:** October 2, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (new package and public CLI contract; see RFC-008)
 
@@ -71,6 +72,21 @@ Add a small local command-line interface, `loxora`, in a new package `@loxora/cl
 
 Repository material is referenced as a Source with a locator that includes the repository, commit, and path, for example `git:Ocomic/<repository>@<commit>:docs/DECISION-LOG.md`. Evidence locators point inside the Source, for example `#D-001` or a line range. This is a documented convention in version 1, not a schema change.
 
+## Acceptance and review triggers
+
+Accepted by Ocomic on October 2, 2026 (pull request #10).
+
+**Workspace granularity (initial decision):** one shared local workspace holds all related projects of the decision owner. Cross-project Relationships, impact, and Context Packages require both endpoint Projects in the same store, and ADR-003 exports a whole workspace.
+
+Revisit this when any of these occur:
+
+- a Project needs different visibility, ownership, retention, or sharing than the others in the workspace;
+- a Project must be handed over, archived, or exported on its own (see the ADR-003 per-Project export trigger);
+- unrelated products make the workspace noisy enough to hurt navigation, review, or Context quality;
+- workspace size or export size becomes a practical problem.
+
+Splitting a workspace is a new decision. Until per-Project export and cross-workspace references exist, Projects that depend on each other stay in the same workspace.
+
 ## Alternatives
 
 ### Generalize the demo fixture loader into an importer
@@ -111,7 +127,7 @@ Milestone 8, authorized by a milestone document under `docs/implementation/`, co
 
 ## Open questions
 
-- Whether a user-level workspace should hold all Ocomic projects, or one workspace should exist per product.
+- When and how to split the shared workspace (see the review triggers above), and how dependencies across workspaces would then be referenced.
 - How Source locators should evolve into a typed provenance model.
 - When to add rollback, restoration, and impact assessment commands.
 - Whether and how an importer for decision logs and roadmaps should follow, based on dogfooding evidence.
