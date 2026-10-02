@@ -10,6 +10,10 @@ RFC-008 (accepted October 2, 2026) defines change classes (C0 to C3) and treats 
 - Whether C0 dependency updates should be automated.
 - How the repository change classes map to Loxora's product-level review policies for managed projects.
 
+## Dogfooding and knowledge capture
+
+ADR-004 (accepted October 2, 2026) adds a local CLI and workspace so real project knowledge can be proposed and reviewed outside the demo fixture. Dogfooding starts with a small, non-critical proof-of-concept repository and a dependency on the asset-loading contract of the live game platform. Initially one shared workspace holds all related projects; ADR-004 lists triggers for splitting it. Open questions: a typed provenance model for repository Sources, when to add rollback and impact commands, and whether an importer should follow.
+
 ## Post-demo portability
 
 Milestone 6 is demo-ready, but deterministic project-owned export/import remains unresolved and explicitly deferred. The repository must not claim permanent MVP portability until a lossless inspectable export can reconstruct canonical knowledge, lineage, relationships, assessments, Evidence, and plans without an external service.

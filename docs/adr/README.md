@@ -12,3 +12,4 @@ Under RFC-008 (post-Hackathon governance), ADR-001 and ADR-002 are the current a
 ## Post-Hackathon decisions
 
 - [ADR-003 — Deterministic Workspace Export Format](./ADR-003-deterministic-workspace-export.md) — **Accepted October 2, 2026** (initial version with review triggers); defines the versioned canonical JSON export and restore-into-empty-store contract that closes the ADR-001 portability requirement.
+- [ADR-004 — Local Knowledge Capture CLI and Workspace](./ADR-004-local-knowledge-capture-cli.md) — **Accepted October 2, 2026** (initial version with review triggers); a local `loxora` CLI over existing Core services so real project knowledge can be proposed, reviewed, and exported for dogfooding, without an importer.
