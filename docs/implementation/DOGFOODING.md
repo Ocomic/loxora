@@ -45,7 +45,7 @@ npm run loxora -- show map --project <project>
 
 - **Placeholders:** replace every `<placeholder>` completely, including the angle brackets. PowerShell treats `<` as a reserved redirection operator and refuses the whole command.
 - **Encoding:** Windows PowerShell 5.1 reads UTF-8 files without BOM as ANSI. Pass longer or non-ASCII content with `--content-file` instead of inline arguments.
-- **Line endings:** with a global `core.autocrlf=true`, `npm run check` reports formatting errors for files that are LF in the repository. Run the check in a checkout with `core.autocrlf=false`.
+- **Line endings:** `.gitattributes` keeps text files LF in the repository and in the working tree, independent of `core.autocrlf`. If an older checkout still shows CRLF formatting errors in `npm run check`, run `git rm -r --cached . && git reset --hard` once on a clean working tree.
 
 ## Provenance tips
 
