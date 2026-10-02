@@ -14,7 +14,7 @@ RFC-008 (accepted October 2, 2026) defines change classes (C0 to C3) and treats 
 
 Milestone 6 is demo-ready, but deterministic project-owned export/import remains unresolved and explicitly deferred. The repository must not claim permanent MVP portability until a lossless inspectable export can reconstruct canonical knowledge, lineage, relationships, assessments, Evidence, and plans without an external service.
 
-ADR-003 (accepted October 2, 2026, initial version) defines the workspace export format, restore into an empty store, and the round-trip proof required before portability may be claimed. Per-Project export, cross-project edge rules, and mixed-visibility export remain open. ADR-003 lists review triggers for its workspace scope and its exact export of Audit Events and derived projections.
+Milestone 7 implements ADR-003, so deterministic workspace export and restore are now available and proven by round-trip tests for every demo stage. ADR-003 (accepted October 2, 2026, initial version) defines the workspace export format, restore into an empty store, and the round-trip proof required before portability may be claimed. Per-Project export, cross-project edge rules, and mixed-visibility export remain open. ADR-003 lists review triggers for its workspace scope and its exact export of Audit Events and derived projections.
 
 ## Knowledge lifecycle
 

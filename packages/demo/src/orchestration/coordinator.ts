@@ -111,15 +111,10 @@ export class DemoCoordinator {
       mkdirSync(this.dataDirectory, { recursive: true });
       removeSqliteFiles(next);
       const candidate = await openSqliteStore(next);
-      const seeded = new SeedSession(candidate, this.manifest);
-      await seeded.seedPrepared();
-      await seeded.advance(stage === "Complete" ? "V3Restored" : stage);
-      await seeded.rebuild();
-      const validation = await seeded.validate(stage === "Complete" ? "V3Restored" : stage);
-      if (!validation) throw new Error("Candidate demo database did not reach the requested stage");
+      const artifactIds = await seedDemoWorkspace(candidate, this.manifest, stage);
       const runtime: RuntimeState = {
         fixtureVersion: this.manifest.fixtureVersion,
-        artifactIds: seeded.artifactIds,
+        artifactIds,
         lastAction: `reset:${stage}`,
         parity: null,
         lastResult: null,
@@ -785,6 +780,22 @@ export class DemoCoordinator {
       lastAction: action,
     });
   }
+}
+
+/** Seeds the curated demo workspace into an empty store and advances it to `stage`. */
+export async function seedDemoWorkspace(
+  store: Store,
+  manifest: DemoManifest,
+  stage: DemoStage,
+): Promise<Record<string, string>> {
+  const target = stage === "Complete" ? "V3Restored" : stage;
+  const seeded = new SeedSession(store, manifest);
+  await seeded.seedPrepared();
+  await seeded.advance(target);
+  await seeded.rebuild();
+  if (!(await seeded.validate(target)))
+    throw new Error("Candidate demo database did not reach the requested stage");
+  return seeded.artifactIds;
 }
 
 class SeedSession {

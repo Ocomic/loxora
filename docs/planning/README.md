@@ -21,6 +21,8 @@ No implementation plan is final until the foundational RFCs are reviewed.
 - [Milestone 6 final demo experience](../implementation/MILESTONE-6.md)
 - [Milestone 6.1 Guided Demo UX and visual polish](../implementation/MILESTONE-6-1.md)
 - [Milestone 6.2 Jury Flow and general-audience clarity](../implementation/MILESTONE-6-2.md)
+- [Milestone 7 deterministic workspace export](../implementation/MILESTONE-7.md)
+- [Workspace Export API](../implementation/EXPORT-API.md)
 - [Demo Runbook](../implementation/DEMO-RUNBOOK.md)
 - [Planned Knowledge Core API](../implementation/PLANNED-KNOWLEDGE-API.md)
 - [Local application API](../implementation/LOCAL-APP-API.md)

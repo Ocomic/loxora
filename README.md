@@ -45,7 +45,7 @@ These documents guide future planning but do not authorize implementation.
 
 Loxora is documentation-driven. Architecture decisions should be documented before implementation whenever reasonably possible.
 
-Work after the Hackathon is authorized by change class as defined in `docs/rfcs/RFC-008-post-hackathon-governance.md`. RFC-007, ADR-001, and ADR-002 are the current architecture baseline, not permanent architecture. Start with `docs/implementation/DEMO-RUNBOOK.md`, `docs/implementation/MILESTONE-6-2.md`, and the API documents under `docs/implementation/`. Deterministic export remains an explicit portability gap.
+Work after the Hackathon is authorized by change class as defined in `docs/rfcs/RFC-008-post-hackathon-governance.md`. RFC-007, ADR-001, and ADR-002 are the current architecture baseline, not permanent architecture. Start with `docs/implementation/DEMO-RUNBOOK.md`, `docs/implementation/MILESTONE-6-2.md`, and the API documents under `docs/implementation/`. Workspaces can be exported to canonical JSON and restored without loss (`docs/implementation/EXPORT-API.md`, Milestone 7).
 
 ## Contributing
 

@@ -54,12 +54,15 @@ import {
   type PlannedKnowledgeStore,
   type ReviewInboxItem,
   type ReviewInboxStore,
+  type WorkspaceExport,
+  type WorkspaceExportStore,
 } from "@loxora/core";
 import { DatabaseSync } from "node:sqlite";
 import { runMigrations } from "./migrations.js";
 import { SqliteNavigationProjectionStore } from "./navigation.js";
 import { SqliteCrossProjectImpactStore } from "./impact.js";
 import { SqlitePlannedKnowledgeStore } from "./planned.js";
+import { SqliteWorkspaceExportStore } from "./export.js";
 
 interface ProposalRow {
   id: string;
@@ -208,12 +211,14 @@ export class SqliteLifecycleStore
     NavigationStore,
     CrossProjectImpactStore,
     PlannedKnowledgeStore,
-    ReviewInboxStore
+    ReviewInboxStore,
+    WorkspaceExportStore
 {
   private readonly database: DatabaseSync;
   private readonly navigation: SqliteNavigationProjectionStore;
   private readonly impact: SqliteCrossProjectImpactStore;
   private readonly planned: SqlitePlannedKnowledgeStore;
+  private readonly workspaceExport: SqliteWorkspaceExportStore;
 
   public constructor(
     path: string,
@@ -248,6 +253,15 @@ export class SqliteLifecycleStore
     );
     this.impact = new SqliteCrossProjectImpactStore(this.database, this.faults);
     this.planned = new SqlitePlannedKnowledgeStore(this.database);
+    this.workspaceExport = new SqliteWorkspaceExportStore(this.database);
+  }
+
+  public async readWorkspaceExport(): Promise<WorkspaceExport> {
+    return this.workspaceExport.readWorkspaceExport();
+  }
+
+  public async restoreWorkspaceExport(document: WorkspaceExport): Promise<void> {
+    return this.workspaceExport.restoreWorkspaceExport(document);
   }
 
   public async createProject(project: Project, auditEvent: AuditEvent): Promise<void> {

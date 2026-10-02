@@ -77,7 +77,7 @@ These are unnecessary for the required relationship paths and would add operatio
 
 ## Implementation status
 
-Milestones 1–4 implement the asynchronous Core ports, SQLite adapter, lifecycle, navigation, and reviewed cross-project impact. Milestone 5 adds an ephemeral Context Package operation in Core and a single read-only stdio MCP adapter. Milestone 6 adds schema 005 Planned Knowledge and one local Node/React/Vite demo package while preserving SQLite isolation and asynchronous Core ports. SQLite remains the replaceable Hackathon persistence implementation, not permanent architecture; deterministic export remains deferred.
+Milestones 1–4 implement the asynchronous Core ports, SQLite adapter, lifecycle, navigation, and reviewed cross-project impact. Milestone 5 adds an ephemeral Context Package operation in Core and a single read-only stdio MCP adapter. Milestone 6 adds schema 005 Planned Knowledge and one local Node/React/Vite demo package while preserving SQLite isolation and asynchronous Core ports. SQLite remains the replaceable Hackathon persistence implementation, not permanent architecture; deterministic export remained deferred during the Hackathon. After the Hackathon, ADR-003 defines the export format and Milestone 7 implements it, including restore into an empty store and a byte-identical round-trip proof.
 
 ## Rollback
 
