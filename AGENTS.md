@@ -2,11 +2,9 @@
 
 ## Project state
 
-Loxora is currently in a controlled Hackathon MVP implementation phase.
+Loxora has completed its Hackathon MVP (Milestones 1 through 6.2, merged into `main`) and is in post-Hackathon development. Work is authorized by change class as defined in `docs/rfcs/RFC-008-post-hackathon-governance.md`.
 
-Do not implement product functionality unless a task explicitly authorizes implementation.
-
-RFC-007, ADR-001, and ADR-002 are accepted only for the Hackathon MVP. Each implementation task must remain inside its explicitly assigned milestone. Acceptance of those documents is not blanket authorization for the complete MVP or permanent long-term architecture.
+RFC-007, ADR-001, and ADR-002 are the current architecture baseline. They constrain current work but are not permanent architecture; they change only through a new or superseding RFC or ADR.
 
 ## Required reading order
 
@@ -22,8 +20,13 @@ Before proposing architecture or implementation, read:
 8. `docs/rfcs/RFC-004-development-workflow.md`
 9. `docs/rfcs/RFC-005-project-preparation.md`
 10. `docs/rfcs/RFC-006-knowledge-navigation-and-progressive-context.md`
-11. `docs/planning/PRODUCT-VISION.md`
-12. `docs/planning/open-questions.md`
+11. `docs/rfcs/RFC-008-post-hackathon-governance.md`
+12. `docs/planning/PRODUCT-VISION.md`
+13. `docs/planning/open-questions.md`
+
+For work touching the existing implementation, also read `docs/rfcs/RFC-007-initial-architecture-and-mvp-boundaries.md`, the ADRs under `docs/adr/`, and the relevant API documents under `docs/implementation/`.
+
+For contributions, read `CONTRIBUTING.md`.
 
 For licensing, commercial-service, managed-compute, or contribution-policy work, also read `docs/planning/LICENSING-STRATEGY.md`.
 
@@ -61,28 +64,36 @@ The first intended real-world post-Hackathon validation target is Ocomic/Play.Oc
 - Team, organization, role, permission, and agent-identity support must remain possible.
 - Cross-project knowledge sharing must be explicit, typed, evidence-backed, and permission-aware.
 
-## Outside an explicitly authorized milestone, do not implement
+## Change classes and authorization
 
-- Knowledge Graph
-- Project Graph
-- Context Builder or Context Packages
-- Retrieval or embeddings
+Classify every change before starting (details in RFC-008). When unsure, use the higher class and ask.
+
+- **C0 — Maintenance:** documentation corrections, CI and tooling, tests, dependency patches, bug fixes that do not change documented behavior. May be opened directly as a pull request.
+- **C1 — Bounded change:** a small feature, refactor, or behavior fix inside an accepted RFC or ADR. Requires a short plan approved by the decision owner first.
+- **C2 — Significant change:** architecture, schema or migrations, public contracts (HTTP, MCP, export format, CLI), new packages, new external integrations, lifecycle/navigation/Context semantics. Requires an accepted RFC or ADR and an authorized milestone document under `docs/implementation/`.
+- **C3 — Owner-reserved decision:** licensing, trademark, contribution policy, security boundaries, data leaving the user's machine, cost-incurring compute or services, hosted services, publication of private knowledge. Only the decision owner decides; agents may prepare proposals.
+
+State the change class and the authorization relied on in every pull request. Agents never merge their own pull requests unless the decision owner explicitly asks for that specific merge. Agent-authored commits keep the agent identity and carry no agent sign-off (see `CONTRIBUTING.md`).
+
+## Always gated (C2 or C3)
+
+Do not implement without an accepted RFC/ADR and authorized milestone, or an owner decision:
+
+- Knowledge Graph or Project Graph beyond the existing typed relationships
+- Persistent Context Packages or a Context Builder beyond the existing deterministic operation
+- Retrieval, search, full-text search, or embeddings
 - Memory Loop implementation
-- Database schema
-- MCP server
-- Codex or Claude Code plugin
+- Database schema changes
+- New MCP tools, other agent integrations, or Codex/Claude Code plugins
 - Multi-agent orchestration
-- Team server, cloud service, authentication, or synchronization
-- UI
-- Build Week demo functionality
+- Team server, cloud service, authentication, authorization, or synchronization
+- New UI surfaces beyond the existing local demo inspector
+- Import beyond the existing curated fixture reset
+- Capability registry, compute routing, managed compute, Hub, or model gateway
 
-Record such ideas in `docs/planning/open-questions.md`.
+Record such ideas in `docs/planning/open-questions.md` or propose an RFC.
 
-Milestones 1 through 6 are complete and merged into `main`. Milestone 6 was authorized by Ocomic on July 15, 2026 and delivered the bounded final local demo described in `docs/implementation/MILESTONE-6.md`: curated fixtures, deterministic reset, minimal non-canonical Planned Knowledge, Review Inbox, the local `@loxora/demo` application, one Playwright flow, and real Context/MCP parity. Export, generalized import, additional MCP tools, authentication, production permissions, synchronization, search, embeddings, graph visualization, persistent Context Packages, and production deployment remain outside the completed Hackathon MVP scope.
-
-Milestone 6.1 was authorized by Ocomic on July 16, 2026 for presentation and UX only and is complete and merged into `main`. It adds Guided/Explore presentation state, server-provided actions, result explanations, responsive/accessibility polish, screenshots, and UI tests without changing canonical lifecycle, persistence, Planned Knowledge, relationships, impact, Context Package, MCP, visibility, or project-ownership behavior.
-
-Milestone 6.2 was authorized by Ocomic on July 17, 2026 for jury-flow and general-audience presentation only and is implemented and merged into `main`. It adds an explicit revalidated temporal presentation transition, verified-result next actions, plain-language freshness and Context explanations, compact phases, reset confirmation, and a non-implemented novel-continuity concept preview. It does not authorize a novel fixture, Core or schema changes, Context or MCP behavior changes, export, import, authentication, search, synchronization, or deployment.
+The Hackathon milestone history is recorded in `docs/hackathon/PRE-HACKATHON-BOUNDARY.md` and `docs/implementation/MILESTONE-*.md`. Those documents are historical and are not edited to describe later work. Deterministic export remains the documented portability gap.
 
 ## Knowledge evolution
 

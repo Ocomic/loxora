@@ -12,6 +12,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 6. RFC-005 — Project Preparation
 7. RFC-006 — Knowledge Navigation & Progressive Context
 8. RFC-007 — Initial Architecture and Hackathon MVP Boundaries
+9. RFC-008 — Post-Hackathon Governance and Work Authorization
 
 ## Dependency matrix
 
@@ -25,6 +26,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 | RFC-005 | RFC-001 to RFC-004 | bootstrap, source ingestion, initial Codex prompt | Defines how a project is inspected and reconstructed before architecture or implementation begins. |
 | RFC-006 | RFC-001 to RFC-005 | retrieval, Context Packages, Project Map, Project Graph, UI, search | Defines how knowledge is organized, indexed, navigated, summarized, and connected without becoming a maze. |
 | RFC-007 | RFC-000 to RFC-006 | Hackathon-only ADRs, explicitly authorized Hackathon milestones, MVP persistence, UI, MCP | Defines a bounded Hackathon vertical slice that proves lifecycle and cross-project impact without selecting permanent architecture. |
+| RFC-008 | RFC-001, RFC-004, RFC-007 | `AGENTS.md`, `CONTRIBUTING.md`, all post-Hackathon milestones and pull requests | Refines RFC-004 change classes into an authorization model, keeps RFC-007/ADR-001/ADR-002 as current baseline, and reserves licensing, security, cost, and data-boundary decisions for the owner. |
 
 ## Mandatory cross-RFC rules
 
@@ -114,6 +116,12 @@ Its proposed simplifications do not redefine the long-term model:
 - the UI and read-only MCP adapter use the same Context Package core operation.
 
 Changes to RFC-007 require review of both Hackathon-only ADRs and all Hackathon planning documents. Changes to RFC-003 or RFC-006 require revalidation of the lifecycle, temporal, navigation, impact, and Context Package acceptance criteria.
+
+### RFC-004, RFC-007, and RFC-008
+
+RFC-008 refines, and does not replace, the RFC-004 workflow and change classes. Every RFC-008 class still follows RFC-004 verification, review, reflection, and knowledge-update obligations.
+
+RFC-008 changes the status of RFC-007, ADR-001, and ADR-002 from Hackathon-only to current baseline. It does not change their content. Changes to that baseline remain C2 changes and require a new or superseding RFC or ADR.
 
 ## Change impact rule
 

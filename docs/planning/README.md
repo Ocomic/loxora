@@ -6,6 +6,7 @@ No implementation plan is final until the foundational RFCs are reviewed.
 
 ## Current planning
 
+- [RFC-008 Post-Hackathon Governance](../rfcs/RFC-008-post-hackathon-governance.md)
 - [Long-term Product Vision](./PRODUCT-VISION.md)
 - [Licensing Strategy](./LICENSING-STRATEGY.md)
 - [Open Questions](./open-questions.md)
