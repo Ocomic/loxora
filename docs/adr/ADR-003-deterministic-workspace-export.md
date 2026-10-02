@@ -1,7 +1,8 @@
 # ADR-003 — Deterministic Workspace Export Format
 
-**Status:** Proposed
+**Status:** Accepted (initial version, with review triggers)
 **Date:** October 2, 2026
+**Decision Date:** October 2, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (new public contract; see RFC-008)
 
@@ -92,6 +93,23 @@ An implementation of this ADR is accepted only if the following hold for the cur
 1. Exporting the same workspace twice produces identical bytes.
 2. Export, then restore into an empty store, then export again produces identical bytes.
 3. After restore, `getProjectMap`, `getKnowledgeHistory`, cross-project impact results, and the Context Package fingerprint equal those of the original store.
+
+## Acceptance and review triggers
+
+Accepted by Ocomic on October 2, 2026 (pull request #7) as the **initial** export decision. Two choices were accepted explicitly as starting points that must be re-evaluated as Loxora evolves:
+
+1. **Workspace-level scope.** Revisit when any of these occur:
+   - a real workspace contains Projects with different owners, visibility, or sharing needs;
+   - a user needs to hand over, archive, or publish a single Project;
+   - Project-level ownership (RFC-000, RFC-001) conflicts with exporting unrelated Projects together;
+   - dogfooding (for example Ocomic/Play.Ocomic) shows that workspace exports are too large or too coarse.
+2. **Exact export of Audit Events and derived navigation projections.** Revisit when any of these occur:
+   - exports become too large, or projections dominate their size;
+   - the projection format changes often enough that exporting it creates churn;
+   - Audit Events or actor identifiers must be redacted for sharing;
+   - a canonical-only exchange format is needed for interoperability.
+
+A revisit is a new or superseding ADR (C2 under RFC-008), with a new `formatVersion` if the format changes. Each milestone that touches export or persistence should state whether any trigger above has occurred.
 
 ## Alternatives
 
