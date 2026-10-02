@@ -16,7 +16,7 @@ Milestone 8 implements ADR-004. ADR-004 (accepted October 2, 2026) adds a local 
 
 ## Product UI direction
 
-The decision owner chose a Mission Control direction for the product UI (see [`UI-VISION.md`](./UI-VISION.md)). The existing demo inspector documented in `WEB-UI.md` is to be rebuilt. Open questions are listed in `UI-VISION.md`; the main ones are how missions relate to the knowledge lifecycle, who owns mission state before a multi-agent runtime exists, and how provider limits are detected without hard-coding providers. Implementation requires an RFC or ADR and an authorized milestone (RFC-008, C2).
+The decision owner chose a Mission Control direction for the product UI (see [`UI-VISION.md`](./UI-VISION.md)). The existing demo inspector documented in `WEB-UI.md` is to be rebuilt. Open questions are listed in `UI-VISION.md`; the main ones are how missions relate to the knowledge lifecycle, who owns mission state before a multi-agent runtime exists, and how provider limits are detected without hard-coding providers. Implementation requires an RFC or ADR and an authorized milestone (RFC-008, C2). [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md) (Proposed) answers the first two for review and lists its own open questions.
 
 ## Post-demo portability
 

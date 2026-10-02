@@ -13,6 +13,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 7. RFC-006 — Knowledge Navigation & Progressive Context
 8. RFC-007 — Initial Architecture and Hackathon MVP Boundaries
 9. RFC-008 — Post-Hackathon Governance and Work Authorization
+10. RFC-009 — Mission Concept and State Model (Proposed)
 
 ## Dependency matrix
 
@@ -27,6 +28,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 | RFC-006 | RFC-001 to RFC-005 | retrieval, Context Packages, Project Map, Project Graph, UI, search | Defines how knowledge is organized, indexed, navigated, summarized, and connected without becoming a maze. |
 | RFC-007 | RFC-000 to RFC-006 | Hackathon-only ADRs, explicitly authorized Hackathon milestones, MVP persistence, UI, MCP | Defines a bounded Hackathon vertical slice that proves lifecycle and cross-project impact without selecting permanent architecture. |
 | RFC-008 | RFC-001, RFC-004, RFC-007 | `AGENTS.md`, `CONTRIBUTING.md`, all post-Hackathon milestones and pull requests | Refines RFC-004 change classes into an authorization model, keeps RFC-007/ADR-001/ADR-002 as current baseline, and reserves licensing, security, cost, and data-boundary decisions for the owner. |
+| RFC-009 (Proposed) | RFC-002, RFC-003, RFC-004, RFC-006, RFC-008 | `docs/planning/UI-VISION.md`, future mission ADR and milestone, Mission Control UI | Defines Missions as execution state separate from knowledge, a seven-state model with typed Wait Reasons, and review-gated paths from mission results to knowledge. |
 
 ## Mandatory cross-RFC rules
 
@@ -122,6 +124,10 @@ Changes to RFC-007 require review of both Hackathon-only ADRs and all Hackathon 
 RFC-008 refines, and does not replace, the RFC-004 workflow and change classes. Every RFC-008 class still follows RFC-004 verification, review, reflection, and knowledge-update obligations.
 
 RFC-008 changes the status of RFC-007, ADR-001, and ADR-002 from Hackathon-only to current baseline. It does not change their content. Changes to that baseline remain C2 changes and require a new or superseding RFC or ADR.
+
+### RFC-003 and RFC-009
+
+Mission States are not Knowledge States. A completed Mission does not make its results canonical; results become knowledge only through Proposals and Review as defined in RFC-003 and RFC-004. Mission telemetry must not appear in Context Packages as knowledge.
 
 ## Change impact rule
 
