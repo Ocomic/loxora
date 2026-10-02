@@ -256,6 +256,6 @@ The exact state model still requires design. It must not be implemented from thi
 ## Suggested next decision steps
 
 1. Owner review of this document.
-2. An RFC for mission concept and mission state model (C2), including its relationship to the knowledge lifecycle.
+2. An RFC for mission concept and mission state model (C2), including its relationship to the knowledge lifecycle. Proposed as [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md).
 3. An RFC or ADR for the product UI shell and the transition away from the demo inspector (C2).
 4. A milestone under `docs/implementation/` for the first slice, validated against real Ocomic workflows.
