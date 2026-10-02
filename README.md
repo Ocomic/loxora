@@ -1,5 +1,7 @@
 # Loxora
 
+[![CI](https://github.com/Ocomic/loxora/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ocomic/loxora/actions/workflows/ci.yml)
+
 > Projects should never lose their memory.
 
 Loxora is an experimental, local-first and model-independent project knowledge and context layer.
