@@ -14,6 +14,10 @@ RFC-008 (accepted October 2, 2026) defines change classes (C0 to C3) and treats 
 
 Milestone 8 implements ADR-004. ADR-004 (accepted October 2, 2026) adds a local CLI and workspace so real project knowledge can be proposed and reviewed outside the demo fixture. Dogfooding starts with a small, non-critical proof-of-concept repository and a dependency on the asset-loading contract of the live game platform. Initially one shared workspace holds all related projects; ADR-004 lists triggers for splitting it. Open questions: a typed provenance model for repository Sources, when to add rollback and impact commands, and whether an importer should follow.
 
+## Product UI direction
+
+The decision owner chose a Mission Control direction for the product UI (see [`UI-VISION.md`](./UI-VISION.md)). The existing demo inspector documented in `WEB-UI.md` is to be rebuilt. Open questions are listed in `UI-VISION.md`; the main ones are how missions relate to the knowledge lifecycle, who owns mission state before a multi-agent runtime exists, and how provider limits are detected without hard-coding providers. Implementation requires an RFC or ADR and an authorized milestone (RFC-008, C2).
+
 ## Post-demo portability
 
 Milestone 6 is demo-ready, but deterministic project-owned export/import remains unresolved and explicitly deferred. The repository must not claim permanent MVP portability until a lossless inspectable export can reconstruct canonical knowledge, lineage, relationships, assessments, Evidence, and plans without an external service.

@@ -2,6 +2,8 @@
 
 The React 19/Vite 8 UI is a local inspector and controller. It renders server/Core results without reimplementing Current selection, History order, severity, Assessment applicability, dependency traversal, freshness, or budgeting.
 
+This document describes the current Hackathon implementation, not the long-term product UI. The intended direction (Mission Control) is recorded in [`docs/planning/UI-VISION.md`](../planning/UI-VISION.md); rebuilding this UI requires its own RFC or ADR and an authorized milestone.
+
 ## Guided and Explore modes
 
 Guided Demo presents nine steps grouped into Establish, Change & Recover, and Use & Prove. It keeps a persistent progress rail, contextual explanation, one dominant server-provided action, and revalidated result summaries. Explore retains free navigation through Projects, Spaces, Collections, Nodes, Review Inbox, Impact, Planned Knowledge, Context, Evidence, Sources, and MCP proof.

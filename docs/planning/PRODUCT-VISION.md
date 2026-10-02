@@ -499,6 +499,8 @@ Potential reusable UI primitives include:
 
 The long-term product direction is therefore not a single fixed application layout. Loxora may provide a stable shell and design system while allowing workspaces to evolve around the user's projects and recurring needs.
 
+The product UI direction for that shell, including Mission Control, Mission Detail, mission states, and crew roles, is described in [`UI-VISION.md`](./UI-VISION.md).
+
 ### Adaptation authority levels
 
 Adaptive behavior should be separated by risk and reversibility.
