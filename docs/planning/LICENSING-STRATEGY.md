@@ -1,6 +1,6 @@
 # Loxora Licensing Strategy
 
-**Status:** Decided — Apache-2.0 adopted for the repository (contribution policy and trademark still open)  
+**Status:** Decided — Apache-2.0 adopted for the repository; DCO contribution policy adopted (trademark still open)  
 **Current repository license:** Apache-2.0 (since 2026-10-02; previously MIT)  
 **Last Updated:** October 2026
 
@@ -30,7 +30,9 @@ This document records the decision space and, in the next section, the decision 
 - Versions up to and including commit `c6aebbb` were published under MIT and remain available under MIT.
 - Runtime dependencies at the time of the change (`@modelcontextprotocol/sdk`, `zod`, `react`, `react-dom`) are MIT-licensed and compatible with Apache-2.0 distribution.
 
-**Still open:** contribution policy (DCO vs. CLA), trademark policy for the Loxora name and logo, and the license/repository boundary for optional proprietary hosted services. These must be resolved before the decision-gate events listed below.
+**Contribution policy (decided 2026-10-02):** Developer Certificate of Origin 1.1 sign-off on every commit, with Apache-2.0 Section 5 inbound = outbound licensing and no CLA. See `CONTRIBUTING.md` and `DCO`. Consequence: once external contributors hold copyright in their contributions, a future relicensing or commercial dual-licensing program would require their consent or a separately agreed rights grant.
+
+**Still open:** trademark policy for the Loxora name and logo, and the license/repository boundary for optional proprietary hosted services. These must be resolved before the decision-gate events listed below.
 
 The analysis below is preserved as the record of the options considered.
 

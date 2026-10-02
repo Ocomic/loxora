@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import * as z from "zod/v4";
 import type { EvidenceReferenceId, NodeId, ProjectId } from "@loxora/core";
 import { DemoCoordinator } from "../orchestration/coordinator.js";
@@ -254,4 +255,5 @@ function staticFile(root: string, request: IncomingMessage, response: ServerResp
   response.end(readFileSync(path));
 }
 
-if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, "/")}`) void startDemoServer();
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href)
+  void startDemoServer();

@@ -1,5 +1,7 @@
 # Loxora
 
+[![CI](https://github.com/Ocomic/loxora/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ocomic/loxora/actions/workflows/ci.yml)
+
 > Projects should never lose their memory.
 
 Loxora is an experimental, local-first and model-independent project knowledge and context layer.
@@ -44,6 +46,10 @@ These documents guide future planning but do not authorize implementation.
 Loxora is documentation-driven. Architecture decisions should be documented before implementation whenever reasonably possible.
 
 RFC-007, ADR-001, and ADR-002 are accepted only for the Hackathon MVP. Runtime implementation remains limited to explicitly authorized milestones. Start with `docs/implementation/DEMO-RUNBOOK.md`, `docs/implementation/MILESTONE-6-2.md`, and the API documents under `docs/implementation/`. Deterministic export remains an explicit portability gap.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). All commits require a Developer Certificate of Origin sign-off (`git commit -s`).
 
 ## License
 

@@ -108,6 +108,7 @@ export class DemoCoordinator {
     const previous = `${this.databasePath}.previous`;
     try {
       await this.close();
+      mkdirSync(this.dataDirectory, { recursive: true });
       removeSqliteFiles(next);
       const candidate = await openSqliteStore(next);
       const seeded = new SeedSession(candidate, this.manifest);

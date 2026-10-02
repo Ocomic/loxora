@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Format, lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  e2e:
+    name: Demo end-to-end (Playwright)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run demo:reset
+      - run: npm run test:demo:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            packages/demo/test-results/
+            packages/demo/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  dco:
+    name: DCO sign-off
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify Signed-off-by on every commit
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          agents="$(grep -v '^[[:space:]]*#' .github/dco-agent-identities | sed '/^[[:space:]]*$/d' || true)"
+          failed=0
+          for sha in $(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA"); do
+            email="$(git log -1 --format='%ae' "$sha")"
+            subject="$(git log -1 --format='%s' "$sha")"
+            if printf '%s\n' "$agents" | grep -Fxqi -- "$email"; then
+              echo "skip  $sha  agent identity <$email>: $subject"
+              continue
+            fi
+            if git log -1 --format='%(trailers:key=Signed-off-by,valueonly)' "$sha" | grep -Fqi -- "<$email>"; then
+              echo "ok    $sha  <$email>: $subject"
+            else
+              echo "::error::Commit $sha by <$email> has no matching Signed-off-by trailer. See CONTRIBUTING.md (git commit -s)."
+              failed=1
+            fi
+          done
+          exit "$failed"

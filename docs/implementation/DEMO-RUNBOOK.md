@@ -11,6 +11,8 @@ npm run demo:start
 
 Open `http://127.0.0.1:4173/?mode=guided`. Reset uses `<repo>/var/demo`; no prepared database is committed.
 
+The Node version is pinned in `.nvmrc`. Continuous integration (`.github/workflows/ci.yml`) runs `npm run check`, then `npm run demo:reset` followed by `npm run test:demo:e2e` in headless Chromium on Linux for every pull request and every push to `main`.
+
 ## Guided Demo
 
 The server derives progress from real state. The browser never enables a canonical operation on its own.
