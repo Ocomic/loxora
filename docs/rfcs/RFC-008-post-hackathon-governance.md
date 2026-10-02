@@ -1,8 +1,9 @@
 # RFC-008 — Post-Hackathon Governance and Work Authorization
 
-**Status:** Proposed
+**Status:** Accepted
 **Version:** 0.1
 **Last Updated:** October 2, 2026
+**Decision Date:** October 2, 2026
 **Decision Owner:** Ocomic
 
 ## Purpose
@@ -142,4 +143,4 @@ Rejected. Export, governance, visibility, and dogfooding are still expected to i
 
 ## Decision
 
-Pending. Merging the pull request that introduces this RFC records acceptance by the decision owner; the status is then changed to **Accepted** in that pull request before merge.
+Accepted by Ocomic on October 2, 2026, as proposed (pull request #6). The change classes, the gated items, and the baseline status of RFC-007, ADR-001, and ADR-002 apply from that date. The open questions above remain open.

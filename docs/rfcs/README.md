@@ -14,9 +14,9 @@ Before changing a foundational RFC, review [`CROSS-REFERENCES.md`](./CROSS-REFER
 - RFC-005 — Project Preparation
 - RFC-006 — Knowledge Navigation & Progressive Context
 - RFC-007 — Initial Architecture and Hackathon MVP Boundaries — **Accepted for Hackathon MVP; current baseline per RFC-008**
-- RFC-008 — Post-Hackathon Governance and Work Authorization — **Proposed**
+- RFC-008 — Post-Hackathon Governance and Work Authorization — **Accepted**
 
-RFC-000 through RFC-006 are foundational drafts. RFC-007 was accepted by Ocomic on July 13, 2026 only for explicitly authorized Hackathon MVP milestones; it is not permanent architecture. RFC-008 proposes treating RFC-007, ADR-001, and ADR-002 as the current baseline and defines change classes for post-Hackathon work.
+RFC-000 through RFC-006 are foundational drafts. RFC-007 was accepted by Ocomic on July 13, 2026 only for explicitly authorized Hackathon MVP milestones; it is not permanent architecture. RFC-008, accepted on October 2, 2026, treats RFC-007, ADR-001, and ADR-002 as the current baseline and defines change classes for post-Hackathon work.
 
 ## Related proposals
 

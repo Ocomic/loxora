@@ -4,7 +4,7 @@
 
 ## Post-Hackathon governance
 
-RFC-008 proposes change classes (C0 to C3) and treats RFC-007, ADR-001, and ADR-002 as the current baseline. Open questions:
+RFC-008 (accepted October 2, 2026) defines change classes (C0 to C3) and treats RFC-007, ADR-001, and ADR-002 as the current baseline. Open questions:
 
 - When to introduce a second maintainer or review quorum.
 - Whether C0 dependency updates should be automated.
