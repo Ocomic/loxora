@@ -32,7 +32,7 @@ For licensing, commercial-service, managed-compute, or contribution-policy work,
 
 The long-term product vision is guidance, not implementation authorization.
 
-The first intended real-world post-Hackathon validation target is Ocomic/Play.Ocomic. Treat this as dogfooding of the generic core, not authorization to hard-code Ocomic-specific concepts into foundational architecture.
+The first intended real-world post-Hackathon validation target is Ocomic/Play.Ocomic. Treat this as dogfooding of the generic core, not authorization to hard-code Ocomic-specific concepts into foundational architecture. Prefer profiles, adapters, capabilities, extensions, or project configuration over Ocomic-specific core concepts.
 
 ## Core rules
 
@@ -62,7 +62,27 @@ The first intended real-world post-Hackathon validation target is Ocomic/Play.Oc
 - Long-term agents should request capabilities rather than hard-code providers or infrastructure.
 - Any future cost-incurring autonomous compute must sit behind user-governed policy, budget, and shutdown controls.
 - Team, organization, role, permission, and agent-identity support must remain possible.
+- Models must remain replaceable. Loxora must not become architecturally dependent on any single model, AI vendor, IDE, MCP implementation, or hosted service, including the tools used to build it, unless the decision owner explicitly approves it.
+- Model external functionality as capabilities rather than providers; routing to a particular implementation must remain replaceable.
+- Avoid premature infrastructure. Do not introduce additional agents, queues, event systems, services, abstractions, or distributed components without a demonstrated requirement.
+- Prefer evidence from real workflows over speculative generalization. Validate abstractions against actual dogfooding use before turning them into foundational systems.
+- Prefer reversible decisions. New configuration, workflow, adaptive behavior, or generated state should be inspectable, versionable, and recoverable where practical.
+- Persistent project state and important decisions belong in Loxora or documented project knowledge, not only in a chat conversation.
+- Keep tests and documentation aligned with behavioral changes. Do not leave architectural intent only in code comments or chat history.
 - Cross-project knowledge sharing must be explicit, typed, evidence-backed, and permission-aware.
+
+## Before starting a task
+
+Inspect the relevant existing code, RFCs, ADRs, implementation documents, and tests before changing architecture. Do not design from the product vision alone.
+
+When a task is ambiguous, first identify:
+
+- what is already implemented,
+- what is documented but not implemented,
+- what is only long-term vision,
+- and what requires a new decision.
+
+When implementation reveals a significant new architectural or product decision, surface it explicitly and determine whether an RFC, ADR, planning note, or private project decision is needed before encoding it in code.
 
 ## Change classes and authorization
 
@@ -157,4 +177,6 @@ Every completed task should state:
 - documentation requiring updates,
 - knowledge lifecycle effects,
 - navigation or summary effects,
-- and known cross-project impacts.
+- architectural implications,
+- known cross-project impacts,
+- and any newly discovered decision that should be recorded.
