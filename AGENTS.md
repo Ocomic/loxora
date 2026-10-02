@@ -26,6 +26,8 @@ Before proposing architecture or implementation, read:
 
 For work touching the existing implementation, also read `docs/rfcs/RFC-007-initial-architecture-and-mvp-boundaries.md`, the ADRs under `docs/adr/`, and the relevant API documents under `docs/implementation/`.
 
+For work touching the UI, also read `docs/planning/UI-VISION.md` and `docs/implementation/WEB-UI.md`. The current demo UI is not the long-term product UI.
+
 For contributions, read `CONTRIBUTING.md`.
 
 For licensing, commercial-service, managed-compute, or contribution-policy work, also read `docs/planning/LICENSING-STRATEGY.md`.
