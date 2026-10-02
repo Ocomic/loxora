@@ -2,6 +2,14 @@
 
 **Status:** Living planning document
 
+## Post-Hackathon governance
+
+RFC-008 proposes change classes (C0 to C3) and treats RFC-007, ADR-001, and ADR-002 as the current baseline. Open questions:
+
+- When to introduce a second maintainer or review quorum.
+- Whether C0 dependency updates should be automated.
+- How the repository change classes map to Loxora's product-level review policies for managed projects.
+
 ## Post-demo portability
 
 Milestone 6 is demo-ready, but deterministic project-owned export/import remains unresolved and explicitly deferred. The repository must not claim permanent MVP portability until a lossless inspectable export can reconstruct canonical knowledge, lineage, relationships, assessments, Evidence, and plans without an external service.
