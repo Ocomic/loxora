@@ -1,0 +1,20 @@
+{
+  "name": "@loxora/cli",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "loxora": "./dist/src/main.js"
+  },
+  "dependencies": {
+    "@loxora/core": "0.0.0",
+    "@loxora/sqlite": "0.0.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  }
+}

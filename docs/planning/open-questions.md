@@ -12,7 +12,7 @@ RFC-008 (accepted October 2, 2026) defines change classes (C0 to C3) and treats 
 
 ## Dogfooding and knowledge capture
 
-ADR-004 (accepted October 2, 2026) adds a local CLI and workspace so real project knowledge can be proposed and reviewed outside the demo fixture. Dogfooding starts with a small, non-critical proof-of-concept repository and a dependency on the asset-loading contract of the live game platform. Initially one shared workspace holds all related projects; ADR-004 lists triggers for splitting it. Open questions: a typed provenance model for repository Sources, when to add rollback and impact commands, and whether an importer should follow.
+Milestone 8 implements ADR-004. ADR-004 (accepted October 2, 2026) adds a local CLI and workspace so real project knowledge can be proposed and reviewed outside the demo fixture. Dogfooding starts with a small, non-critical proof-of-concept repository and a dependency on the asset-loading contract of the live game platform. Initially one shared workspace holds all related projects; ADR-004 lists triggers for splitting it. Open questions: a typed provenance model for repository Sources, when to add rollback and impact commands, and whether an importer should follow.
 
 ## Post-demo portability
 
