@@ -1,0 +1,4 @@
+# Keep repository text files LF on every platform, independent of core.autocrlf.
+* text=auto eol=lf
+
+*.png binary
