@@ -125,13 +125,12 @@ The long-term direction is described in `docs/planning/PRODUCT-VISION.md`. The f
 
 ## Licensing and contribution policy
 
-Resolved on 2026-10-02: the repository moved from MIT to Apache-2.0. The decision and the options considered are recorded in `docs/planning/LICENSING-STRATEGY.md`.
+Resolved on 2026-10-02: the repository moved from MIT to Apache-2.0. The decision and the options considered are recorded in `docs/planning/LICENSING-STRATEGY.md`. The contribution policy (DCO sign-off, no CLA) was resolved on the same date; see `CONTRIBUTING.md`.
 
 Open questions include:
 
 - Whether protection against closed hosted forks becomes a product requirement for any future hosted-service component.
 - Whether commercial dual licensing is desirable.
-- Contributor License Agreement or Developer Certificate of Origin strategy.
 - Copyright ownership and relicensing rights before substantial external contributions arrive.
 - Dependency-license compatibility for the eventual packaged local runtime.
 - Trademark policy for the Loxora name, logo, official hosted service, and compatibility claims.

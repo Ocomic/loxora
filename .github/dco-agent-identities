@@ -1,0 +1,4 @@
+# Commit author emails of AI agents exempt from the automated DCO sign-off check.
+# The maintainer who merges a pull request takes DCO responsibility for these commits.
+# See CONTRIBUTING.md, "AI-assisted and agent-authored commits".
+noreply@anthropic.com
