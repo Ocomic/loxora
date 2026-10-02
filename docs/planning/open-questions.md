@@ -125,12 +125,11 @@ The long-term direction is described in `docs/planning/PRODUCT-VISION.md`. The f
 
 ## Licensing and contribution policy
 
-The repository currently uses MIT. The decision space is recorded in `docs/planning/LICENSING-STRATEGY.md`.
+Resolved on 2026-10-02: the repository moved from MIT to Apache-2.0. The decision and the options considered are recorded in `docs/planning/LICENSING-STRATEGY.md`.
 
 Open questions include:
 
-- Remain MIT vs. move to Apache-2.0, MPL-2.0, AGPLv3, or another approved open-source license.
-- Whether protection against closed hosted forks is a product requirement.
+- Whether protection against closed hosted forks becomes a product requirement for any future hosted-service component.
 - Whether commercial dual licensing is desirable.
 - Contributor License Agreement or Developer Certificate of Origin strategy.
 - Copyright ownership and relicensing rights before substantial external contributions arrive.

@@ -1,8 +1,8 @@
 # Loxora Licensing Strategy
 
-**Status:** Open decision  
-**Current repository license:** MIT  
-**Last Updated:** September 2026
+**Status:** Decided — Apache-2.0 adopted for the repository (contribution policy and trademark still open)  
+**Current repository license:** Apache-2.0 (since 2026-10-02; previously MIT)  
+**Last Updated:** October 2026
 
 ## Purpose
 
@@ -10,9 +10,31 @@ Loxora's long-term product vision now includes both an open-source local core an
 
 The current MIT license should therefore be reviewed deliberately before the contributor base and commercial surface grow.
 
-This document records the decision space. It does not change the repository license.
+This document records the decision space and, in the next section, the decision taken.
 
-## Current MIT implications
+## Decision (2026-10-02)
+
+**Decision:** Relicense the Loxora repository from MIT to the Apache License, Version 2.0, following the adoption-first direction described below.
+
+**Decided by:** Ocomic (sole copyright holder at the time of the change). Proposed with assistance from a Claude Code agent.
+
+**Rationale:**
+- The product vision monetizes optional hosted convenience, managed compute, routing, and collaboration rather than restricting the local core; a permissive license matches that model.
+- Apache-2.0 keeps MIT-like adoption while adding an explicit contributor patent license, patent-termination terms, and clearer contribution and notice handling.
+- The local-first core is primarily distributed and run locally, so AGPLv3 network-use terms would add adoption friction with limited protective effect.
+- All repository history at the time of the change was authored by Ocomic, so relicensing did not require consent from other contributors.
+
+**Effects:**
+- `LICENSE` contains the Apache License, Version 2.0; `NOTICE` records copyright and the license change.
+- All workspace `package.json` files declare `"license": "Apache-2.0"`.
+- Versions up to and including commit `c6aebbb` were published under MIT and remain available under MIT.
+- Runtime dependencies at the time of the change (`@modelcontextprotocol/sdk`, `zod`, `react`, `react-dom`) are MIT-licensed and compatible with Apache-2.0 distribution.
+
+**Still open:** contribution policy (DCO vs. CLA), trademark policy for the Loxora name and logo, and the license/repository boundary for optional proprietary hosted services. These must be resolved before the decision-gate events listed below.
+
+The analysis below is preserved as the record of the options considered.
+
+## MIT implications (pre-decision analysis)
 
 MIT is a permissive open-source license.
 
@@ -199,7 +221,7 @@ A permissive source license does not require permissive trademark use.
 
 ## Decision gate
 
-Resolve the long-term license before whichever comes first:
+The core license is decided (Apache-2.0). Resolve the remaining contribution-policy, trademark, and hosted-service license-boundary questions before whichever comes first:
 - accepting substantial external code contributions,
 - shipping a stable public release intended for broad adoption,
 - launching a paid Loxora-hosted service,

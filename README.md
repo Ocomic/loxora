@@ -44,3 +44,9 @@ These documents guide future planning but do not authorize implementation.
 Loxora is documentation-driven. Architecture decisions should be documented before implementation whenever reasonably possible.
 
 RFC-007, ADR-001, and ADR-002 are accepted only for the Hackathon MVP. Runtime implementation remains limited to explicitly authorized milestones. Start with `docs/implementation/DEMO-RUNBOOK.md`, `docs/implementation/MILESTONE-6-2.md`, and the API documents under `docs/implementation/`. Deterministic export remains an explicit portability gap.
+
+## License
+
+Loxora is licensed under the [Apache License, Version 2.0](LICENSE). See `NOTICE` for copyright and license-history information. Versions up to commit `c6aebbb` were released under the MIT License.
+
+The license does not grant rights to the Loxora name or logo. The decision record is in `docs/planning/LICENSING-STRATEGY.md`.
