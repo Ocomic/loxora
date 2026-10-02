@@ -41,6 +41,18 @@ npm run loxora -- show map --project <project>
 | A project that consumes another project's output | `relate propose --from-project <consumer> --to-project <provider>` |
 | Context for an agent task | `context --project <p> --node <n> --include-related` |
 
+## Windows notes
+
+- **Placeholders:** replace every `<placeholder>` completely, including the angle brackets. PowerShell treats `<` as a reserved redirection operator and refuses the whole command.
+- **Encoding:** Windows PowerShell 5.1 reads UTF-8 files without BOM as ANSI. Pass longer or non-ASCII content with `--content-file` instead of inline arguments.
+- **Line endings:** with a global `core.autocrlf=true`, `npm run check` reports formatting errors for files that are LF in the repository. Run the check in a checkout with `core.autocrlf=false`.
+
+## Provenance tips
+
+- Push the commits you cite before others need to resolve them, and integrate diverged history with a merge rather than a rebase so cited hashes stay valid.
+- Cite committed content only. Commit first if the knowledge exists only in a working copy.
+- Plans and relationships can only reference Nodes with accepted knowledge. Have reviews done before linking plans or proposing dependencies.
+
 ## After each session
 
 - `npm run loxora -- export --out <backup-path>` and `export verify --in <backup-path>`.
