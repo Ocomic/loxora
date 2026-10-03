@@ -5,6 +5,7 @@ import {
   LifecycleService,
   MISSION_STATES,
   MissionService,
+  compareMissionsByAttention,
   NavigationService,
   NodeKeyService,
   PLANNED_KNOWLEDGE_STATUSES,
@@ -782,11 +783,7 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
               mission.waitReason !== "provider_limit"),
         )
         .slice()
-        .sort(
-          (a, b) =>
-            missionPriority(a) - missionPriority(b) ||
-            b.lastActivityAt.localeCompare(a.lastActivityAt),
-        );
+        .sort(compareMissionsByAttention);
       const now = Date.now();
       return {
         message:
@@ -1247,14 +1244,6 @@ function missionStateLabel(mission: Mission): string {
   return mission.state === "waiting" && mission.waitReason
     ? `waiting: ${mission.waitReason}`
     : mission.state;
-}
-
-/** Exceptions first: humans needed, then provider limits, running, paused, queued, finished. */
-function missionPriority(mission: Mission): number {
-  if (mission.state === "waiting") return mission.waitReason === "provider_limit" ? 1 : 0;
-  return (
-    ["running", "paused", "queued", "failed", "completed", "cancelled"].indexOf(mission.state) + 2
-  );
 }
 
 function ago(iso: string, now: number): string {

@@ -251,9 +251,15 @@ export class SqliteLifecycleStore
       runMigrations(this.database);
     }
     if (options.requiredMigrationId) {
-      const present = this.database
-        .prepare("SELECT 1 FROM schema_migrations WHERE id = ?")
-        .get(options.requiredMigrationId);
+      let present: unknown;
+      try {
+        present = this.database
+          .prepare("SELECT 1 FROM schema_migrations WHERE id = ?")
+          .get(options.requiredMigrationId);
+      } catch {
+        // No schema_migrations table: an empty or foreign database. Close before failing.
+        present = undefined;
+      }
       if (!present) {
         this.database.close();
         throw new IntegrityError(`Required migration ${options.requiredMigrationId} is missing`);

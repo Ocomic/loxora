@@ -799,3 +799,34 @@ function optionalText(value: string | undefined | null): string | null {
 function unique<T>(values: readonly T[]): T[] {
   return [...new Set(values)];
 }
+
+/** Attention order (RFC-010): human-needed waits, provider limits, running, paused, queued, finished. */
+export function missionAttentionRank(mission: Pick<Mission, "state" | "waitReason">): number {
+  if (mission.state === "waiting") return mission.waitReason === "provider_limit" ? 1 : 0;
+  return (
+    ["running", "paused", "queued", "failed", "completed", "cancelled"].indexOf(mission.state) + 2
+  );
+}
+
+/** Sorts by attention rank, then by most recent activity. */
+export function compareMissionsByAttention(
+  left: Pick<Mission, "state" | "waitReason" | "lastActivityAt">,
+  right: Pick<Mission, "state" | "waitReason" | "lastActivityAt">,
+): number {
+  return (
+    missionAttentionRank(left) - missionAttentionRank(right) ||
+    right.lastActivityAt.localeCompare(left.lastActivityAt)
+  );
+}
+
+/** True when a human must act: waiting with a `needs_*` reason and an unanswered request. */
+export function missionNeedsHuman(
+  mission: Pick<Mission, "state" | "waitReason" | "attentionRequest">,
+): boolean {
+  return (
+    mission.state === "waiting" &&
+    mission.waitReason !== null &&
+    mission.waitReason !== "provider_limit" &&
+    !mission.attentionRequest?.answeredAt
+  );
+}

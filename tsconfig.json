@@ -5,6 +5,7 @@
     { "path": "./packages/sqlite" },
     { "path": "./packages/mcp" },
     { "path": "./packages/cli" },
-    { "path": "./packages/demo" }
+    { "path": "./packages/demo" },
+    { "path": "./packages/app" }
   ]
 }
