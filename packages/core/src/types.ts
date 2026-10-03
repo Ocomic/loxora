@@ -24,6 +24,11 @@ export type CrossProjectRelationshipReviewDecisionId = Brand<
 export type CrossProjectRelationshipId = Brand<string, "CrossProjectRelationshipId">;
 export type ImpactAssessmentId = Brand<string, "ImpactAssessmentId">;
 export type PlannedKnowledgeId = Brand<string, "PlannedKnowledgeId">;
+export type PlannedKnowledgeRevisionId = Brand<string, "PlannedKnowledgeRevisionId">;
+export type PlannedKnowledgeRevisionDecisionId = Brand<
+  string,
+  "PlannedKnowledgeRevisionDecisionId"
+>;
 export type Scope = Brand<string, "Scope">;
 
 export type ProposalStatus = "Submitted" | "Accepted" | "Rejected";
@@ -72,7 +77,12 @@ export type AuditEventType =
   | "CrossProjectRelationshipAccepted"
   | "CrossProjectRelationshipRejected"
   | "ImpactAssessmentCreated"
-  | "PlannedKnowledgeCreated";
+  | "PlannedKnowledgeCreated"
+  | "PlannedKnowledgeRevised"
+  | "PlannedKnowledgeRevisionProposed"
+  | "PlannedKnowledgeRevisionAccepted"
+  | "PlannedKnowledgeRevisionRejected"
+  | "NodeKeyAssigned";
 
 export interface Project {
   readonly id: ProjectId;

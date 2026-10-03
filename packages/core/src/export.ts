@@ -2,7 +2,9 @@ import { createHash } from "node:crypto";
 import { ValidationError } from "./errors.js";
 
 export const WORKSPACE_EXPORT_FORMAT = "loxora.workspace-export";
-export const WORKSPACE_EXPORT_FORMAT_VERSION = 1;
+export const WORKSPACE_EXPORT_FORMAT_VERSION = 2;
+/** Versions `parseWorkspaceExport` accepts; older documents are upgraded on parse. */
+export const WORKSPACE_EXPORT_SUPPORTED_VERSIONS: readonly number[] = Object.freeze([1, 2]);
 
 export type WorkspaceExportValue = string | number | null;
 export type WorkspaceExportRecord = Readonly<Record<string, WorkspaceExportValue>>;
@@ -20,7 +22,7 @@ const section = (
 ): WorkspaceExportSectionSpec => Object.freeze({ name, key, fields });
 
 /**
- * Canonical sections of format version 1, in restore order (ADR-003).
+ * Canonical sections of the current format version, in restore order (ADR-003, ADR-006).
  * Field names are part of the public export contract; changing them requires a new format version.
  */
 export const WORKSPACE_EXPORT_SECTIONS: readonly WorkspaceExportSectionSpec[] = Object.freeze([
@@ -324,6 +326,65 @@ export const WORKSPACE_EXPORT_SECTIONS: readonly WorkspaceExportSectionSpec[] = 
     ["plannedKnowledgeId", "ownerProjectId", "evidenceProjectId", "evidenceReferenceId"],
   ),
   section(
+    "plannedKnowledgeRevisions",
+    ["id"],
+    [
+      "id",
+      "plannedKnowledgeId",
+      "ownerProjectId",
+      "kind",
+      "revisionNumber",
+      "baseRevisionNumber",
+      "title",
+      "description",
+      "status",
+      "reason",
+      "blockingCondition",
+      "relatedProjectId",
+      "relatedRevisionProjectId",
+      "relatedRevisionId",
+      "changedFields",
+      "changeReason",
+      "authorId",
+      "createdAt",
+      "sourceProposalId",
+    ],
+  ),
+  section(
+    "plannedKnowledgeRevisionNodes",
+    ["revisionId", "nodeProjectId", "nodeId"],
+    ["revisionId", "ownerProjectId", "nodeProjectId", "nodeId"],
+  ),
+  section(
+    "plannedKnowledgeRevisionEvidence",
+    ["revisionId", "evidenceProjectId", "evidenceReferenceId"],
+    ["revisionId", "ownerProjectId", "evidenceProjectId", "evidenceReferenceId"],
+  ),
+  section(
+    "plannedKnowledgeRevisionDecisions",
+    ["id"],
+    [
+      "id",
+      "proposalId",
+      "ownerProjectId",
+      "reviewerId",
+      "decision",
+      "reason",
+      "decidedAt",
+      "resultingRevisionId",
+    ],
+  ),
+  section(
+    "plannedKnowledgeRevisionDecisionEvidence",
+    ["decisionId", "evidenceProjectId", "evidenceReferenceId"],
+    ["decisionId", "ownerProjectId", "evidenceProjectId", "evidenceReferenceId"],
+  ),
+  section(
+    "knowledgeNodeKeys",
+    ["projectId", "keyNormalized"],
+    ["projectId", "keyNormalized", "key", "nodeId", "assignedBy", "assignedAt"],
+  ),
+  section(
     "auditEvents",
     ["id"],
     [
@@ -435,7 +496,43 @@ export function workspaceExportRecords(
   return Array.isArray(value) ? (value as readonly WorkspaceExportRecord[]) : [];
 }
 
-/** Throws ValidationError unless `value` is a complete, well-formed format-version-1 export. */
+/** Sections added in format version 2 (ADR-006); absent from version 1 documents. */
+export const WORKSPACE_EXPORT_VERSION_2_SECTIONS: readonly string[] = Object.freeze([
+  "plannedKnowledgeRevisions",
+  "plannedKnowledgeRevisionNodes",
+  "plannedKnowledgeRevisionEvidence",
+  "plannedKnowledgeRevisionDecisions",
+  "plannedKnowledgeRevisionDecisionEvidence",
+  "knowledgeNodeKeys",
+]);
+
+/**
+ * Upgrades an older export document to the current format version without changing any
+ * existing record (ADR-006): a version 1 document gets empty version 2 sections. Documents
+ * of the current version and unknown values are returned unchanged for validation.
+ */
+export function upgradeWorkspaceExport(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+  const document = value as Record<string, unknown>;
+  if (document.format !== WORKSPACE_EXPORT_FORMAT || document.formatVersion !== 1) return value;
+  const sections = document.sections;
+  if (typeof sections !== "object" || sections === null || Array.isArray(sections)) return value;
+  for (const name of WORKSPACE_EXPORT_VERSION_2_SECTIONS) {
+    if (name in sections) {
+      throw new ValidationError(`Version 1 export must not contain section ${name}`);
+    }
+  }
+  return {
+    ...document,
+    formatVersion: WORKSPACE_EXPORT_FORMAT_VERSION,
+    sections: {
+      ...(sections as Record<string, unknown>),
+      ...Object.fromEntries(WORKSPACE_EXPORT_VERSION_2_SECTIONS.map((name) => [name, []])),
+    },
+  };
+}
+
+/** Throws ValidationError unless `value` is a complete, well-formed export of the current format version. */
 export function assertWorkspaceExport(value: unknown): asserts value is WorkspaceExport {
   const document = objectValue(value, "export document");
   exactKeys(document, ["format", "formatVersion", "sections", "sourceSchema"], "export document");
@@ -476,8 +573,9 @@ export function parseWorkspaceExport(text: string): WorkspaceExport {
   } catch {
     throw new ValidationError("Export is not valid JSON");
   }
-  assertWorkspaceExport(value);
-  return value;
+  const upgraded = upgradeWorkspaceExport(value);
+  assertWorkspaceExport(upgraded);
+  return upgraded;
 }
 
 /** Canonical bytes per ADR-003: sorted keys, records sorted by key, 2-space indent, LF, trailing newline. */

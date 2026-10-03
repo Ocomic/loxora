@@ -58,6 +58,17 @@ function plannedKnowledgeMigration(): Migration {
   };
 }
 
+function planRevisionsNodeKeysMigration(): Migration {
+  return {
+    id: "006_plan_revisions_node_keys",
+    sql: readFileSync(
+      new URL("../../migrations/006_plan_revisions_node_keys.sql", import.meta.url),
+      "utf8",
+    ),
+    rebuildsReferencedTable: true,
+  };
+}
+
 export function migrationCatalog(): readonly Migration[] {
   return [
     initialMigration(),
@@ -65,6 +76,7 @@ export function migrationCatalog(): readonly Migration[] {
     navigationMigration(),
     crossProjectImpactMigration(),
     plannedKnowledgeMigration(),
+    planRevisionsNodeKeysMigration(),
   ];
 }
 

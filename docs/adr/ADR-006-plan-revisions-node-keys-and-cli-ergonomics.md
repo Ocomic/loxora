@@ -149,13 +149,22 @@ Rejected (G5). It would blur proposed and accepted knowledge.
 
 ## Implementation (after acceptance)
 
-Milestone 9, authorized by a milestone document under `docs/implementation/`, covers:
+Milestone 9 ([`MILESTONE-9.md`](../implementation/MILESTONE-9.md)) covers:
 
 - Core: plan revisions, plan revision proposals in the Review Inbox, status set, node keys, and reference resolution, with tests for every permission rule in section 2;
 - SQLite migration with data migration of existing plans and tests on a copy of a Milestone 8 workspace;
 - export format version 2 with version 1 upgrade and round-trip tests;
 - CLI changes from sections 5 and 6, with tests and documentation;
 - a dogfooding rehearsal: link the existing unlinked plans through `plan update`, assign keys to existing decision Nodes, and have an agent propose `Completed` and a reviewer accept it.
+
+## Implementation notes (Milestone 9)
+
+These notes record how Milestone 9 realized this decision. They do not change it.
+
+- **Revision 1 stays in `planned_knowledge_items`.** Instead of moving the substantive fields out of the plan table, the existing immutable plan row is revision 1. Revisions 2 and later and plan revision proposals live in `planned_knowledge_revisions`; SQL views provide the effective state. The model is the same as in section 1, but no existing data is rewritten. A version 1 export restores without transformation: the upgrade only adds empty version 2 sections, instead of splitting the plan sections as section 7 described.
+- **Status check.** The migration rebuilds `planned_knowledge_items` once to allow `InProgress`, copying every row unchanged.
+- **Keys at proposal time.** A Node row is created when its first Proposal is accepted. `propose new --key` therefore binds the key to the Proposal's reserved Node id, which keeps the key reserved if the Proposal is rejected.
+- **`export verify` of version 1 backups** ignores only the informational `sourceSchema`, which gains migration 006 in the restored store.
 
 ## Open questions
 

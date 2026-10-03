@@ -4,7 +4,10 @@ import {
   DEFAULT_SCOPE,
   LifecycleService,
   NavigationService,
+  NodeKeyService,
+  PLANNED_KNOWLEDGE_STATUSES,
   PlannedKnowledgeService,
+  assertNodeKey,
   ReviewInboxService,
   parseWorkspaceExport,
   serializeWorkspaceExport,
@@ -14,6 +17,10 @@ import {
   type CrossProjectRelationshipProposalId,
   type EvidenceReferenceId,
   type NodeId,
+  type PlannedKnowledgeChanges,
+  type PlannedKnowledgeId,
+  type PlannedKnowledgePolicy,
+  type PlannedKnowledgeRevisionId,
   type PlannedKnowledgeStatus,
   type ProjectId,
   type ProposalId,
@@ -26,7 +33,7 @@ import { openSqliteStore } from "@loxora/sqlite";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { WorkspaceDirectory } from "./directory.js";
+import { WorkspaceDirectory, type EffectivePlan } from "./directory.js";
 import {
   CliUsageError,
   databasePath,
@@ -56,13 +63,7 @@ export interface CommandResult {
 
 type Handler = (context: CommandContext) => Promise<CommandResult>;
 
-const PLAN_STATUSES: readonly PlannedKnowledgeStatus[] = [
-  "Proposed",
-  "Deferred",
-  "Ready",
-  "Completed",
-  "Cancelled",
-];
+const PLAN_STATUSES: readonly PlannedKnowledgeStatus[] = PLANNED_KNOWLEDGE_STATUSES;
 const CONFIDENCE: readonly RelationshipConfidence[] = ["Low", "Medium", "High"];
 
 export const COMMANDS: Readonly<Record<string, Handler>> = {
@@ -83,17 +84,31 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
 
   "workspace status": (context) =>
     withWorkspace(context, async ({ config, directory }) => {
-      const projects = directory.records("projects").map((project) => ({
-        id: project.id,
-        name: project.name,
-        nodes: directory.records("knowledgeNodes").filter((node) => node.projectId === project.id)
-          .length,
-        pendingProposals: directory
+      const current = new Set(directory.records("currentRevisions").map((record) => record.nodeId));
+      const nodeIds = new Set(directory.records("knowledgeNodes").map((node) => node.id));
+      const projects = directory.records("projects").map((project) => {
+        const submitted = directory
           .records("knowledgeProposals")
           .filter(
             (proposal) => proposal.projectId === project.id && proposal.status === "Submitted",
-          ).length,
-      }));
+          );
+        const plans = directory
+          .plans(String(project.id))
+          .filter((plan) => plan.ownerProjectId === project.id);
+        const planStatuses: Record<string, number> = {};
+        for (const plan of plans) planStatuses[plan.status] = (planStatuses[plan.status] ?? 0) + 1;
+        return {
+          id: project.id,
+          name: project.name,
+          nodes: directory
+            .records("knowledgeNodes")
+            .filter((node) => node.projectId === project.id && current.has(node.id)).length,
+          pendingNodes: submitted.filter((proposal) => !nodeIds.has(proposal.proposedNodeId))
+            .length,
+          pendingProposals: submitted.length + pendingPlanProposals(directory, String(project.id)),
+          plans: planStatuses,
+        };
+      });
       return {
         message: [
           `Workspace "${config.name}" at ${context.workspaceDirectory}`,
@@ -101,10 +116,12 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
           projects.length === 0
             ? "No projects yet."
             : projects
-                .map(
-                  (p) =>
-                    `- ${p.name} (${short(p.id)}): ${p.nodes} nodes, ${p.pendingProposals} pending proposals`,
-                )
+                .map((p) => {
+                  const plans = Object.entries(p.plans)
+                    .map(([status, count]) => `${count} ${status}`)
+                    .join(", ");
+                  return `- ${p.name} (${short(p.id)}): ${plural(p.nodes, "node")} with accepted knowledge, ${plural(p.pendingNodes, "pending node")}, ${plural(p.pendingProposals, "pending proposal")}${plans ? `; plans: ${plans}` : ""}`;
+                })
                 .join("\n"),
         ].join("\n"),
         data: { directory: context.workspaceDirectory, config, projects },
@@ -193,7 +210,7 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
     }),
 
   "propose new": (context) =>
-    withWrite(context, async ({ store, actor, directory }) => {
+    withWrite(context, async ({ store, actor, directory, config }) => {
       const project = directory.project(required(context.options, "project"));
       const projectId = String(project.id);
       const space = directory.space(projectId, required(context.options, "space"));
@@ -202,6 +219,15 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
         required(context.options, "collection"),
         String(space.id),
       );
+      const key = optional(context.options, "key");
+      if (key !== undefined) {
+        assertNodeKey(key);
+        if (directory.keyTaken(projectId, key.trim())) {
+          throw new CliUsageError(
+            `Key "${key.trim()}" is already used in this Project; keys are never reused`,
+          );
+        }
+      }
       const proposal = await new LifecycleService(store).submitKnowledgeProposal({
         projectId: projectId as ProjectId,
         spaceId: space.id as SpaceId,
@@ -216,10 +242,18 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
         ),
         proposerId: actor,
       });
+      const nodeKey = key
+        ? await nodeKeys(store, config).assignNodeKey({
+            projectId: projectId as ProjectId,
+            nodeId: proposal.proposedNodeId,
+            key,
+            actorId: actor,
+          })
+        : null;
       return {
         result: {
-          message: `Proposal ${proposal.id} submitted for "${proposal.proposedNodeTitle}"; awaiting review`,
-          data: proposal,
+          message: `Proposal ${proposal.id} submitted for "${proposal.proposedNodeTitle}"${nodeKey ? ` with key ${nodeKey.key}` : ""}; awaiting review`,
+          data: { ...proposal, nodeKey },
         },
         affected: [projectId],
       };
@@ -262,23 +296,71 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
   review: (context) =>
     withWrite(context, async ({ store, actor, directory, config }) => {
       requireReviewer(config, actor);
-      const proposal = directory.proposal(required(context.options, "proposal"));
+      const item = directory.reviewable(required(context.options, "proposal"));
+      const explicit = list(context.options, "evidence");
+      if (item.kind === "PlanRevisionProposal") {
+        const proposal = item.record;
+        const evidence =
+          explicit.length > 0
+            ? qualifiedEvidence(directory, explicit)
+            : directory
+                .records("plannedKnowledgeRevisionEvidence")
+                .filter((record) => record.revisionId === proposal.id)
+                .map((record) => ({
+                  projectId: record.evidenceProjectId as ProjectId,
+                  evidenceReferenceId: record.evidenceReferenceId as EvidenceReferenceId,
+                }));
+        const result = await plannedService(store, config).reviewPlannedKnowledgeRevisionProposal({
+          ownerProjectId: proposal.ownerProjectId as ProjectId,
+          proposalId: proposal.id as PlannedKnowledgeRevisionId,
+          reviewerId: actor,
+          decision: decision(context.options),
+          reason: required(context.options, "reason"),
+          evidence,
+        });
+        const plan = directory.plan(String(proposal.plannedKnowledgeId));
+        return {
+          result: {
+            message: `${
+              result.revision
+                ? `Accepted: plan "${plan.title}" is now revision ${result.revision.revisionNumber} (${result.revision.state.status})`
+                : `Rejected plan revision proposal ${proposal.id}`
+            }${evidenceNote(
+              evidence.map((entry) => entry.evidenceReferenceId),
+              explicit.length === 0,
+            )}`,
+            data: result,
+          },
+          affected: [
+            String(proposal.ownerProjectId),
+            ...(plan.relatedProjectId ? [plan.relatedProjectId] : []),
+          ],
+        };
+      }
+      const proposal = item.record;
       const projectId = String(proposal.projectId);
+      const evidenceIds =
+        explicit.length > 0
+          ? explicit.map((ref) => directory.evidence(ref, projectId).id as EvidenceReferenceId)
+          : directory
+              .records("proposalEvidence")
+              .filter((record) => record.proposalId === proposal.id)
+              .map((record) => record.evidenceReferenceId as EvidenceReferenceId);
       const result = await new LifecycleService(store).reviewKnowledgeProposal({
         projectId: projectId as ProjectId,
         proposalId: proposal.id as ProposalId,
         reviewerId: actor,
         decision: decision(context.options),
         reason: required(context.options, "reason"),
-        evidenceReferenceIds: list(context.options, "evidence").map(
-          (ref) => directory.evidence(ref, projectId).id as EvidenceReferenceId,
-        ),
+        evidenceReferenceIds: evidenceIds,
       });
       return {
         result: {
-          message: result.revision
-            ? `Accepted: Revision ${result.revision.id} is now Current for "${proposal.proposedNodeTitle}"`
-            : `Rejected Proposal ${proposal.id}`,
+          message: `${
+            result.revision
+              ? `Accepted: Revision ${result.revision.id} is now Current for "${proposal.proposedNodeTitle}"`
+              : `Rejected Proposal ${proposal.id}`
+          }${evidenceNote(evidenceIds, explicit.length === 0)}`,
           data: result,
         },
         affected: [projectId],
@@ -293,11 +375,21 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
       const items = await new ReviewInboxService(store).getReviewInbox({
         projectIds: projects.map((project) => project.id as ProjectId),
       });
-      const lines = items.map((item) =>
-        item.kind === "KnowledgeProposal" && item.proposal
-          ? `- proposal ${item.id}: "${item.proposal.proposedNodeTitle}" (${item.proposal.kind}) by ${item.proposal.proposerId}`
-          : `- ${item.kind} ${item.id}`,
-      );
+      const lines = items.map((item) => {
+        if (item.kind === "KnowledgeProposal" && item.proposal) {
+          return `- proposal ${item.id}: "${item.proposal.proposedNodeTitle}"${keySuffix(directory, item.proposal.proposedNodeId)} in ${projectName(directory, item.proposal.projectId)} (${item.proposal.kind}) by ${item.proposal.proposerId}`;
+        }
+        if (item.kind === "CrossProjectRelationshipProposal" && item.relationshipProposal) {
+          const r = item.relationshipProposal;
+          return `- relationship ${item.id}: ${projectName(directory, r.source.projectId)} / ${nodeLabel(directory, r.source.nodeId)} DependsOn ${projectName(directory, r.target.projectId)} / ${nodeLabel(directory, r.target.nodeId)} (${r.confidence}) by ${r.proposerId}`;
+        }
+        if (item.kind === "PlannedKnowledgeRevisionProposal" && item.plannedRevisionProposal) {
+          const p = item.plannedRevisionProposal;
+          return `- plan revision ${item.id}: "${p.planTitle}" ${p.effectiveStatus} -> ${p.proposal.state.status} (changed: ${p.proposal.changedFields.join(", ")}) by ${p.proposal.authorId}: ${p.proposal.changeReason}`;
+        }
+        const unknown = item as { kind: string; id: string };
+        return `- ${unknown.kind} ${unknown.id}`;
+      });
       return {
         message: items.length === 0 ? "Review inbox is empty." : lines.join("\n"),
         data: items,
@@ -351,6 +443,128 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
       };
     }),
 
+  "plan update": (context) =>
+    withWrite(context, async ({ store, actor, directory, config }) => {
+      const scope = context.options.project
+        ? String(directory.project(required(context.options, "project")).id)
+        : undefined;
+      const plan = directory.plan(required(context.options, "plan"), scope);
+      const changes: {
+        -readonly [K in keyof PlannedKnowledgeChanges]: PlannedKnowledgeChanges[K];
+      } = {};
+      const status = optional(context.options, "status");
+      if (status !== undefined) {
+        if (!PLAN_STATUSES.includes(status as PlannedKnowledgeStatus)) {
+          throw new CliUsageError(`--status must be one of ${PLAN_STATUSES.join(", ")}`);
+        }
+        changes.status = status as PlannedKnowledgeStatus;
+      }
+      for (const [option, field] of [
+        ["title", "title"],
+        ["description", "description"],
+        ["blocking-condition", "blockingCondition"],
+      ] as const) {
+        const value = optional(context.options, option);
+        if (value !== undefined) changes[field] = value;
+      }
+      const related = optional(context.options, "related-project");
+      if (related !== undefined) {
+        changes.relatedProjectId =
+          related.trim().toLowerCase() === "none"
+            ? null
+            : (directory.project(related).id as ProjectId);
+      }
+      const relatedProjectId =
+        changes.relatedProjectId === undefined ? plan.relatedProjectId : changes.relatedProjectId;
+      const resolve = (ref: string) => planNode(directory, plan, relatedProjectId, ref);
+      changes.addNodes = list(context.options, "add-node").map(resolve);
+      changes.removeNodes = list(context.options, "remove-node").map(resolve);
+      changes.addEvidence = qualifiedEvidence(directory, list(context.options, "evidence"));
+      changes.removeEvidence = qualifiedEvidence(
+        directory,
+        list(context.options, "remove-evidence"),
+      );
+      const result = await plannedService(store, config).revisePlannedKnowledge({
+        ownerProjectId: plan.ownerProjectId as ProjectId,
+        plannedKnowledgeId: plan.id as PlannedKnowledgeId,
+        changes,
+        changeReason: required(context.options, "reason"),
+        actorId: actor,
+      });
+      const affected = [
+        plan.ownerProjectId,
+        ...(plan.relatedProjectId ? [plan.relatedProjectId] : []),
+        ...(relatedProjectId ? [String(relatedProjectId)] : []),
+      ];
+      if (result.outcome === "Proposed") {
+        return {
+          result: {
+            message: `Plan revision proposal ${result.proposal.id} submitted for "${plan.title}" (changed: ${result.proposal.changedFields.join(", ")}). Closing or reopening a plan needs a reviewer; see "loxora inbox".`,
+            data: result,
+          },
+          affected,
+        };
+      }
+      return {
+        result: {
+          message: `Plan "${result.revision.state.title}" is now revision ${result.revision.revisionNumber} (${result.revision.state.status}); changed: ${result.revision.changedFields.join(", ")}`,
+          data: result,
+        },
+        affected,
+      };
+    }),
+
+  "plan history": (context) =>
+    withWorkspace(context, async ({ store, directory, config }) => {
+      const scope = context.options.project
+        ? String(directory.project(required(context.options, "project")).id)
+        : undefined;
+      const plan = directory.plan(required(context.options, "plan"), scope);
+      const history = await plannedService(store, config).getPlannedKnowledgeHistory({
+        ownerProjectId: plan.ownerProjectId as ProjectId,
+        plannedKnowledgeId: plan.id as PlannedKnowledgeId,
+      });
+      if (!history) throw new CliUsageError(`Plan "${plan.title}" was not found`);
+      return {
+        message: [
+          `${history.plan.title} — plan history (planned knowledge, not canonical knowledge)`,
+          ...history.entries.map((entry) =>
+            entry.kind === "Revision"
+              ? `- r${entry.revisionNumber}${entry.isEffective ? " EFFECTIVE" : "          "} ${entry.createdAt} [${entry.state.status}] by ${entry.authorId}${
+                  entry.changeReason
+                    ? `: ${entry.changeReason} (changed: ${entry.changedFields.join(", ")})`
+                    : " (created)"
+                }`
+              : `- proposal ${short(entry.id)} ${entry.createdAt} [${entry.state.status}] by ${entry.authorId}: ${entry.changeReason} — ${
+                  entry.decision
+                    ? `${entry.decision.decision} by ${entry.decision.reviewerId}`
+                    : "awaiting review"
+                }`,
+          ),
+        ].join("\n"),
+        data: history,
+      };
+    }),
+
+  "node key": (context) =>
+    withWrite(context, async ({ store, actor, directory, config }) => {
+      const project = directory.project(required(context.options, "project"));
+      const node = directory.node(String(project.id), required(context.options, "node"));
+      const assigned = await nodeKeys(store, config).assignNodeKey({
+        projectId: project.id as ProjectId,
+        nodeId: node.id as NodeId,
+        key: required(context.options, "key"),
+        actorId: actor,
+      });
+      return {
+        result: {
+          message: `Node "${node.title}" now has the immutable key ${assigned.key}`,
+          data: assigned,
+        },
+        affected: [String(project.id)],
+      };
+    }),
+
   "relate propose": (context) =>
     withWrite(context, async ({ store, actor, directory, config }) => {
       const from = directory.project(required(context.options, "from-project"));
@@ -386,18 +600,34 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
     withWrite(context, async ({ store, actor, directory, config }) => {
       requireReviewer(config, actor);
       const proposal = directory.relationshipProposal(required(context.options, "proposal"));
+      const explicit = list(context.options, "evidence");
+      const evidence =
+        explicit.length > 0
+          ? qualifiedEvidence(directory, explicit)
+          : directory
+              .records("crossProjectRelationshipProposalEvidence")
+              .filter((record) => record.proposalId === proposal.id)
+              .map((record) => ({
+                projectId: record.evidenceProjectId as ProjectId,
+                evidenceReferenceId: record.evidenceReferenceId as EvidenceReferenceId,
+              }));
       const result = await impactService(store, config).reviewCrossProjectRelationshipProposal({
         proposalId: proposal.id as CrossProjectRelationshipProposalId,
         reviewerId: actor,
         decision: decision(context.options),
         reason: required(context.options, "reason"),
-        evidence: qualifiedEvidence(directory, list(context.options, "evidence")),
+        evidence,
       });
       return {
         result: {
-          message: result.relationship
-            ? `Accepted: Relationship ${result.relationship.id} is active`
-            : `Rejected Relationship Proposal ${proposal.id}`,
+          message: `${
+            result.relationship
+              ? `Accepted: Relationship ${result.relationship.id} is active`
+              : `Rejected Relationship Proposal ${proposal.id}`
+          }${evidenceNote(
+            evidence.map((entry) => entry.evidenceReferenceId),
+            explicit.length === 0,
+          )}`,
           data: result,
         },
         affected: [String(proposal.sourceProjectId), String(proposal.targetProjectId)],
@@ -410,7 +640,10 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
       const map = await new NavigationService(store).getProjectMap({
         projectId: project.id as ProjectId,
       });
-      return { message: renderTree(directory, project), data: map };
+      return {
+        message: renderTree(directory, project),
+        data: { ...map, plans: directory.plans(String(project.id)) },
+      };
     }),
 
   "show current": (context) =>
@@ -463,8 +696,11 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
           plans.length === 0
             ? "No planned knowledge."
             : [
-                "Planned knowledge (not implemented, not canonical):",
-                ...plans.map((plan) => `- [${plan.status}] ${plan.title} (${plan.id})`),
+                "Planned knowledge (not canonical knowledge):",
+                ...plans.map(
+                  (plan) =>
+                    `- [${plan.status}] ${plan.title} r${plan.revisionNumber} (${plan.id}) — ${planStateLabel(plan.status)}`,
+                ),
               ].join("\n"),
         data: plans,
       };
@@ -530,6 +766,29 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
         await store.close();
       }
       const digest = workspaceExportDigest(original);
+      const upgraded = serializeWorkspaceExport(document);
+      if (upgraded !== original) {
+        // An older format version was upgraded on parse. The restored store has applied newer
+        // migrations, so only the informational sourceSchema may differ (ADR-003, ADR-006).
+        const restored = parseWorkspaceExport(roundTrip);
+        const comparable = serializeWorkspaceExport({
+          ...restored,
+          sourceSchema: document.sourceSchema,
+        });
+        if (comparable === upgraded) {
+          const added = restored.sourceSchema.filter((id) => !document.sourceSchema.includes(id));
+          return {
+            message: `Round trip identical after upgrade to format version ${document.formatVersion}${added.length > 0 ? ` (restored store adds migrations: ${added.join(", ")})` : ""}\nsha256 ${digest} (input)`,
+            data: {
+              path: input,
+              sha256: digest,
+              identical: true,
+              upgraded: true,
+              addedMigrations: added,
+            },
+          };
+        }
+      }
       if (roundTrip !== original) {
         throw new CliUsageError(
           `Round trip differs: input sha256 ${digest}, restored sha256 ${workspaceExportDigest(roundTrip)}`,
@@ -650,16 +909,117 @@ function renderTree(directory: WorkspaceDirectory, project: WorkspaceExportRecor
         .filter((n) => n.collectionId === collection.id)) {
         const revision = current.get(node.id);
         lines.push(
-          `      - ${node.title}${revision ? ` [current ${short(revision)}]` : " [no current revision]"}`,
+          `      - ${nodeLabel(directory, node.id)}${revision ? ` [current ${short(revision)}]` : " [no current revision]"}`,
+        );
+      }
+      const nodeIds = new Set(directory.records("knowledgeNodes").map((node) => node.id));
+      for (const proposal of directory
+        .records("knowledgeProposals")
+        .filter(
+          (p) =>
+            p.collectionId === collection.id &&
+            p.status === "Submitted" &&
+            !nodeIds.has(p.proposedNodeId),
+        )) {
+        lines.push(
+          `      - ${keyPrefix(directory, proposal.proposedNodeId)}${proposal.proposedNodeTitle} [pending review]`,
         );
       }
     }
   }
-  const pending = directory
-    .records("knowledgeProposals")
-    .filter((p) => p.projectId === project.id && p.status === "Submitted").length;
-  if (pending > 0) lines.push(`  (${pending} proposal(s) awaiting review — see "loxora inbox")`);
+  const plans = directory.plans(String(project.id));
+  if (plans.length > 0) {
+    lines.push("  Plans (planned knowledge, not canonical):");
+    for (const plan of plans) {
+      lines.push(`    - [${plan.status}] ${plan.title} r${plan.revisionNumber}`);
+    }
+  }
+  const pending =
+    directory
+      .records("knowledgeProposals")
+      .filter((p) => p.projectId === project.id && p.status === "Submitted").length +
+    pendingPlanProposals(directory, String(project.id));
+  if (pending > 0) {
+    lines.push(`  (${plural(pending, "proposal")} awaiting review — see "loxora inbox")`);
+  }
   return lines.join("\n");
+}
+
+function plannedPolicy(config: WorkspaceConfig): PlannedKnowledgePolicy {
+  return { mayDecide: (actor) => !isAgentActor(actor) && config.reviewers.includes(actor) };
+}
+
+function plannedService(store: Store, config: WorkspaceConfig): PlannedKnowledgeService {
+  return new PlannedKnowledgeService(store, undefined, undefined, plannedPolicy(config));
+}
+
+function nodeKeys(store: Store, config: WorkspaceConfig): NodeKeyService {
+  return new NodeKeyService(store, undefined, undefined, plannedPolicy(config));
+}
+
+function planNode(
+  directory: WorkspaceDirectory,
+  plan: EffectivePlan,
+  relatedProjectId: string | null,
+  reference: string,
+): { projectId: ProjectId; nodeId: NodeId } {
+  try {
+    const node = directory.node(plan.ownerProjectId, reference);
+    return { projectId: plan.ownerProjectId as ProjectId, nodeId: node.id as NodeId };
+  } catch (error) {
+    if (!relatedProjectId) throw error;
+    const node = directory.node(relatedProjectId, reference);
+    return { projectId: relatedProjectId as ProjectId, nodeId: node.id as NodeId };
+  }
+}
+
+function pendingPlanProposals(directory: WorkspaceDirectory, projectId: string): number {
+  const decided = new Set(
+    directory.records("plannedKnowledgeRevisionDecisions").map((record) => record.proposalId),
+  );
+  return directory
+    .records("plannedKnowledgeRevisions")
+    .filter(
+      (record) =>
+        record.kind === "Proposal" &&
+        record.ownerProjectId === projectId &&
+        !decided.has(record.id),
+    ).length;
+}
+
+function planStateLabel(status: PlannedKnowledgeStatus): string {
+  if (status === "Completed") return "closed";
+  if (status === "Cancelled") return "cancelled";
+  return "not yet done";
+}
+
+function projectName(directory: WorkspaceDirectory, projectId: unknown): string {
+  const project = directory.records("projects").find((record) => record.id === projectId);
+  return project ? String(project.name) : short(projectId);
+}
+
+function keyPrefix(directory: WorkspaceDirectory, nodeId: unknown): string {
+  const key = directory.nodeKey(nodeId);
+  return key ? `[${key}] ` : "";
+}
+
+function keySuffix(directory: WorkspaceDirectory, nodeId: unknown): string {
+  const key = directory.nodeKey(nodeId);
+  return key ? ` [${key}]` : "";
+}
+
+function nodeLabel(directory: WorkspaceDirectory, nodeId: unknown): string {
+  const node = directory.records("knowledgeNodes").find((record) => record.id === nodeId);
+  return `${keyPrefix(directory, nodeId)}${node ? String(node.title) : short(nodeId)}`;
+}
+
+function evidenceNote(ids: readonly unknown[], fromProposal: boolean): string {
+  if (ids.length === 0) return "";
+  return `\nEvidence: ${ids.map(short).join(", ")}${fromProposal ? " (from the proposal)" : ""}`;
+}
+
+export function plural(count: number, singular: string): string {
+  return `${count} ${count === 1 ? singular : `${singular}s`}`;
 }
 
 function short(value: unknown): string {
