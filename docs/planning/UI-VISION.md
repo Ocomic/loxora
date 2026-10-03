@@ -258,5 +258,5 @@ Implementation still requires an ADR for storage and interfaces and an authorize
 1. Owner review of this document.
 2. An RFC for mission concept and mission state model (C2), including its relationship to the knowledge lifecycle. Done: [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md), accepted October 2, 2026.
 3. An ADR for mission storage and the reporting interface (C2). Done: [ADR-005](../adr/ADR-005-mission-storage-and-reporting-interface.md), accepted October 3, 2026.
-4. An RFC or ADR for the product UI shell and the transition away from the demo inspector (C2).
+4. An RFC or ADR for the product UI shell and the transition away from the demo inspector (C2). Proposed as [RFC-010](../rfcs/RFC-010-product-ui-shell-and-mission-control-mvp.md).
 5. A milestone under `docs/implementation/` for the first slice, validated against real Ocomic workflows. The mission persistence slice is [Milestone 10](../implementation/MILESTONE-10.md); the read-only Mission Detail view follows (F11).

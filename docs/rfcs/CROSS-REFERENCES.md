@@ -14,6 +14,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 8. RFC-007 — Initial Architecture and Hackathon MVP Boundaries
 9. RFC-008 — Post-Hackathon Governance and Work Authorization
 10. RFC-009 — Mission Concept and State Model
+11. RFC-010 — Product UI Shell and Mission Control MVP (Proposed)
 
 ## Dependency matrix
 
@@ -29,6 +30,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 | RFC-007 | RFC-000 to RFC-006 | Hackathon-only ADRs, explicitly authorized Hackathon milestones, MVP persistence, UI, MCP | Defines a bounded Hackathon vertical slice that proves lifecycle and cross-project impact without selecting permanent architecture. |
 | RFC-008 | RFC-001, RFC-004, RFC-007 | `AGENTS.md`, `CONTRIBUTING.md`, all post-Hackathon milestones and pull requests | Refines RFC-004 change classes into an authorization model, keeps RFC-007/ADR-001/ADR-002 as current baseline, and reserves licensing, security, cost, and data-boundary decisions for the owner. |
 | RFC-009 | RFC-002, RFC-003, RFC-004, RFC-006, RFC-008 | `docs/planning/UI-VISION.md`, future mission ADR and milestone, Mission Control UI | Defines Missions as execution state separate from knowledge, a seven-state model with typed Wait Reasons, and review-gated paths from mission results to knowledge. |
+| RFC-010 (Proposed) | RFC-006, RFC-008, RFC-009 | `@loxora/app`, UI milestones, `WEB-UI.md` (frozen demo) | Defines the product UI shell, the read-only Mission Control MVP on real workspace data, the no-invented-data rule for design elements without a data source, and the transition away from the demo inspector. |
 
 ## Mandatory cross-RFC rules
 
