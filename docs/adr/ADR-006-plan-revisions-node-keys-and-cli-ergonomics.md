@@ -1,7 +1,8 @@
 # ADR-006 — Plan Revisions, Node Keys, and CLI Ergonomics
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** October 3, 2026
+**Decision Date:** October 3, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (schema migration, Planned Knowledge semantics, export format version, public CLI contract; see RFC-008)
 
@@ -161,6 +162,12 @@ Milestone 9, authorized by a milestone document under `docs/implementation/`, co
 - Should plans themselves get keys (for example `P-003`)?
 - Should a plan revision proposal also be possible for other fields when a project wants stricter governance (a per-project policy)?
 - How should keys interact with a future per-Project export or Project merge?
+
+## Acceptance
+
+Accepted by Ocomic on October 3, 2026, as proposed (pull request #19), including the derived rules flagged for review: reopening a closed plan requires a reviewer, retroactive Node keys are reviewer-only, and a plan revision proposal fails on acceptance if a field it changes was modified in between.
+
+This acceptance authorizes Milestone 9 under `docs/implementation/`. It precedes the mission milestone (ADR-005). Compact Context Packages remain out of scope. The open questions above remain open.
 
 ## Related documents
 

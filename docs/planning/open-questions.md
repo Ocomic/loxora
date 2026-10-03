@@ -156,7 +156,7 @@ Open questions include:
 
 ## Findings from the first dogfooding session (October 2026)
 
-[ADR-006](../adr/ADR-006-plan-revisions-node-keys-and-cli-ergonomics.md) (Proposed) addresses the plan, key, navigation, and review items below; compact Context Packages remain open.
+[ADR-006](../adr/ADR-006-plan-revisions-node-keys-and-cli-ergonomics.md) (accepted October 3, 2026; Milestone 9) addresses the plan, key, navigation, and review items below; compact Context Packages remain open.
 
 The first session captured decisions, roadmap phases, and one cross-project dependency from two real repositories with the Milestone 8 CLI. The full chain (proposal, review, relationship, Context Package across two Projects) worked, and provenance stayed traceable. The following friction is generalized here; project-specific details stay in the private workspace. Items that change the CLI contract or Context Package semantics are C2 under RFC-008.
 
