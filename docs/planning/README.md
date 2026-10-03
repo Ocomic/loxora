@@ -28,6 +28,8 @@ No implementation plan is final until the foundational RFCs are reviewed.
 - [Milestone 9 plan revisions, Node keys, and CLI ergonomics](../implementation/MILESTONE-9.md)
 - [Milestone 10 mission persistence and reporting interface](../implementation/MILESTONE-10.md)
 - [Mission API](../implementation/MISSION-API.md)
+- [Milestone 11 Mission Control MVP](../implementation/MILESTONE-11.md)
+- [Loxora App (Mission Control)](../implementation/APP.md)
 - [Loxora CLI](../implementation/CLI.md)
 - [Dogfooding guide](../implementation/DOGFOODING.md)
 - [Demo Runbook](../implementation/DEMO-RUNBOOK.md)

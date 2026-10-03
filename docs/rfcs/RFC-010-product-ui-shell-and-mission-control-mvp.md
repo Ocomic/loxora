@@ -1,8 +1,9 @@
 # RFC-010 — Product UI Shell and Mission Control MVP
 
-**Status:** Proposed
+**Status:** Accepted
 **Version:** 0.2
 **Last Updated:** October 3, 2026
+**Decision Date:** October 3, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (new UI surface, new package; RFC-008)
 
@@ -246,4 +247,6 @@ No data changes. `@loxora/app` reads the existing workspace. Removing the packag
 
 ## Decision
 
-Pending. To be decided by the decision owner. Acceptance would authorize a milestone document (Milestone 11) for the read-only Mission Control MVP as described in sections 1 to 8. A following small write milestone would implement section 9 (configured actor, `availableActions`, and the buttons in its table). Acceptance would not authorize the other shell sections or any C3 items.
+Accepted by Ocomic on October 3, 2026 (pull request #23), including the actor decision in section 9. Section 9 was committed to the pull request after its merge and reached `main` with the Milestone 11 pull request. [Milestone 11](../implementation/MILESTONE-11.md) implements sections 1 to 8.
+
+The acceptance authorizes a milestone document (Milestone 11) for the read-only Mission Control MVP as described in sections 1 to 8. A following small write milestone implements section 9 (configured actor, `availableActions`, and the buttons in its table). It does not authorize the other shell sections or any C3 items. The other open questions remain open.
