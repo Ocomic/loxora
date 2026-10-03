@@ -1,6 +1,6 @@
 # Loxora CLI
 
-Milestone 8 implements ADR-004. Milestone 9 implements ADR-006, which adds plan revisions, Node keys, and ergonomics (CLI contract version 2). `loxora` is a thin local command-line adapter over the Core services. Humans and agents use it to propose knowledge; workspace reviewers decide what becomes Current.
+Milestone 8 implements ADR-004. Milestone 9 implements ADR-006, which adds plan revisions, Node keys, and ergonomics (CLI contract version 2). Milestone 10 implements ADR-005, which adds the `mission` commands (CLI contract version 3). `loxora` is a thin local command-line adapter over the Core services. Humans and agents use it to propose knowledge; workspace reviewers decide what becomes Current.
 
 ## Running it
 
@@ -25,10 +25,10 @@ The CLI needs Node.js as pinned in `.nvmrc`. It works on Windows, macOS, and Lin
 - **Initialization:** `loxora workspace init --reviewer <id> [--name <name>]`.
   - At least one reviewer is required, and `agent:*` ids are rejected as reviewers.
   - Initialization inside a Git working tree is refused unless `--allow-in-repository` is given.
-- **Migrations:** opening a workspace applies pending migrations, for example `006_plan_revisions_node_keys` (Milestone 9). Export a backup first.
+- **Migrations:** opening a workspace applies pending migrations, for example `006_plan_revisions_node_keys` (Milestone 9) or `007_missions` (Milestone 10). Every command opens the workspace, including `export`, so back up by copying the workspace directory before upgrading.
 - **Backups:**
-  - `loxora export --out <file>` and `loxora export verify --in <file>` (format version 2).
-  - Older version 1 backups are upgraded on read. `export verify` reports "identical after upgrade" and names the migrations the restored store adds.
+  - `loxora export --out <file>` and `loxora export verify --in <file>` (format version 3).
+  - Older version 1 and 2 backups are upgraded on read. `export verify` reports "identical after upgrade" and names the migrations the restored store adds.
 
 ## Actors and review
 
@@ -48,6 +48,7 @@ The CLI needs Node.js as pinned in `.nvmrc`. It works on Windows, macOS, and Lin
 - **Projects, spaces, collections, and sources:** id, unique name or title, or id prefix.
 - **Plans:** id, unique effective title, or id prefix; `--project` narrows the search.
 - **Proposals** (knowledge or plan revision) and **Evidence:** id or prefix.
+- **Missions:** id, unique title, or id prefix.
 - An ambiguous reference fails and asks for the full id. Referencing a Node that only has a pending Proposal points to that Proposal.
 
 ## Commands
@@ -68,6 +69,13 @@ The CLI needs Node.js as pinned in `.nvmrc`. It works on Windows, macOS, and Lin
 | `plan add --project --title --description --status --reason --blocking-condition [--node…] [--related-project --related-node…] [--evidence…]` | Record Planned Knowledge (never Current); revision 1 |
 | `plan update --plan [--project] --reason [--status] [--title] [--description] [--blocking-condition] [--add-node…] [--remove-node…] [--related-project <p>\|none] [--evidence…] [--remove-evidence…]` | New plan revision, or a plan revision proposal when closing or reopening without reviewer rights |
 | `plan history --plan [--project]` | Plan revisions and proposals; the effective revision is marked |
+| `mission create --project --title --goal [--ref-project…] [--node…] [--plan…] [--role] [--predecessor]` | Record a Mission (state `queued`); references must exist |
+| `mission start --mission [--activity]`, `mission activity --mission --text` | Start; report what is happening now |
+| `mission wait --mission --reason <wait reason> [--detail] [--capability] [--expected-resume] [--question --why [--option [--consequence]]…]` | Wait for a provider limit or for a human (Attention Request) |
+| `mission answer --mission --response [--decision approve\|reject] [--evidence…]` | Answer the Attention Request (humans only) |
+| `mission resume --mission`, `mission pause --mission [--reason]`, `mission cancel --mission --reason` | Resume after an answer or a provider limit; pause and cancel are human-only |
+| `mission complete --mission --summary [--output…] [--validation…] [--decision…] [--proposal…] [--log…] [--evidence…]`, `mission fail --mission --reason […]` | Record the Outcome; external log references are flagged not portable |
+| `mission show --mission`, `mission list [--project] [--state] [--reason] [--attention]` | Mission Detail; list sorted by need for attention |
 | `relate propose --from-project --from-node --to-project --to-node --evidence… --reason [--confidence] [--restricted]` | Propose a `DependsOn` relationship from consumer to provider |
 | `relate review --proposal --decision --reason [--evidence…]` | Review a relationship (reviewers only) |
 | `show map --project` | Project tree with keys, Current markers, pending Nodes, and plans. `--json` returns the Project Map plus plans. |
@@ -84,6 +92,14 @@ Every write command rebuilds the navigation projection of the affected Projects.
 - `plan update` links only Nodes with accepted knowledge. Link them after review through a new revision.
 - `--add-node` resolves in the owning Project first, then in the related Project.
 - Plan status never follows Missions automatically. A Mission can be completed while its plan stays `InProgress`.
+
+## Missions
+
+- Missions are execution state, never knowledge (RFC-009). They do not change maps, Context Packages, or knowledge Audit Events. Results become knowledge only through `propose` and `review`; list them with `mission complete --proposal`.
+- **Wait Reasons:** `provider_limit` (a controlled pause, not a failure; nothing resumes automatically), `needs_input`, `needs_approval`, `needs_permission`, `needs_manual_action`. `needs_budget` is reserved.
+- **Humans only:** answering, pausing, cancelling, and resuming a paused Mission. Agents may resume after a provider limit, or after a human answered.
+- **Continuing finished work:** create a new Mission with `--predecessor`; terminal states are final.
+- **Logs:** never stored. Use `--log workspace:<path>` for files inside the workspace directory; `external:<locator>` is kept but flagged not portable.
 
 ## Output and exit codes
 

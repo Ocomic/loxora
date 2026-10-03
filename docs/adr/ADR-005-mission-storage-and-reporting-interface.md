@@ -177,7 +177,7 @@ Rejected for the first slice by the decision owner. It avoids secrets in the wor
 
 ## Implementation (after acceptance)
 
-A milestone document under `docs/implementation/` authorizes the work. It follows the CLI improvement milestone that the decision owner placed first (plan update, linking, status, short ids). It covers:
+Milestone 10 ([`MILESTONE-10.md`](../implementation/MILESTONE-10.md)) implements this decision. It follows the CLI improvement milestone that the decision owner placed first (plan update, linking, status, short ids). It covers:
 
 - Core module, transition table, and unit tests for every allowed and forbidden transition and actor rule;
 - SQLite migration and store, including the concurrency check;
