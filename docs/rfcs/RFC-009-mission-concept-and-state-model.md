@@ -1,8 +1,8 @@
 # RFC-009 — Mission Concept and State Model
 
 **Status:** Accepted
-**Version:** 0.1
-**Last Updated:** October 2, 2026
+**Version:** 0.2 (Amendment 1)
+**Last Updated:** October 3, 2026
 **Decision Date:** October 2, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (RFC-008)
@@ -98,10 +98,11 @@ Seven states. Waiting is one state with a required, typed Wait Reason instead of
 | Wait Reason | Meaning | Resolved by |
 |---|---|---|
 | `provider_limit` | An external model or provider limit was reached. Optional: limited capability, expected reset time, whether another capability could continue. | Time passing or a human decision |
-| `input_required` | Missing information or a decision. Carries an Attention Request. | Human answer |
-| `approval_required` | An action needs human approval (for example a merge or publication). Carries an Attention Request. | Human approval or rejection |
-| `permission_required` | A capability or access right is missing. | Human grant, or cancellation |
-| `budget_required` | The action would exceed or need a budget. Reserved; no cost handling in this RFC. | Human decision |
+| `needs_input` | Missing information or a decision. Carries an Attention Request. | Human answer |
+| `needs_approval` | An action needs human approval (for example a merge or publication). Carries an Attention Request. | Human approval or rejection |
+| `needs_permission` | A capability or access right is missing. | Human grant, or cancellation |
+| `needs_manual_action` | The human must perform an action outside Loxora (for example sign in or run a local step). Carries an Attention Request. Added by Amendment 1. | Human confirmation |
+| `needs_budget` | The action would exceed or need a budget. Reserved; no cost handling in this RFC. | Human decision |
 
 **Mapping to the UI vision:**
 
@@ -109,11 +110,11 @@ Seven states. Waiting is one state with a required, typed Wait Reason instead of
 |---|---|
 | Running | `running` |
 | Provider limit (originally "Codex Limit") | `waiting` + `provider_limit` |
-| Needs input | `waiting` + `input_required` (also `approval_required`, `permission_required`) |
+| Needs input | `waiting` + `needs_input` (also `needs_approval`, `needs_permission`, `needs_manual_action`) |
 | Completed | `completed` |
 | `waiting_for_provider` / `waiting_for_user` / `waiting_for_permission` (UI-VISION, section 18) | `waiting` + the corresponding Wait Reason |
 
-UI-VISION section 8 distinguishes system failure, provider limitation, permission requirement, missing information, decision required, approval required, budget approval, and task completion. Each maps to exactly one state or state plus Wait Reason (`failed`, `provider_limit`, `permission_required`, `input_required`, `input_required` with a decision, `approval_required`, `budget_required`, `completed`).
+UI-VISION section 8 distinguishes system failure, provider limitation, permission requirement, missing information, decision required, approval required, budget approval, and task completion. Each maps to exactly one state or state plus Wait Reason (`failed`, `provider_limit`, `needs_permission`, `needs_input`, `needs_input` with a decision, `needs_approval`, `needs_budget`, `completed`).
 
 ### 4. Transitions
 
@@ -129,7 +130,7 @@ paused   -> running | cancelled
 Rules:
 
 - Terminal states (`completed`, `failed`, `cancelled`) have no outgoing transitions. Continuing failed work creates a **new Mission** that references the earlier one as its predecessor. History is never rewritten (consistent with rollback in RFC-002 and RFC-003).
-- Leaving `waiting` with `input_required`, `approval_required`, or `permission_required` requires a recorded human response. An agent cannot answer its own Attention Request.
+- Leaving `waiting` with `needs_input`, `needs_approval`, `needs_permission`, or `needs_manual_action` requires a recorded human response. An agent cannot answer its own Attention Request.
 - `cancelled` and `paused` can only be caused by a human.
 - Every transition creates a Mission Event with actor (a human id or `agent:<name>`, as in the CLI), timestamp, previous and new state, reason, and optional Evidence.
 - A human may move a Mission out of `waiting` (for example to `cancelled`) at any time.
@@ -161,7 +162,7 @@ Rejected. It would mix execution telemetry with reviewed knowledge, put unreview
 
 ### Flat waiting states (`waiting_for_provider`, `waiting_for_user`, `waiting_for_permission`)
 
-Considered; this is the sketch in UI-VISION section 18. Rejected in favor of one `waiting` state with typed reasons, because all waiting states share the same transitions and new reasons (for example `budget_required`) can be added without changing the transition table. The UI can still present each reason as its own state.
+Considered; this is the sketch in UI-VISION section 18. Rejected in favor of one `waiting` state with typed reasons, because all waiting states share the same transitions and new reasons (for example `needs_budget`) can be added without changing the transition table. The UI can still present each reason as its own state.
 
 ### Infer mission state from logs or agent output
 
@@ -219,3 +220,19 @@ Rejected. A new Mission with a predecessor reference keeps the failed attempt vi
 Accepted by Ocomic on October 2, 2026, as proposed (pull request #15). The terms from section 1 and the reserved distinction "Mission vs. Knowledge" were added to RFC-002.
 
 This acceptance authorizes preparing an ADR for storage and interfaces and a milestone document for the first slice. Implementation starts only after that ADR is accepted and the milestone is authorized (RFC-008, C2). It does not authorize orchestration, automatic resumption, notifications, or cost handling. The open questions above remain open.
+
+## Amendments
+
+### Amendment 1 — Wait Reason names (October 3, 2026)
+
+Decided by Ocomic while preparing ADR-005. Backend and UI use the same names to avoid misunderstandings, and every Wait Reason that waits for a human starts with `needs_`:
+
+| Before (version 0.1) | After |
+|---|---|
+| `input_required` | `needs_input` |
+| `approval_required` | `needs_approval` |
+| `permission_required` | `needs_permission` |
+| `budget_required` (reserved) | `needs_budget` (reserved) |
+| — | `needs_manual_action` (new): the human must perform an action outside Loxora |
+
+`provider_limit` is unchanged. `paused` remains a human-initiated halt only and is not a Wait Reason. No implementation existed before this amendment, so no data is affected.

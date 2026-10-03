@@ -22,6 +22,7 @@ Before writing this ADR, the decision owner decided the blocking questions on Oc
 | Export | Missions, Mission Events, Attention Requests, and Outcomes become part of a new export format version. External logs are not exported. |
 | Staleness | No state and no automatic transition. "Last activity" is derived for display and not persisted. |
 | Out of scope | Notifications, automatic resumption, and budget logic stay C3 and are not implemented. The model must not block them. |
+| Wait Reason names (follow-up) | Backend and UI use the same names. Human-facing reasons are `needs_input`, `needs_approval`, `needs_permission`, `needs_manual_action`, and the reserved `needs_budget`; `provider_limit` stays. `needs_manual_action` covers actions the human must perform outside Loxora. Recorded as RFC-009 Amendment 1. |
 
 The first dogfooding session (October 2026) showed that agents already work through the `loxora` CLI (ADR-004), so a CLI adapter reaches real agent work without a running server.
 
@@ -43,7 +44,7 @@ A new Core module (`packages/core/src/mission.ts`) defines the mission types, th
 | `startMission` | `queued` → `running` | human, agent | Optional `currentActivity` |
 | `reportActivity` | `running` → `running` | human, agent | Updates `currentActivity`; appends an activity event (source of "last activity") |
 | `waitMission` | `running` → `waiting` | human, agent | Wait Reason required; see section 3 |
-| `answerAttentionRequest` | stays `waiting` | human only | Records the response; required before leaving `input_required`, `approval_required`, or `permission_required` |
+| `answerAttentionRequest` | stays `waiting` | human only | Records the response; required before leaving `needs_input`, `needs_approval`, or `needs_permission` |
 | `resumeMission` | `waiting` / `paused` → `running` | see section 3 | From `paused`: human only |
 | `pauseMission` | `running` / `waiting` → `paused` | human only | |
 | `cancelMission` | non-terminal → `cancelled` | human only | |
@@ -57,17 +58,20 @@ Terminal states have no outgoing transitions. Continuing failed or cancelled wor
 
 ### 3. Wait Reasons and Attention Requests
 
-Wait Reasons use the names accepted in RFC-009:
+Wait Reasons use the names of RFC-009 as amended on October 3, 2026 (Amendment 1): backend and UI use the same names, and every reason that waits for a human starts with `needs_`.
 
 | Wait Reason | Required payload | Leaving `waiting` |
 |---|---|---|
 | `provider_limit` | `detail`; optional `limitedCapability`, `expectedResumeAt` | `resumeMission` by human or agent |
-| `input_required` | Attention Request: question, why it is needed, optional options with consequences | after `answerAttentionRequest`; then `resumeMission` |
-| `approval_required` | Attention Request: what needs approval and its consequences | after an `approve` or `reject` answer; then `resumeMission` |
-| `permission_required` | Attention Request: which capability or access is missing | after a human answer (granted or not); then `resumeMission` |
-| `budget_required` | — | **Reserved.** Rejected by Core until a C3 decision defines budget handling. |
+| `needs_input` | Attention Request: question, why it is needed, optional options with consequences | after `answerAttentionRequest`; then `resumeMission` |
+| `needs_approval` | Attention Request: what needs approval and its consequences | after an `approve` or `reject` answer; then `resumeMission` |
+| `needs_permission` | Attention Request: which capability or access is missing | after a human answer (granted or not); then `resumeMission` |
+| `needs_manual_action` | Attention Request: which action the human must perform outside Loxora (for example sign in, run a local step) and why | after a human answer confirming the action (done or not possible); then `resumeMission` |
+| `needs_budget` | — | **Reserved.** Rejected by Core until a C3 decision defines budget handling. |
 
-- UI labels are presentation only. "Needs input" shows `input_required`; the state designed as "Codex Limit" shows `provider_limit`.
+- The UI shows the same names as labels ("Needs input" for `needs_input`). The state designed as "Codex Limit" shows `provider_limit`.
+- `needs_input` is answered with information or a decision. `needs_manual_action` is answered by confirming that the human did something outside Loxora.
+- `paused` is not a Wait Reason. It only means that a human deliberately halted the Mission. Waiting for a model or provider is `provider_limit`, never `paused`.
 - `limitedCapability` is free text that describes the capability (for example "coding agent"). A provider or model name may appear only in optional, secondary `agentMetadata`; Core never interprets it.
 - `expectedResumeAt` is informational. Nothing resumes automatically (C3).
 - Adding a Wait Reason changes the Core contract, the schema check, and the export format, so it requires an update of this ADR.
@@ -111,13 +115,13 @@ A new SQLite migration adds:
 - "Last activity" is derived from the latest event timestamp at read time and not persisted.
 - Missions are never part of Context Packages, navigation projections, or knowledge maps (RFC-009).
 
-### 7. Export format version 2
+### 7. Next export format version
 
-- Workspace export `formatVersion` becomes `2`. It adds one section per new table, with field lists and sort keys in `WORKSPACE_EXPORT_SECTIONS` (ADR-003 rules unchanged: canonical bytes, restore into an empty store only).
-- The reader accepts version 1 and version 2. A version 1 document restores with empty mission sections. The exporter always writes version 2.
+- The workspace export gets the next `formatVersion`. This is version 3 if ADR-006 (plan revisions and node keys, planned first) has introduced version 2, otherwise version 2. It adds one section per new table, with field lists and sort keys in `WORKSPACE_EXPORT_SECTIONS` (ADR-003 rules unchanged: canonical bytes, restore into an empty store only).
+- The reader accepts every earlier version. An older document restores with empty mission sections. The exporter always writes the newest version.
 - Referenced log files are not exported (section 5).
 
-### 8. CLI adapter (version 2 of the ADR-004 contract)
+### 8. CLI adapter (next version of the ADR-004 contract)
 
 New `mission` command group. Every write needs `--actor` or `LOXORA_ACTOR`.
 
@@ -126,7 +130,7 @@ New `mission` command group. Every write needs `--actor` or `LOXORA_ACTOR`.
 | `mission create --project --title --goal [--ref-project…] [--node…] [--plan…] [--role] [--predecessor]` | `createMission` |
 | `mission start --mission [--activity]` | `startMission` |
 | `mission activity --mission --text` | `reportActivity` |
-| `mission wait --mission --reason provider_limit\|input_required\|approval_required\|permission_required [--detail] [--question] [--why] [--option…] [--consequence…] [--expected-resume]` | `waitMission` |
+| `mission wait --mission --reason provider_limit\|needs_input\|needs_approval\|needs_permission\|needs_manual_action [--detail] [--question] [--why] [--option…] [--consequence…] [--expected-resume]` | `waitMission` |
 | `mission answer --mission --response [--decision approve\|reject]` | `answerAttentionRequest` |
 | `mission resume --mission` | `resumeMission` |
 | `mission pause --mission`, `mission cancel --mission --reason` | `pauseMission`, `cancelMission` |
@@ -165,7 +169,7 @@ Rejected for the first slice by the decision owner. It avoids secrets in the wor
 ## Consequences
 
 - Real agent work can be tracked locally with explicit human intervention points, without orchestration or a running server.
-- The schema, the export format (version 2), and the CLI contract change. Each is versioned and covered by tests.
+- The schema, the export format (next version), and the CLI contract change. Each is versioned and covered by tests.
 - Every later adapter (server, MCP) must call the same Core operations.
 - The ADR-003 rule applies: the migration, exporter, restorer, and round-trip tests change together.
 - Notifications, automatic resumption, and budgets can later attach to Mission Events and Wait Reasons without changing the state model.
@@ -176,15 +180,14 @@ A milestone document under `docs/implementation/` authorizes the work. It follow
 
 - Core module, transition table, and unit tests for every allowed and forbidden transition and actor rule;
 - SQLite migration and store, including the concurrency check;
-- export format version 2 with version 1 compatibility and round-trip tests;
+- the next export format version, with compatibility for earlier versions and round-trip tests;
 - CLI `mission` commands, `docs/implementation/CLI.md`, and a mission section in `DOGFOODING.md`;
-- an end-to-end rehearsal: create, start, wait with `provider_limit`, resume, wait with `input_required`, answer, resume, complete with a Proposal.
+- an end-to-end rehearsal: create, start, wait with `provider_limit`, resume, wait with `needs_input`, answer, resume, complete with a Proposal.
 
 ## Open questions
 
-- Should `dependency` (waiting for another Mission or Project) and `manual` become Wait Reasons? `manual` overlaps with `paused`; `dependency` could reference a blocking Mission.
+- Should `dependency` (waiting for another Mission or Project) become a Wait Reason? It could reference the blocking Mission. Deferred until dogfooding shows a concrete case.
 - Should `answerAttentionRequest` be limited to workspace reviewers, or is any non-agent actor enough?
-- Should RFC-009 open question 6 (an "in progress" plan status) be solved in the CLI improvement milestone instead?
 - How should a Mission refer to a Context Package once Context Packages are persisted? For now, an optional fingerprint text.
 
 ## Related documents

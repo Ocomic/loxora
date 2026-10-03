@@ -227,7 +227,7 @@ These workflows validate generic UI abstractions. The Loxora UI must not become 
 
 Mission state should be modeled independently of the UI. The frontend must not infer critical execution state from logs.
 
-**Superseded by [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md) (accepted October 2, 2026).** The accepted model uses seven states (`queued`, `running`, `waiting`, `paused`, `completed`, `failed`, `cancelled`) with a typed Wait Reason on `waiting` (`provider_limit`, `input_required`, `approval_required`, `permission_required`, `budget_required`). RFC-009 maps each UI state below onto it. The original sketch is kept for history:
+**Superseded by [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md) (accepted October 2, 2026).** The accepted model uses seven states (`queued`, `running`, `waiting`, `paused`, `completed`, `failed`, `cancelled`) with a typed Wait Reason on `waiting` (`provider_limit`, `needs_input`, `needs_approval`, `needs_permission`, `needs_manual_action`, `needs_budget`; names per RFC-009 Amendment 1). RFC-009 maps each UI state below onto it. The original sketch is kept for history:
 
 ```text
 queued
