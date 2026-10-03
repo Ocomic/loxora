@@ -1,7 +1,8 @@
 # ADR-005 — Mission Storage and Reporting Interface
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** October 3, 2026
+**Decision Date:** October 3, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (schema migration, export format version, public CLI contract; see RFC-008)
 
@@ -189,6 +190,13 @@ A milestone document under `docs/implementation/` authorizes the work. It follow
 - Should `dependency` (waiting for another Mission or Project) become a Wait Reason? It could reference the blocking Mission. Deferred until dogfooding shows a concrete case.
 - Should `answerAttentionRequest` be limited to workspace reviewers, or is any non-agent actor enough?
 - How should a Mission refer to a Context Package once Context Packages are persisted? For now, an optional fingerprint text.
+
+
+## Acceptance
+
+Accepted by Ocomic on October 3, 2026, as proposed (pull request #18), together with RFC-009 Amendment 1 (Wait Reason names).
+
+This acceptance authorizes a milestone document under `docs/implementation/` for the mission persistence slice. It follows Milestone 9 (ADR-006), so the export format version for missions is 3. Server write endpoints, MCP tools, notifications, automatic resumption, and budgets remain out of scope. The open questions above remain open.
 
 ## Related documents
 
