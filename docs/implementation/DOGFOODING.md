@@ -36,6 +36,21 @@ npm run loxora -- plan update --plan "<phase>" --status InProgress --add-node <D
 npm run loxora -- plan update --plan "<phase>" --status Completed --reason "<why>"   # agents: becomes a proposal for a reviewer
 ```
 
+## Tracking agent work as Missions
+
+```sh
+npm run loxora -- mission create --project <project> --title "<task>" --goal "<done when>" --node <D-001> --role "Coding Agent"
+npm run loxora -- mission start --mission "<task>" --activity "<what now>"
+npm run loxora -- mission wait --mission "<task>" --reason provider_limit --detail "<limit message>" --expected-resume <time>
+npm run loxora -- mission wait --mission "<task>" --reason needs_approval --question "<merge PR?>" --why "<agents never merge>"
+npm run loxora -- mission list --attention          # what needs you
+npm run loxora -- mission answer --mission "<task>" --response "<answer>" --decision approve --actor <your-id>
+npm run loxora -- mission resume --mission "<task>"
+npm run loxora -- mission complete --mission "<task>" --summary "<result>" --proposal <proposal-id> --log workspace:logs/<file>
+```
+
+A completed Mission is not accepted knowledge. Its Proposals still go through `review`, and `mission show` displays their live review state.
+
 ## Suggested mapping
 
 | Existing artifact | Loxora concept |
@@ -46,6 +61,7 @@ npm run loxora -- plan update --plan "<phase>" --status Completed --reason "<why
 | Benchmark runs, test results | Sources and Evidence cited by Proposals and reviews |
 | A project that consumes another project's output | `relate propose --from-project <consumer> --to-project <provider>` |
 | Context for an agent task | `context --project <p> --node <n> --include-related` |
+| A coding-agent session, its limits, and its questions to you | A Mission (`mission create`, `wait`, `answer`, `complete`) |
 
 ## Windows notes
 

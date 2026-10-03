@@ -798,7 +798,7 @@ test("export verify accepts a version 1 backup and reports the upgrade", async (
   const document = JSON.parse(readFileSync(out, "utf8"));
   document.formatVersion = 1;
   document.sourceSchema = document.sourceSchema.filter(
-    (id: string) => id !== "006_plan_revisions_node_keys",
+    (id: string) => id !== "006_plan_revisions_node_keys" && id !== "007_missions",
   );
   for (const name of [
     "plannedKnowledgeRevisions",
@@ -807,6 +807,15 @@ test("export verify accepts a version 1 backup and reports the upgrade", async (
     "plannedKnowledgeRevisionDecisions",
     "plannedKnowledgeRevisionDecisionEvidence",
     "knowledgeNodeKeys",
+    "missions",
+    "missionProjectReferences",
+    "missionKnowledgeReferences",
+    "missionEvents",
+    "missionEventEvidence",
+    "missionAttentionRequests",
+    "missionOutcomes",
+    "missionOutcomeProposals",
+    "missionLogReferences",
   ]) {
     delete document.sections[name];
   }
@@ -816,6 +825,184 @@ test("export verify accepts a version 1 backup and reports the upgrade", async (
   assert.equal(verified.code, 0, verified.stderr);
   assert.match(
     verified.stdout,
-    /identical after upgrade to format version 2 \(restored store adds migrations: 006_plan_revisions_node_keys\)/,
+    /identical after upgrade to format version 3 \(restored store adds migrations: 006_plan_revisions_node_keys, 007_missions\)/,
   );
+});
+
+test("Milestone 10: missions from creation to outcome, with human-only answers", async (t) => {
+  const cli = harness(t);
+  await cli.json("workspace", "init", "--reviewer", "Ocomic");
+  const { proposalId } = await seedProject(
+    cli,
+    "game",
+    "GLB contract",
+    "GLB with embedded textures",
+  );
+  const agent = ["--actor", "agent:codex"] as const;
+  const created = await cli.json(
+    "mission",
+    "create",
+    "--project",
+    "game",
+    "--title",
+    "Export barrel LODs",
+    "--goal",
+    "LOD0-LOD2 GLBs",
+    "--node",
+    "GLB contract",
+    "--role",
+    "Asset Worker",
+    ...agent,
+  );
+  assert.equal(created.state, "queued");
+  const id = String(created.id);
+  assert.equal(
+    (
+      await cli.json(
+        "mission",
+        "start",
+        "--mission",
+        "Export barrel LODs",
+        "--activity",
+        "LOD1",
+        ...agent,
+      )
+    ).state,
+    "running",
+  );
+  const limited = await cli.run(
+    "mission",
+    "wait",
+    "--mission",
+    id.slice(0, 8),
+    "--reason",
+    "provider_limit",
+    "--detail",
+    "Usage limit reached",
+    "--capability",
+    "coding agent",
+    "--expected-resume",
+    "2026-10-04T08:00:00Z",
+    ...agent,
+  );
+  assert.equal(limited.code, 0, limited.stderr);
+  assert.match(limited.stdout, /waiting: provider_limit/);
+  const shownLimit = await cli.run("mission", "show", "--mission", id);
+  assert.match(shownLimit.stdout, /Paused by a provider limit — the Mission has not failed/);
+  assert.match(shownLimit.stdout, /nothing resumes automatically/);
+  await cli.json("mission", "resume", "--mission", id, ...agent);
+  const budget = await cli.run(
+    "mission",
+    "wait",
+    "--mission",
+    id,
+    "--reason",
+    "needs_budget",
+    ...agent,
+  );
+  assert.equal(budget.code, 2);
+  assert.match(budget.stderr, /reserved/);
+  await cli.json(
+    "mission",
+    "wait",
+    "--mission",
+    id,
+    "--reason",
+    "needs_input",
+    "--question",
+    "Texture size for LOD2?",
+    "--why",
+    "Both fit the budget",
+    "--option",
+    "512",
+    "--consequence",
+    "smaller download",
+    "--option",
+    "1024",
+    ...agent,
+  );
+  const attention = await cli.run("mission", "list", "--attention");
+  assert.match(
+    attention.stdout,
+    /\[waiting: needs_input\] Export barrel LODs .* needs you: Texture size for LOD2\?/,
+  );
+  const agentAnswer = await cli.run(
+    "mission",
+    "answer",
+    "--mission",
+    id,
+    "--response",
+    "512",
+    ...agent,
+  );
+  assert.equal(agentAnswer.code, 2);
+  assert.match(agentAnswer.stderr, /Only a human/);
+  const early = await cli.run("mission", "resume", "--mission", id, ...agent);
+  assert.equal(early.code, 2);
+  await cli.json("mission", "answer", "--mission", id, "--response", "512", "--actor", "Ocomic");
+  await cli.json("mission", "resume", "--mission", id, ...agent);
+  await cli.json("mission", "activity", "--mission", id, "--text", "Exporting LOD2", ...agent);
+  const completed = await cli.run(
+    "mission",
+    "complete",
+    "--mission",
+    id,
+    "--summary",
+    "Three LODs exported",
+    "--output",
+    "barrel_lod0.glb",
+    "--validation",
+    "inspect-glb passes",
+    "--decision",
+    "LOD2 uses 512",
+    "--proposal",
+    proposalId,
+    "--log",
+    "workspace:logs/lod.txt",
+    "--log",
+    "external:C:/agent/run.log",
+    ...agent,
+  );
+  assert.equal(completed.code, 0, completed.stderr);
+  assert.match(completed.stdout, /is completed/);
+  assert.match(completed.stdout, /1 external log reference not portable/);
+  const shown = await cli.run("mission", "show", "--mission", id);
+  assert.match(shown.stdout, /Outcome: Three LODs exported/);
+  assert.match(shown.stdout, /Proposal \w+: Accepted/);
+  assert.match(shown.stdout, /Log: external:C:\/agent\/run.log \(not portable\)/);
+  assert.match(shown.stdout, /9\. .* Completed running -> completed by agent:codex/);
+  const cancel = await cli.run(
+    "mission",
+    "cancel",
+    "--mission",
+    id,
+    "--reason",
+    "x",
+    "--actor",
+    "Ocomic",
+  );
+  assert.equal(cancel.code, 2);
+  assert.match(cancel.stderr, /cannot go from completed/);
+  const retry = await cli.json(
+    "mission",
+    "create",
+    "--project",
+    "game",
+    "--title",
+    "Follow-up",
+    "--goal",
+    "LOD3",
+    "--predecessor",
+    id,
+    ...agent,
+  );
+  assert.equal(retry.predecessorMissionId, id);
+  const list = await cli.run("mission", "list", "--project", "game");
+  assert.ok(
+    list.stdout.indexOf("[queued] Follow-up") <
+      list.stdout.indexOf("[completed] Export barrel LODs"),
+  );
+  assert.match((await cli.run("mission", "wait", "--help")).stdout, /needs_manual_action/);
+  const status = await cli.run("workspace", "status");
+  assert.equal(status.code, 0);
 });

@@ -54,6 +54,7 @@ import {
   type PlannedKnowledgeStore,
   type NodeKey,
   type NodeKeyStore,
+  type MissionStore,
   type PlannedKnowledgeRevision,
   type PlannedKnowledgeRevisionDecision,
   type PlannedKnowledgeRevisionId,
@@ -69,6 +70,7 @@ import { SqliteNavigationProjectionStore } from "./navigation.js";
 import { SqliteCrossProjectImpactStore } from "./impact.js";
 import { SqlitePlannedKnowledgeStore } from "./planned.js";
 import { SqliteNodeKeyStore } from "./node-keys.js";
+import { SqliteMissionStore } from "./mission.js";
 import { SqliteWorkspaceExportStore } from "./export.js";
 
 interface ProposalRow {
@@ -220,6 +222,7 @@ export class SqliteLifecycleStore
     PlannedKnowledgeStore,
     ReviewInboxStore,
     NodeKeyStore,
+    MissionStore,
     WorkspaceExportStore
 {
   private readonly database: DatabaseSync;
@@ -227,6 +230,7 @@ export class SqliteLifecycleStore
   private readonly impact: SqliteCrossProjectImpactStore;
   private readonly planned: SqlitePlannedKnowledgeStore;
   private readonly nodeKeys: SqliteNodeKeyStore;
+  private readonly missions: SqliteMissionStore;
   private readonly workspaceExport: SqliteWorkspaceExportStore;
 
   public constructor(
@@ -262,6 +266,7 @@ export class SqliteLifecycleStore
     );
     this.impact = new SqliteCrossProjectImpactStore(this.database, this.faults);
     this.planned = new SqlitePlannedKnowledgeStore(this.database);
+    this.missions = new SqliteMissionStore(this.database);
     this.nodeKeys = new SqliteNodeKeyStore(this.database, (event) =>
       this.planned.insertAudit(event),
     );
@@ -1008,6 +1013,24 @@ export class SqliteLifecycleStore
   }
   public getNodeKeys(input: { projectId: ProjectId }) {
     return this.nodeKeys.getNodeKeys(input);
+  }
+  public createMission(input: Parameters<MissionStore["createMission"]>[0]) {
+    return this.missions.createMission(input);
+  }
+  public applyMissionChange(input: Parameters<MissionStore["applyMissionChange"]>[0]) {
+    return this.missions.applyMissionChange(input);
+  }
+  public getMission(input: Parameters<MissionStore["getMission"]>[0]) {
+    return this.missions.getMission(input);
+  }
+  public listMissions(input: Parameters<MissionStore["listMissions"]>[0]) {
+    return this.missions.listMissions(input);
+  }
+  public getMissionEvents(input: Parameters<MissionStore["getMissionEvents"]>[0]) {
+    return this.missions.getMissionEvents(input);
+  }
+  public missingMissionReferences(input: Parameters<MissionStore["missingMissionReferences"]>[0]) {
+    return this.missions.missingMissionReferences(input);
   }
 
   public getCurrentEndpoint(input: Parameters<CrossProjectImpactStore["getCurrentEndpoint"]>[0]) {

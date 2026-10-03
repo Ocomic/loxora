@@ -69,6 +69,13 @@ function planRevisionsNodeKeysMigration(): Migration {
   };
 }
 
+function missionsMigration(): Migration {
+  return {
+    id: "007_missions",
+    sql: readFileSync(new URL("../../migrations/007_missions.sql", import.meta.url), "utf8"),
+  };
+}
+
 export function migrationCatalog(): readonly Migration[] {
   return [
     initialMigration(),
@@ -77,6 +84,7 @@ export function migrationCatalog(): readonly Migration[] {
     crossProjectImpactMigration(),
     plannedKnowledgeMigration(),
     planRevisionsNodeKeysMigration(),
+    missionsMigration(),
   ];
 }
 

@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { ValidationError } from "./errors.js";
 
 export const WORKSPACE_EXPORT_FORMAT = "loxora.workspace-export";
-export const WORKSPACE_EXPORT_FORMAT_VERSION = 2;
+export const WORKSPACE_EXPORT_FORMAT_VERSION = 3;
 /** Versions `parseWorkspaceExport` accepts; older documents are upgraded on parse. */
-export const WORKSPACE_EXPORT_SUPPORTED_VERSIONS: readonly number[] = Object.freeze([1, 2]);
+export const WORKSPACE_EXPORT_SUPPORTED_VERSIONS: readonly number[] = Object.freeze([1, 2, 3]);
 
 export type WorkspaceExportValue = string | number | null;
 export type WorkspaceExportRecord = Readonly<Record<string, WorkspaceExportValue>>;
@@ -385,6 +385,98 @@ export const WORKSPACE_EXPORT_SECTIONS: readonly WorkspaceExportSectionSpec[] = 
     ["projectId", "keyNormalized", "key", "nodeId", "assignedBy", "assignedAt"],
   ),
   section(
+    "missions",
+    ["id"],
+    [
+      "id",
+      "ownerProjectId",
+      "title",
+      "goal",
+      "state",
+      "waitReason",
+      "waitDetail",
+      "limitedCapability",
+      "expectedResumeAt",
+      "currentActivity",
+      "workerRole",
+      "agentMetadata",
+      "predecessorMissionId",
+      "createdBy",
+      "createdAt",
+      "updatedAt",
+      "sequence",
+    ],
+  ),
+  section("missionProjectReferences", ["missionId", "projectId"], ["missionId", "projectId"]),
+  section(
+    "missionKnowledgeReferences",
+    ["missionId", "kind", "projectId", "targetId"],
+    ["missionId", "kind", "projectId", "targetId"],
+  ),
+  section(
+    "missionEvents",
+    ["id"],
+    [
+      "id",
+      "missionId",
+      "sequence",
+      "eventType",
+      "previousState",
+      "newState",
+      "waitReason",
+      "actorId",
+      "occurredAt",
+      "reason",
+      "payloadJson",
+    ],
+  ),
+  section(
+    "missionEventEvidence",
+    ["eventId", "evidenceProjectId", "evidenceReferenceId"],
+    ["eventId", "evidenceProjectId", "evidenceReferenceId"],
+  ),
+  section(
+    "missionAttentionRequests",
+    ["id"],
+    [
+      "id",
+      "missionId",
+      "eventId",
+      "waitReason",
+      "question",
+      "rationale",
+      "optionsJson",
+      "response",
+      "decision",
+      "responderId",
+      "answeredAt",
+    ],
+  ),
+  section(
+    "missionOutcomes",
+    ["missionId"],
+    [
+      "missionId",
+      "kind",
+      "summary",
+      "outputsJson",
+      "validationsJson",
+      "decisionsJson",
+      "recordedBy",
+      "recordedAt",
+    ],
+  ),
+  section(
+    "missionOutcomeProposals",
+    ["missionId", "proposalId"],
+    ["missionId", "projectId", "proposalId"],
+  ),
+  section(
+    "missionLogReferences",
+    ["missionId", "position"],
+    ["missionId", "position", "kind", "locator"],
+  ),
+  section(
     "auditEvents",
     ["id"],
     [
@@ -506,30 +598,61 @@ export const WORKSPACE_EXPORT_VERSION_2_SECTIONS: readonly string[] = Object.fre
   "knowledgeNodeKeys",
 ]);
 
+/** Sections added in format version 3 (ADR-005, missions). */
+export const WORKSPACE_EXPORT_VERSION_3_SECTIONS: readonly string[] = Object.freeze([
+  "missions",
+  "missionProjectReferences",
+  "missionKnowledgeReferences",
+  "missionEvents",
+  "missionEventEvidence",
+  "missionAttentionRequests",
+  "missionOutcomes",
+  "missionOutcomeProposals",
+  "missionLogReferences",
+]);
+
+/** Sections each format version added over its predecessor. */
+const ADDED_SECTIONS: Readonly<Record<number, readonly string[]>> = Object.freeze({
+  2: WORKSPACE_EXPORT_VERSION_2_SECTIONS,
+  3: WORKSPACE_EXPORT_VERSION_3_SECTIONS,
+});
+
 /**
  * Upgrades an older export document to the current format version without changing any
- * existing record (ADR-006): a version 1 document gets empty version 2 sections. Documents
- * of the current version and unknown values are returned unchanged for validation.
+ * existing record (ADR-006, ADR-005): each step adds the empty sections of the next version.
+ * Documents of the current version and unknown values are returned unchanged for validation.
  */
 export function upgradeWorkspaceExport(value: unknown): unknown {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
-  const document = value as Record<string, unknown>;
-  if (document.format !== WORKSPACE_EXPORT_FORMAT || document.formatVersion !== 1) return value;
-  const sections = document.sections;
-  if (typeof sections !== "object" || sections === null || Array.isArray(sections)) return value;
-  for (const name of WORKSPACE_EXPORT_VERSION_2_SECTIONS) {
-    if (name in sections) {
-      throw new ValidationError(`Version 1 export must not contain section ${name}`);
-    }
+  let document = value as Record<string, unknown>;
+  if (document.format !== WORKSPACE_EXPORT_FORMAT) return value;
+  const start = document.formatVersion;
+  if (
+    typeof start !== "number" ||
+    !WORKSPACE_EXPORT_SUPPORTED_VERSIONS.includes(start) ||
+    start === WORKSPACE_EXPORT_FORMAT_VERSION
+  ) {
+    return value;
   }
-  return {
-    ...document,
-    formatVersion: WORKSPACE_EXPORT_FORMAT_VERSION,
-    sections: {
-      ...(sections as Record<string, unknown>),
-      ...Object.fromEntries(WORKSPACE_EXPORT_VERSION_2_SECTIONS.map((name) => [name, []])),
-    },
-  };
+  for (let version = start + 1; version <= WORKSPACE_EXPORT_FORMAT_VERSION; version += 1) {
+    const sections = document.sections;
+    if (typeof sections !== "object" || sections === null || Array.isArray(sections)) return value;
+    const added = ADDED_SECTIONS[version] ?? [];
+    for (const name of added) {
+      if (name in sections) {
+        throw new ValidationError(`Version ${start} export must not contain section ${name}`);
+      }
+    }
+    document = {
+      ...document,
+      formatVersion: version,
+      sections: {
+        ...(sections as Record<string, unknown>),
+        ...Object.fromEntries(added.map((name) => [name, []])),
+      },
+    };
+  }
+  return document;
 }
 
 /** Throws ValidationError unless `value` is a complete, well-formed export of the current format version. */

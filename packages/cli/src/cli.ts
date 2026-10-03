@@ -26,8 +26,6 @@ const STRING_OPTIONS = [
   "content",
   "content-file",
   "reason",
-  "proposal",
-  "decision",
   "status",
   "blocking-condition",
   "related-project",
@@ -40,8 +38,20 @@ const STRING_OPTIONS = [
   "budget",
   "out",
   "in",
-  "plan",
   "key",
+  "mission",
+  "goal",
+  "role",
+  "predecessor",
+  "activity",
+  "text",
+  "detail",
+  "question",
+  "why",
+  "capability",
+  "expected-resume",
+  "response",
+  "state",
 ] as const;
 const MULTIPLE_OPTIONS = [
   "reviewer",
@@ -52,6 +62,15 @@ const MULTIPLE_OPTIONS = [
   "add-node",
   "remove-node",
   "remove-evidence",
+  "plan",
+  "proposal",
+  "decision",
+  "ref-project",
+  "option",
+  "consequence",
+  "output",
+  "validation",
+  "log",
 ] as const;
 const BOOLEAN_OPTIONS = [
   "json",
@@ -60,6 +79,7 @@ const BOOLEAN_OPTIONS = [
   "restricted",
   "history",
   "include-related",
+  "attention",
 ] as const;
 
 export const USAGE = `Usage: loxora <command> [options]
@@ -91,6 +111,23 @@ Plans (planned knowledge, never canonical; closing or reopening a plan needs a r
   plan history --plan <plan> [--project <p>]
   relate propose --from-project <p> --from-node <n> --to-project <p> --to-node <n> --evidence <e>... --reason <why> [--confidence Low|Medium|High] [--restricted]
   relate review --proposal <id> --decision accept|reject --reason <why> [--evidence <e>...]   (default: the proposal's Evidence)
+
+Missions (execution state, never knowledge; pause, cancel, and answers are human-only)
+  mission create --project <p> --title <t> --goal <g> [--ref-project <p>...] [--node <n>...] [--plan <plan>...] [--role <role>] [--predecessor <mission>]
+  mission start --mission <m> [--activity <text>]
+  mission activity --mission <m> --text <what is happening now>
+  mission wait --mission <m> --reason provider_limit|needs_input|needs_approval|needs_permission|needs_manual_action
+           [--detail <text>] [--capability <limited capability>] [--expected-resume <time>]
+           [--question <q> --why <why> [--option <o> [--consequence <c>]]...]
+  mission answer --mission <m> --response <text> [--decision approve|reject] [--evidence <e>...]
+  mission resume --mission <m>
+  mission pause --mission <m> [--reason <why>]
+  mission cancel --mission <m> --reason <why>
+  mission complete --mission <m> --summary <s> [--output <o>...] [--validation <v>...] [--decision <d>...]
+           [--proposal <id>...] [--log workspace:<path>|external:<locator>...] [--evidence <e>...]
+  mission fail --mission <m> --reason <why> [--output <o>...] [--log <ref>...]
+  mission show --mission <m>
+  mission list [--project <p>] [--state <s>] [--reason <wait reason>] [--attention]
 
 Reading
   show map --project <p>

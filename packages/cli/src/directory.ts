@@ -105,6 +105,18 @@ export class WorkspaceDirectory {
     return pick(this.records("knowledgeProposals"), reference, null, "Proposal");
   }
 
+  /** Resolves a Mission by id, unique title (optionally within a Project), or id prefix. */
+  public mission(reference: string, projectId?: string): WorkspaceExportRecord {
+    return pick(
+      this.records("missions").filter(
+        (record) => !projectId || record.ownerProjectId === projectId,
+      ),
+      reference,
+      "title",
+      "Mission",
+    );
+  }
+
   /** The immutable key of a Node, if it has one. */
   public nodeKey(nodeId: unknown): string | null {
     const record = this.records("knowledgeNodeKeys").find((entry) => entry.nodeId === nodeId);

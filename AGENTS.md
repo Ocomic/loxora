@@ -115,7 +115,7 @@ Do not implement without an accepted RFC/ADR and authorized milestone, or an own
 
 Record such ideas in `docs/planning/open-questions.md` or propose an RFC.
 
-The Hackathon milestone history is recorded in `docs/hackathon/PRE-HACKATHON-BOUNDARY.md` and `docs/implementation/MILESTONE-*.md`. Those documents are historical and are not edited to describe later work. Post-Hackathon milestones start with `docs/implementation/MILESTONE-7.md` (deterministic workspace export, ADR-003) `docs/implementation/MILESTONE-8.md` (local knowledge capture CLI, ADR-004), and `docs/implementation/MILESTONE-9.md` (plan revisions, Node keys, CLI ergonomics, ADR-006).
+The Hackathon milestone history is recorded in `docs/hackathon/PRE-HACKATHON-BOUNDARY.md` and `docs/implementation/MILESTONE-*.md`. Those documents are historical and are not edited to describe later work. Post-Hackathon milestones start with `docs/implementation/MILESTONE-7.md` (deterministic workspace export, ADR-003) `docs/implementation/MILESTONE-8.md` (local knowledge capture CLI, ADR-004), `docs/implementation/MILESTONE-9.md` (plan revisions, Node keys, CLI ergonomics, ADR-006), and `docs/implementation/MILESTONE-10.md` (mission persistence, ADR-005).
 
 ## Knowledge evolution
 
