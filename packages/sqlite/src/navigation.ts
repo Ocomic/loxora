@@ -199,11 +199,11 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
       .prepare(`SELECT p.id proposal_id, p.proposed_node_id node_id FROM proposal_evidence pe
       JOIN knowledge_proposals p ON p.id=pe.proposal_id WHERE pe.evidence_reference_id=? AND pe.project_id=? ORDER BY p.id`)
       .all(input.evidenceReferenceId, input.projectId) as SqlRow[];
-    const plannedRows = this.hasTable("planned_knowledge_evidence")
+    const plannedRows = this.hasView("planned_knowledge_effective_evidence")
       ? (this.database
-          .prepare(`SELECT p.id planned_id,n.node_project_id,n.node_id FROM planned_knowledge_evidence pe
-      JOIN planned_knowledge_items p ON p.id=pe.planned_knowledge_id
-      JOIN planned_knowledge_nodes n ON n.planned_knowledge_id=p.id
+          .prepare(`SELECT p.id planned_id,n.node_project_id,n.node_id FROM planned_knowledge_effective_evidence pe
+      JOIN planned_knowledge_effective p ON p.id=pe.planned_knowledge_id
+      JOIN planned_knowledge_effective_nodes n ON n.planned_knowledge_id=p.id
       WHERE pe.evidence_reference_id=? AND pe.evidence_project_id=?
       ORDER BY p.id,n.node_project_id,n.node_id`)
           .all(input.evidenceReferenceId, input.projectId) as SqlRow[])
@@ -649,7 +649,7 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
       sources,
       plannedKnowledge: this.database
         .prepare(
-          `SELECT p.* FROM planned_knowledge_items p
+          `SELECT p.* FROM planned_knowledge_effective p
            WHERE p.scope=? AND (p.owner_project_id=? OR p.related_project_id=?)
            ORDER BY p.owner_project_id,p.id`,
         )
@@ -674,7 +674,7 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
       (
         this.database
           .prepare(
-            `SELECT COUNT(*) count FROM planned_knowledge_items
+            `SELECT COUNT(*) count FROM planned_knowledge_effective
              WHERE scope=? AND (owner_project_id=? OR related_project_id=?)`,
           )
           .get(scope, projectId, projectId) as { count: number }
@@ -822,10 +822,11 @@ export class SqliteNavigationProjectionStore implements NavigationStore {
   private count(sql: string, id: string): number {
     return Number((this.database.prepare(sql).get(id) as { count: number }).count);
   }
-  private hasTable(name: string): boolean {
+
+  private hasView(name: string): boolean {
     return (
       this.database
-        .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?")
+        .prepare("SELECT 1 FROM sqlite_master WHERE type='view' AND name=?")
         .get(name) !== undefined
     );
   }

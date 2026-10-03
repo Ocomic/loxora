@@ -496,7 +496,7 @@ test("cross-project dependencies, plans, and context use reviewed knowledge acro
     "agent:test",
   );
   const plans = await cli.run("show", "plans", "--project", "asset-poc");
-  assert.match(plans.stdout, /not implemented, not canonical/);
+  assert.match(plans.stdout, /not canonical knowledge[\s\S]*not yet done/);
   assert.match(plans.stdout, /\[Proposed\] Automate LOD generation/);
   const badStatus = await cli.run(
     "plan",
@@ -556,5 +556,266 @@ test("ambiguous and unknown references are rejected with guidance", async (t) =>
   assert.equal(
     (JSON.parse(unknown.stdout) as { error: { kind: string } }).error.kind,
     "CliUsageError",
+  );
+});
+
+test("Milestone 9: keys, plan revisions, reviewer-gated closing, inbox, help, and defaults", async (t) => {
+  const cli = harness(t);
+  await cli.json("workspace", "init", "--reviewer", "Ocomic");
+  const { evidenceId } = await seedProject(cli, "poc", "Baseline", "Accepted baseline");
+  const keyed = await cli.json(
+    "propose",
+    "new",
+    "--project",
+    "poc",
+    "--space",
+    "Architecture",
+    "--collection",
+    "Contracts",
+    "--title",
+    "Hardware first",
+    "--content",
+    "Validate hardware before UI",
+    "--source",
+    "poc decisions",
+    "--evidence",
+    evidenceId,
+    "--key",
+    "D-001",
+    "--actor",
+    "agent:test",
+  );
+  assert.equal((keyed.nodeKey as { key: string }).key, "D-001");
+  const duplicate = await cli.run(
+    "propose",
+    "new",
+    "--project",
+    "poc",
+    "--space",
+    "Architecture",
+    "--collection",
+    "Contracts",
+    "--title",
+    "Other",
+    "--content",
+    "x",
+    "--evidence",
+    evidenceId,
+    "--key",
+    "d-001",
+    "--actor",
+    "agent:test",
+  );
+  assert.equal(duplicate.code, 2);
+  assert.match(duplicate.stderr, /already used/);
+
+  const inbox = await cli.run("inbox");
+  assert.match(inbox.stdout, /"Hardware first" \[D-001\] in poc \(Initial\) by agent:test/);
+  const map = await cli.run("show", "map", "--project", "poc");
+  assert.match(map.stdout, /\[D-001\] Hardware first \[pending review\]/);
+  assert.match(map.stdout, /1 proposal awaiting review/);
+  const pendingLink = await cli.run(
+    "plan",
+    "add",
+    "--project",
+    "poc",
+    "--title",
+    "Phase 1",
+    "--description",
+    "Smoke test",
+    "--status",
+    "Ready",
+    "--reason",
+    "Roadmap",
+    "--blocking-condition",
+    "None",
+    "--node",
+    "D-001",
+    "--actor",
+    "agent:test",
+  );
+  assert.equal(pendingLink.code, 2);
+  assert.match(pendingLink.stderr, /no accepted knowledge yet/);
+
+  const reviewed = await cli.run(
+    "review",
+    "--proposal",
+    String(keyed.id),
+    "--decision",
+    "accept",
+    "--reason",
+    "ok",
+    "--actor",
+    "Ocomic",
+  );
+  assert.equal(reviewed.code, 0, reviewed.stderr);
+  assert.match(reviewed.stdout, /Evidence: .* \(from the proposal\)/);
+  assert.match(
+    (await cli.run("show", "current", "--project", "poc", "--node", "d-001")).stdout,
+    /Validate hardware/,
+  );
+
+  await cli.json(
+    "plan",
+    "add",
+    "--project",
+    "poc",
+    "--title",
+    "Phase 1",
+    "--description",
+    "Smoke test",
+    "--status",
+    "Ready",
+    "--reason",
+    "Roadmap",
+    "--blocking-condition",
+    "None",
+    "--actor",
+    "agent:test",
+  );
+  const linked = await cli.run(
+    "plan",
+    "update",
+    "--plan",
+    "Phase 1",
+    "--project",
+    "poc",
+    "--status",
+    "InProgress",
+    "--add-node",
+    "D-001",
+    "--reason",
+    "Started; link decision",
+    "--actor",
+    "agent:test",
+  );
+  assert.equal(linked.code, 0, linked.stderr);
+  assert.match(linked.stdout, /revision 2 \(InProgress\); changed: status, relatedNodes/);
+
+  const closing = await cli.run(
+    "plan",
+    "update",
+    "--plan",
+    "Phase 1",
+    "--status",
+    "Completed",
+    "--reason",
+    "Done from my side",
+    "--actor",
+    "agent:test",
+  );
+  assert.equal(closing.code, 0, closing.stderr);
+  assert.match(closing.stdout, /Plan revision proposal \S+ submitted/);
+  const planInbox = await cli.run("inbox");
+  assert.match(
+    planInbox.stdout,
+    /plan revision \S+: "Phase 1" InProgress -> Completed \(changed: status\) by agent:test/,
+  );
+  const proposalId = /plan revision (\S+):/.exec(planInbox.stdout)?.[1] ?? "";
+  const agentReview = await cli.run(
+    "review",
+    "--proposal",
+    proposalId,
+    "--decision",
+    "accept",
+    "--reason",
+    "self",
+    "--actor",
+    "agent:test",
+  );
+  assert.equal(agentReview.code, 2);
+  const accepted = await cli.run(
+    "review",
+    "--proposal",
+    proposalId.slice(0, 8),
+    "--decision",
+    "accept",
+    "--reason",
+    "verified",
+    "--actor",
+    "Ocomic",
+  );
+  assert.equal(accepted.code, 0, accepted.stderr);
+  assert.match(accepted.stdout, /plan "Phase 1" is now revision 3 \(Completed\)/);
+
+  const plans = await cli.run("show", "plans", "--project", "poc");
+  assert.match(plans.stdout, /\[Completed\] Phase 1 r3 .* — closed/);
+  assert.doesNotMatch(plans.stdout, /not implemented/);
+  const history = await cli.run("plan", "history", "--plan", "Phase 1");
+  assert.match(history.stdout, /- r1 .*\[Ready\].*\(created\)/);
+  assert.match(
+    history.stdout,
+    /- proposal \S+ .*\[Completed\] by agent:test: Done from my side — Accepted by Ocomic/,
+  );
+  assert.match(history.stdout, /- r3 EFFECTIVE/);
+
+  const agentKey = await cli.run(
+    "node",
+    "key",
+    "--project",
+    "poc",
+    "--node",
+    "Baseline",
+    "--key",
+    "D-000",
+    "--actor",
+    "agent:test",
+  );
+  assert.equal(agentKey.code, 2);
+  assert.match(agentKey.stderr, /need a reviewer/);
+  const reviewerKey = await cli.run(
+    "node",
+    "key",
+    "--project",
+    "poc",
+    "--node",
+    "Baseline",
+    "--key",
+    "D-000",
+    "--actor",
+    "Ocomic",
+  );
+  assert.equal(reviewerKey.code, 0, reviewerKey.stderr);
+
+  const status = await cli.run("workspace", "status");
+  assert.match(
+    status.stdout,
+    /poc \(\w+\): 2 nodes with accepted knowledge, 0 pending nodes, 0 pending proposals; plans: 1 Completed/,
+  );
+  const help = await cli.run("plan", "update", "--help");
+  assert.equal(help.code, 0);
+  assert.match(help.stdout, /plan update --plan/);
+  assert.doesNotMatch(help.stdout, /workspace init/);
+  assert.match((await cli.run("help", "node", "key")).stdout, /node key --project/);
+});
+
+test("export verify accepts a version 1 backup and reports the upgrade", async (t) => {
+  const cli = harness(t);
+  await cli.json("workspace", "init", "--reviewer", "Ocomic");
+  await seedProject(cli, "legacy", "Contract", "Accepted");
+  const out = join(cli.root, "current.json");
+  await cli.json("export", "--out", out);
+  const document = JSON.parse(readFileSync(out, "utf8"));
+  document.formatVersion = 1;
+  document.sourceSchema = document.sourceSchema.filter(
+    (id: string) => id !== "006_plan_revisions_node_keys",
+  );
+  for (const name of [
+    "plannedKnowledgeRevisions",
+    "plannedKnowledgeRevisionNodes",
+    "plannedKnowledgeRevisionEvidence",
+    "plannedKnowledgeRevisionDecisions",
+    "plannedKnowledgeRevisionDecisionEvidence",
+    "knowledgeNodeKeys",
+  ]) {
+    delete document.sections[name];
+  }
+  const legacy = join(cli.root, "legacy-v1.json");
+  writeFileSync(legacy, `${JSON.stringify(document, null, 2)}\n`);
+  const verified = await cli.run("export", "verify", "--in", legacy);
+  assert.equal(verified.code, 0, verified.stderr);
+  assert.match(
+    verified.stdout,
+    /identical after upgrade to format version 2 \(restored store adds migrations: 006_plan_revisions_node_keys\)/,
   );
 });

@@ -1,5 +1,5 @@
+import type { DatabaseSync } from "node:sqlite";
 import type {
-  AuditEvent,
   EvidenceReference,
   EvidenceReferenceId,
   KnowledgeProposal,
@@ -16,7 +16,20 @@ import type {
   Scope,
   SourceReference,
 } from "@loxora/core";
-import type { DatabaseSync } from "node:sqlite";
+import {
+  type AuditEvent,
+  NotFoundError,
+  PLANNED_KNOWLEDGE_FIELDS,
+  type PlannedKnowledgeField,
+  type PlannedKnowledgeHistory,
+  type PlannedKnowledgeHistoryEntry,
+  type PlannedKnowledgeRevision,
+  type PlannedKnowledgeRevisionDecision,
+  type PlannedKnowledgeRevisionId,
+  type PlannedKnowledgeState,
+  type ProjectQualifiedNodeId,
+  ValidationError,
+} from "@loxora/core";
 
 type Row = Record<string, string | null>;
 const frozen = <T>(value: T): T => Object.freeze(value);
@@ -88,8 +101,8 @@ export class SqlitePlannedKnowledgeStore implements PlannedKnowledgeStore, Revie
     const ids = this.database
       .prepare(
         `SELECT DISTINCT p.id,p.owner_project_id,p.created_at
-           FROM planned_knowledge_items p
-           LEFT JOIN planned_knowledge_nodes n ON n.planned_knowledge_id=p.id
+           FROM planned_knowledge_effective p
+           LEFT JOIN planned_knowledge_effective_nodes n ON n.planned_knowledge_id=p.id
            WHERE (p.owner_project_id=? OR p.related_project_id=?) AND p.scope=?
              AND (? IS NULL OR (n.node_project_id=? AND n.node_id=?))
            ORDER BY p.created_at,p.id`,
@@ -118,19 +131,19 @@ export class SqlitePlannedKnowledgeStore implements PlannedKnowledgeStore, Revie
     plannedKnowledgeId: PlannedKnowledgeId;
   }): Promise<PlannedKnowledge | null> {
     const row = this.database
-      .prepare("SELECT * FROM planned_knowledge_items WHERE id=? AND owner_project_id=?")
+      .prepare("SELECT * FROM planned_knowledge_effective WHERE id=? AND owner_project_id=?")
       .get(input.plannedKnowledgeId, input.ownerProjectId) as Row | undefined;
     if (!row) return null;
     const nodes = this.database
       .prepare(
-        "SELECT node_project_id,node_id FROM planned_knowledge_nodes WHERE planned_knowledge_id=? ORDER BY node_project_id,node_id",
+        "SELECT node_project_id,node_id FROM planned_knowledge_effective_nodes WHERE planned_knowledge_id=? ORDER BY node_project_id,node_id",
       )
       .all(row.id as string) as Row[];
     const evidenceRows = this.database
       .prepare(
         `SELECT pe.evidence_project_id,pe.evidence_reference_id,e.source_reference_id,e.summary,e.locator,e.created_at,
                 s.kind source_kind,s.locator source_locator,s.title source_title,s.created_at source_created_at
-         FROM planned_knowledge_evidence pe
+         FROM planned_knowledge_effective_evidence pe
          JOIN evidence_references e ON e.id=pe.evidence_reference_id AND e.project_id=pe.evidence_project_id
          JOIN source_references s ON s.id=e.source_reference_id AND s.project_id=e.project_id
          WHERE pe.planned_knowledge_id=? ORDER BY pe.evidence_project_id,pe.evidence_reference_id`,
@@ -183,6 +196,9 @@ export class SqlitePlannedKnowledgeStore implements PlannedKnowledgeStore, Revie
       authorId: row.author_id as string,
       createdAt: row.created_at as string,
       scope: row.scope as Scope,
+      revisionNumber: Number(row.revision_number),
+      revisedBy: row.revised_by as string,
+      revisedAt: row.revised_at as string,
       relatedRevision: row.related_revision_id
         ? frozen({
             projectId: row.related_revision_project_id as ProjectId,
@@ -193,6 +209,329 @@ export class SqlitePlannedKnowledgeStore implements PlannedKnowledgeStore, Revie
       evidenceReferences: frozen(evidenceReferences),
       sources: frozen([...sources.values()]),
     });
+  }
+
+  public async appendPlannedKnowledgeRevision(input: {
+    revision: PlannedKnowledgeRevision;
+    expectedEffectiveRevisionNumber: number;
+    auditEvent: AuditEvent;
+  }): Promise<PlannedKnowledgeRevision> {
+    const { revision } = input;
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      this.assertEffectiveRevision(
+        revision.plannedKnowledgeId,
+        revision.ownerProjectId,
+        input.expectedEffectiveRevisionNumber,
+      );
+      this.insertRevision(revision);
+      this.insertAudit(input.auditEvent);
+      this.database.exec("COMMIT");
+    } catch (error) {
+      if (this.database.isTransaction) this.database.exec("ROLLBACK");
+      throw error;
+    }
+    return revision;
+  }
+
+  public async recordPlannedKnowledgeRevisionDecision(input: {
+    decision: PlannedKnowledgeRevisionDecision;
+    revision: PlannedKnowledgeRevision | null;
+    expectedEffectiveRevisionNumber: number;
+    auditEvent: AuditEvent;
+  }): Promise<void> {
+    const { decision } = input;
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      const proposal = this.database
+        .prepare(
+          "SELECT planned_knowledge_id FROM planned_knowledge_revisions WHERE id=? AND owner_project_id=? AND kind='Proposal'",
+        )
+        .get(decision.proposalId, decision.ownerProjectId) as Row | undefined;
+      if (!proposal) {
+        throw new NotFoundError(`Plan revision proposal ${decision.proposalId} was not found`);
+      }
+      if (
+        this.database
+          .prepare("SELECT 1 FROM planned_knowledge_revision_decisions WHERE proposal_id=?")
+          .get(decision.proposalId) !== undefined
+      ) {
+        throw new ValidationError(
+          `Plan revision proposal ${decision.proposalId} was already reviewed`,
+        );
+      }
+      this.assertEffectiveRevision(
+        proposal.planned_knowledge_id as string,
+        decision.ownerProjectId,
+        input.expectedEffectiveRevisionNumber,
+      );
+      if (input.revision) this.insertRevision(input.revision);
+      this.database
+        .prepare(
+          `INSERT INTO planned_knowledge_revision_decisions
+           (id,proposal_id,owner_project_id,reviewer_id,decision,reason,decided_at,resulting_revision_id)
+           VALUES (?,?,?,?,?,?,?,?)`,
+        )
+        .run(
+          decision.id,
+          decision.proposalId,
+          decision.ownerProjectId,
+          decision.reviewerId,
+          decision.decision,
+          decision.reason,
+          decision.decidedAt,
+          decision.resultingRevisionId,
+        );
+      const evidenceInsert = this.database.prepare(
+        "INSERT INTO planned_knowledge_revision_decision_evidence (decision_id,owner_project_id,evidence_project_id,evidence_reference_id) VALUES (?,?,?,?)",
+      );
+      for (const entry of decision.evidence)
+        evidenceInsert.run(
+          decision.id,
+          decision.ownerProjectId,
+          entry.projectId,
+          entry.evidenceReferenceId,
+        );
+      this.insertAudit(input.auditEvent);
+      this.database.exec("COMMIT");
+    } catch (error) {
+      if (this.database.isTransaction) this.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  public async getPlannedKnowledgeHistory(input: {
+    ownerProjectId: ProjectId;
+    plannedKnowledgeId: PlannedKnowledgeId;
+  }): Promise<PlannedKnowledgeHistory | null> {
+    const plan = await this.getPlannedKnowledge(input);
+    if (!plan) return null;
+    const item = this.database
+      .prepare("SELECT * FROM planned_knowledge_items WHERE id=? AND owner_project_id=?")
+      .get(input.plannedKnowledgeId, input.ownerProjectId) as Row;
+    const first: PlannedKnowledgeHistoryEntry = frozen({
+      kind: "Revision" as const,
+      id: null,
+      revisionNumber: 1,
+      baseRevisionNumber: null,
+      state: this.state(
+        item,
+        "SELECT node_project_id a,node_id b FROM planned_knowledge_nodes WHERE planned_knowledge_id=? ORDER BY a,b",
+        "SELECT evidence_project_id a,evidence_reference_id b FROM planned_knowledge_evidence WHERE planned_knowledge_id=? ORDER BY a,b",
+      ),
+      changedFields: frozen([]),
+      changeReason: null,
+      authorId: item.author_id as string,
+      createdAt: item.created_at as string,
+      sourceProposalId: null,
+      isEffective: plan.revisionNumber === 1,
+      decision: null,
+    });
+    const rows = this.database
+      .prepare(
+        `SELECT * FROM planned_knowledge_revisions WHERE planned_knowledge_id=? AND owner_project_id=?
+         ORDER BY created_at, CASE kind WHEN 'Proposal' THEN 0 ELSE 1 END, id`,
+      )
+      .all(input.plannedKnowledgeId, input.ownerProjectId) as Row[];
+    const entries = rows.map((row) => {
+      const revision = this.revision(row);
+      return frozen({
+        kind: revision.kind,
+        id: revision.id,
+        revisionNumber: revision.revisionNumber,
+        baseRevisionNumber: revision.baseRevisionNumber,
+        state: revision.state,
+        changedFields: revision.changedFields,
+        changeReason: revision.changeReason,
+        authorId: revision.authorId,
+        createdAt: revision.createdAt,
+        sourceProposalId: revision.sourceProposalId,
+        isEffective:
+          revision.kind === "Revision" && revision.revisionNumber === plan.revisionNumber,
+        decision: revision.kind === "Proposal" ? this.decision(revision.id) : null,
+      });
+    });
+    return frozen({ plan, entries: frozen([first, ...entries]) });
+  }
+
+  public async getPlannedKnowledgeRevision(input: {
+    ownerProjectId: ProjectId;
+    revisionId: PlannedKnowledgeRevisionId;
+  }): Promise<PlannedKnowledgeRevision | null> {
+    const row = this.database
+      .prepare("SELECT * FROM planned_knowledge_revisions WHERE id=? AND owner_project_id=?")
+      .get(input.revisionId, input.ownerProjectId) as Row | undefined;
+    return row ? this.revision(row) : null;
+  }
+
+  public async nodesWithoutCurrentKnowledge(input: {
+    nodes: readonly ProjectQualifiedNodeId[];
+    scope: Scope;
+  }): Promise<readonly ProjectQualifiedNodeId[]> {
+    const current = this.database.prepare(
+      "SELECT 1 FROM current_revisions WHERE project_id=? AND node_id=? AND scope=?",
+    );
+    return frozen(
+      input.nodes.filter(
+        (node) => current.get(node.projectId, node.nodeId, input.scope) === undefined,
+      ),
+    );
+  }
+
+  private assertEffectiveRevision(planId: string, ownerProjectId: string, expected: number): void {
+    const row = this.database
+      .prepare(
+        "SELECT revision_number FROM planned_knowledge_effective WHERE id=? AND owner_project_id=?",
+      )
+      .get(planId, ownerProjectId) as { revision_number: number } | undefined;
+    if (!row) throw new NotFoundError(`Plan ${planId} was not found`);
+    if (Number(row.revision_number) !== expected) {
+      throw new ValidationError(
+        `Plan ${planId} changed concurrently (effective revision ${row.revision_number}, expected ${expected}); retry`,
+      );
+    }
+  }
+
+  private insertRevision(revision: PlannedKnowledgeRevision): void {
+    const { state } = revision;
+    this.database
+      .prepare(
+        `INSERT INTO planned_knowledge_revisions
+         (id,planned_knowledge_id,owner_project_id,kind,revision_number,base_revision_number,title,description,
+          status,reason,blocking_condition,related_project_id,related_revision_project_id,related_revision_id,
+          changed_fields,change_reason,author_id,created_at,source_proposal_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      )
+      .run(
+        revision.id,
+        revision.plannedKnowledgeId,
+        revision.ownerProjectId,
+        revision.kind,
+        revision.revisionNumber,
+        revision.baseRevisionNumber,
+        state.title,
+        state.description,
+        state.status,
+        state.reason,
+        state.blockingCondition,
+        state.relatedProjectId,
+        state.relatedRevision?.projectId ?? null,
+        state.relatedRevision?.revisionId ?? null,
+        revision.changedFields.join(","),
+        revision.changeReason,
+        revision.authorId,
+        revision.createdAt,
+        revision.sourceProposalId,
+      );
+    const nodeInsert = this.database.prepare(
+      "INSERT INTO planned_knowledge_revision_nodes (revision_id,owner_project_id,node_project_id,node_id) VALUES (?,?,?,?)",
+    );
+    for (const node of state.relatedNodes)
+      nodeInsert.run(revision.id, revision.ownerProjectId, node.projectId, node.nodeId);
+    const evidenceInsert = this.database.prepare(
+      "INSERT INTO planned_knowledge_revision_evidence (revision_id,owner_project_id,evidence_project_id,evidence_reference_id) VALUES (?,?,?,?)",
+    );
+    for (const entry of state.evidence)
+      evidenceInsert.run(
+        revision.id,
+        revision.ownerProjectId,
+        entry.projectId,
+        entry.evidenceReferenceId,
+      );
+  }
+
+  private revision(row: Row): PlannedKnowledgeRevision {
+    const id = row.id as string;
+    return frozen({
+      id: id as PlannedKnowledgeRevisionId,
+      plannedKnowledgeId: row.planned_knowledge_id as PlannedKnowledgeId,
+      ownerProjectId: row.owner_project_id as ProjectId,
+      kind: row.kind as PlannedKnowledgeRevision["kind"],
+      revisionNumber: row.revision_number === null ? null : Number(row.revision_number),
+      baseRevisionNumber: Number(row.base_revision_number),
+      state: this.state(
+        row,
+        "SELECT node_project_id a,node_id b FROM planned_knowledge_revision_nodes WHERE revision_id=? ORDER BY a,b",
+        "SELECT evidence_project_id a,evidence_reference_id b FROM planned_knowledge_revision_evidence WHERE revision_id=? ORDER BY a,b",
+      ),
+      changedFields: frozen(
+        (row.changed_fields as string)
+          .split(",")
+          .filter((field): field is PlannedKnowledgeField =>
+            (PLANNED_KNOWLEDGE_FIELDS as readonly string[]).includes(field),
+          ),
+      ),
+      changeReason: row.change_reason as string,
+      authorId: row.author_id as string,
+      createdAt: row.created_at as string,
+      sourceProposalId: (row.source_proposal_id as PlannedKnowledgeRevisionId | null) ?? null,
+    });
+  }
+
+  private state(row: Row, nodesSql: string, evidenceSql: string): PlannedKnowledgeState {
+    const id = row.id as string;
+    return frozen({
+      title: row.title as string,
+      description: row.description as string,
+      status: row.status as PlannedKnowledgeStatus,
+      reason: row.reason as string,
+      blockingCondition: row.blocking_condition as string,
+      relatedProjectId: (row.related_project_id as ProjectId | null) ?? null,
+      relatedRevision: row.related_revision_id
+        ? frozen({
+            projectId: row.related_revision_project_id as ProjectId,
+            revisionId: row.related_revision_id as RevisionId,
+          })
+        : null,
+      relatedNodes: frozen(
+        this.links(nodesSql, id).map(([projectId, nodeId]) =>
+          frozen({ projectId: projectId as ProjectId, nodeId: nodeId as NodeId }),
+        ),
+      ),
+      evidence: frozen(
+        this.links(evidenceSql, id).map(([projectId, evidenceId]) =>
+          frozen({
+            projectId: projectId as ProjectId,
+            evidenceReferenceId: evidenceId as EvidenceReferenceId,
+          }),
+        ),
+      ),
+    });
+  }
+
+  private decision(proposalId: string): PlannedKnowledgeRevisionDecision | null {
+    const row = this.database
+      .prepare("SELECT * FROM planned_knowledge_revision_decisions WHERE proposal_id=?")
+      .get(proposalId) as Row | undefined;
+    if (!row) return null;
+    return frozen({
+      id: row.id as PlannedKnowledgeRevisionDecision["id"],
+      proposalId: row.proposal_id as PlannedKnowledgeRevisionId,
+      ownerProjectId: row.owner_project_id as ProjectId,
+      reviewerId: row.reviewer_id as string,
+      decision: row.decision as "Accepted" | "Rejected",
+      reason: row.reason as string,
+      decidedAt: row.decided_at as string,
+      resultingRevisionId: (row.resulting_revision_id as PlannedKnowledgeRevisionId | null) ?? null,
+      evidence: frozen(
+        this.links(
+          "SELECT evidence_project_id a,evidence_reference_id b FROM planned_knowledge_revision_decision_evidence WHERE decision_id=? ORDER BY a,b",
+          row.id as string,
+        ).map(([projectId, id]) =>
+          frozen({
+            projectId: projectId as ProjectId,
+            evidenceReferenceId: id as EvidenceReferenceId,
+          }),
+        ),
+      ),
+    });
+  }
+
+  private links(sql: string, id: string): [string, string][] {
+    return (this.database.prepare(sql).all(id) as { a: string; b: string }[]).map((row) => [
+      row.a,
+      row.b,
+    ]);
   }
 
   public async getReviewInbox(input: {
@@ -218,6 +557,7 @@ export class SqlitePlannedKnowledgeStore implements PlannedKnowledgeStore, Revie
           createdAt: proposal.createdAt,
           proposal,
           relationshipProposal: null,
+          plannedRevisionProposal: null,
           paths: frozen([this.proposalPath(row)]),
           evidence: frozen(this.proposalEvidence(proposal.id)),
           allowedDecisions: frozen(["Accepted", "Rejected"] as const),
@@ -278,7 +618,55 @@ export class SqlitePlannedKnowledgeStore implements PlannedKnowledgeStore, Revie
           createdAt: relationshipProposal.proposedAt,
           proposal: null,
           relationshipProposal,
+          plannedRevisionProposal: null,
           paths: frozen(paths),
+          evidence: frozen(evidence),
+          allowedDecisions: frozen(["Accepted", "Rejected"] as const),
+        }),
+      );
+    }
+    const planProposals = this.database
+      .prepare(
+        `SELECT r.* FROM planned_knowledge_revisions r
+         JOIN planned_knowledge_items p ON p.id=r.planned_knowledge_id
+         WHERE r.kind='Proposal' AND p.scope=?
+           AND NOT EXISTS (SELECT 1 FROM planned_knowledge_revision_decisions d WHERE d.proposal_id=r.id)
+         ORDER BY r.created_at,r.id`,
+      )
+      .all(input.scope) as Row[];
+    for (const row of planProposals) {
+      const proposal = this.revision(row);
+      const projectIds = [
+        proposal.ownerProjectId,
+        ...(proposal.state.relatedProjectId ? [proposal.state.relatedProjectId] : []),
+      ];
+      if (!projectIds.some((id) => allowed.has(id))) continue;
+      const effective = this.database
+        .prepare("SELECT title,status FROM planned_knowledge_effective WHERE id=?")
+        .get(proposal.plannedKnowledgeId) as Row;
+      const evidence = proposal.state.evidence
+        .map(
+          (entry) =>
+            this.database
+              .prepare("SELECT * FROM evidence_references WHERE id=? AND project_id=?")
+              .get(entry.evidenceReferenceId, entry.projectId) as Row | undefined,
+        )
+        .filter((entry): entry is Row => entry !== undefined)
+        .map((entry) => this.evidence(entry));
+      items.push(
+        frozen({
+          kind: "PlannedKnowledgeRevisionProposal" as const,
+          id: proposal.id,
+          projectIds: frozen(projectIds),
+          createdAt: proposal.createdAt,
+          proposal: null,
+          relationshipProposal: null,
+          plannedRevisionProposal: frozen({
+            proposal,
+            planTitle: effective.title as string,
+            effectiveStatus: effective.status as PlannedKnowledgeStatus,
+          }),
+          paths: frozen([]),
           evidence: frozen(evidence),
           allowedDecisions: frozen(["Accepted", "Rejected"] as const),
         }),
@@ -424,7 +812,7 @@ export class SqlitePlannedKnowledgeStore implements PlannedKnowledgeStore, Revie
       createdAt: row.created_at as string,
     });
   }
-  private insertAudit(event: AuditEvent): void {
+  public insertAudit(event: AuditEvent): void {
     this.database
       .prepare(
         `INSERT INTO audit_events (id,project_id,event_type,aggregate_type,aggregate_id,actor_id,occurred_at,correlation_id,payload_json) VALUES (?,?,?,?,?,?,?,?,?)`,

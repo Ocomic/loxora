@@ -52,6 +52,12 @@ import {
   type PlannedKnowledgeId,
   type PlannedKnowledgeStatus,
   type PlannedKnowledgeStore,
+  type NodeKey,
+  type NodeKeyStore,
+  type PlannedKnowledgeRevision,
+  type PlannedKnowledgeRevisionDecision,
+  type PlannedKnowledgeRevisionId,
+  type ProjectQualifiedNodeId,
   type ReviewInboxItem,
   type ReviewInboxStore,
   type WorkspaceExport,
@@ -62,6 +68,7 @@ import { runMigrations } from "./migrations.js";
 import { SqliteNavigationProjectionStore } from "./navigation.js";
 import { SqliteCrossProjectImpactStore } from "./impact.js";
 import { SqlitePlannedKnowledgeStore } from "./planned.js";
+import { SqliteNodeKeyStore } from "./node-keys.js";
 import { SqliteWorkspaceExportStore } from "./export.js";
 
 interface ProposalRow {
@@ -212,12 +219,14 @@ export class SqliteLifecycleStore
     CrossProjectImpactStore,
     PlannedKnowledgeStore,
     ReviewInboxStore,
+    NodeKeyStore,
     WorkspaceExportStore
 {
   private readonly database: DatabaseSync;
   private readonly navigation: SqliteNavigationProjectionStore;
   private readonly impact: SqliteCrossProjectImpactStore;
   private readonly planned: SqlitePlannedKnowledgeStore;
+  private readonly nodeKeys: SqliteNodeKeyStore;
   private readonly workspaceExport: SqliteWorkspaceExportStore;
 
   public constructor(
@@ -253,6 +262,9 @@ export class SqliteLifecycleStore
     );
     this.impact = new SqliteCrossProjectImpactStore(this.database, this.faults);
     this.planned = new SqlitePlannedKnowledgeStore(this.database);
+    this.nodeKeys = new SqliteNodeKeyStore(this.database, (event) =>
+      this.planned.insertAudit(event),
+    );
     this.workspaceExport = new SqliteWorkspaceExportStore(this.database);
   }
 
@@ -954,6 +966,48 @@ export class SqliteLifecycleStore
     scope: Scope;
   }): Promise<readonly ReviewInboxItem[]> {
     return this.planned.getReviewInbox(input);
+  }
+  public appendPlannedKnowledgeRevision(input: {
+    revision: PlannedKnowledgeRevision;
+    expectedEffectiveRevisionNumber: number;
+    auditEvent: AuditEvent;
+  }) {
+    return this.planned.appendPlannedKnowledgeRevision(input);
+  }
+  public recordPlannedKnowledgeRevisionDecision(input: {
+    decision: PlannedKnowledgeRevisionDecision;
+    revision: PlannedKnowledgeRevision | null;
+    expectedEffectiveRevisionNumber: number;
+    auditEvent: AuditEvent;
+  }) {
+    return this.planned.recordPlannedKnowledgeRevisionDecision(input);
+  }
+  public getPlannedKnowledgeHistory(input: {
+    ownerProjectId: ProjectId;
+    plannedKnowledgeId: PlannedKnowledgeId;
+  }) {
+    return this.planned.getPlannedKnowledgeHistory(input);
+  }
+  public getPlannedKnowledgeRevision(input: {
+    ownerProjectId: ProjectId;
+    revisionId: PlannedKnowledgeRevisionId;
+  }) {
+    return this.planned.getPlannedKnowledgeRevision(input);
+  }
+  public nodesWithoutCurrentKnowledge(input: {
+    nodes: readonly ProjectQualifiedNodeId[];
+    scope: Scope;
+  }) {
+    return this.planned.nodesWithoutCurrentKnowledge(input);
+  }
+  public nodeKeyTarget(input: { projectId: ProjectId; nodeId: NodeId }) {
+    return this.nodeKeys.nodeKeyTarget(input);
+  }
+  public assignNodeKey(key: NodeKey, auditEvent: AuditEvent) {
+    return this.nodeKeys.assignNodeKey(key, auditEvent);
+  }
+  public getNodeKeys(input: { projectId: ProjectId }) {
+    return this.nodeKeys.getNodeKeys(input);
   }
 
   public getCurrentEndpoint(input: Parameters<CrossProjectImpactStore["getCurrentEndpoint"]>[0]) {

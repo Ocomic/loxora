@@ -40,8 +40,19 @@ const STRING_OPTIONS = [
   "budget",
   "out",
   "in",
+  "plan",
+  "key",
 ] as const;
-const MULTIPLE_OPTIONS = ["reviewer", "source", "evidence", "node", "related-node"] as const;
+const MULTIPLE_OPTIONS = [
+  "reviewer",
+  "source",
+  "evidence",
+  "node",
+  "related-node",
+  "add-node",
+  "remove-node",
+  "remove-evidence",
+] as const;
 const BOOLEAN_OPTIONS = [
   "json",
   "help",
@@ -65,14 +76,21 @@ Structure and provenance (write commands need --actor <id> or LOXORA_ACTOR)
   evidence add --project <p> --source <s> --summary <text> --locator <#anchor|lines>
 
 Knowledge (proposals require review by a workspace reviewer)
-  propose new --project <p> --space <s> --collection <c> --title <t> (--content <text>|--content-file <path>) --source <s>... --evidence <e>...
+  propose new --project <p> --space <s> --collection <c> --title <t> (--content <text>|--content-file <path>) --source <s>... --evidence <e>... [--key <key>]
   propose successor --project <p> --node <n> (--content|--content-file) --reason <why> --source <s>... --evidence <e>...
   inbox [--project <p>]
-  review --proposal <id> --decision accept|reject --reason <why> --evidence <e>...
-  plan add --project <p> --title <t> --description <d> --status Proposed|Deferred|Ready|Completed|Cancelled --reason <why>
+  review --proposal <id> --decision accept|reject --reason <why> [--evidence <e>...]   (default: the proposal's Evidence)
+  node key --project <p> --node <n> --key <key>   (reviewers only; keys are immutable and never reused)
+
+Plans (planned knowledge, never canonical; closing or reopening a plan needs a reviewer)
+  plan add --project <p> --title <t> --description <d> --status Proposed|Deferred|Ready|InProgress|Completed|Cancelled --reason <why>
            --blocking-condition <what must be true first> [--node <n>...] [--related-project <p> --related-node <n>...] [--evidence <e>...]
+  plan update --plan <plan> [--project <p>] --reason <why> [--status <status>] [--title <t>] [--description <d>]
+           [--blocking-condition <c>] [--add-node <n>...] [--remove-node <n>...] [--related-project <p>|none]
+           [--evidence <e>...] [--remove-evidence <e>...]
+  plan history --plan <plan> [--project <p>]
   relate propose --from-project <p> --from-node <n> --to-project <p> --to-node <n> --evidence <e>... --reason <why> [--confidence Low|Medium|High] [--restricted]
-  relate review --proposal <id> --decision accept|reject --reason <why> --evidence <e>...
+  relate review --proposal <id> --decision accept|reject --reason <why> [--evidence <e>...]   (default: the proposal's Evidence)
 
 Reading
   show map --project <p>
@@ -85,8 +103,25 @@ Portability
   export --out <file>
   export verify --in <file>
 
-References accept ids, unique id prefixes (6+ characters), or unique names/titles.
-Add --json for machine-readable output.`;
+References accept ids, Node keys (for example D-001), unique id prefixes (6+ characters), or unique names/titles.
+Add --json for machine-readable output. "loxora <command> --help" or "loxora help <command>" shows one command.`;
+
+/** Usage lines of one command, including its continuation lines; null if unknown. */
+export function commandUsage(name: string): string | null {
+  const lines = USAGE.split("\n");
+  const result: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (line.startsWith(`  ${name} `) || line === `  ${name}`) {
+      result.push(line);
+      while ((lines[index + 1] ?? "").startsWith("           ")) {
+        index += 1;
+        result.push(lines[index] ?? "");
+      }
+    }
+  }
+  return result.length > 0 ? `Usage: loxora\n${result.join("\n")}` : null;
+}
 
 export async function runCli(argv: readonly string[], io: CliIo): Promise<number> {
   let json = false;
@@ -106,7 +141,17 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
     const options = parsed.values as Options;
     json = options.json === true;
     const positionals = parsed.positionals;
-    if (options.help === true || positionals.length === 0) {
+    const helpTarget =
+      positionals[0] === "help" ? positionals.slice(1) : options.help === true ? positionals : null;
+    if (helpTarget && helpTarget.length > 0) {
+      const twoWordHelp = helpTarget.slice(0, 2).join(" ");
+      const usage = commandUsage(COMMANDS[twoWordHelp] ? twoWordHelp : (helpTarget[0] ?? ""));
+      if (!usage)
+        throw new CliUsageError(`Unknown command: ${helpTarget.join(" ")}. Run "loxora --help".`);
+      io.stdout(`${usage}\n`);
+      return 0;
+    }
+    if (options.help === true || positionals.length === 0 || positionals[0] === "help") {
       io.stdout(`${USAGE}\n`);
       return positionals.length === 0 && options.help !== true ? 1 : 0;
     }
