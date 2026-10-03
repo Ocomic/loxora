@@ -244,7 +244,7 @@ The current position of a Mission in its lifecycle: queued, running, waiting, pa
 
 ### Wait Reason
 
-The typed reason why a waiting Mission cannot currently proceed, such as a provider limit, required input, approval, permission, or budget.
+The typed reason why a waiting Mission cannot currently proceed, such as a provider limit, or a human providing input, approval, permission, a manual action, or budget (RFC-009, Amendment 1).
 
 ### Attention Request
 

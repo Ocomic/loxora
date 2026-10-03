@@ -227,7 +227,7 @@ These workflows validate generic UI abstractions. The Loxora UI must not become 
 
 Mission state should be modeled independently of the UI. The frontend must not infer critical execution state from logs.
 
-**Superseded by [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md) (accepted October 2, 2026).** The accepted model uses seven states (`queued`, `running`, `waiting`, `paused`, `completed`, `failed`, `cancelled`) with a typed Wait Reason on `waiting` (`provider_limit`, `input_required`, `approval_required`, `permission_required`, `budget_required`). RFC-009 maps each UI state below onto it. The original sketch is kept for history:
+**Superseded by [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md) (accepted October 2, 2026).** The accepted model uses seven states (`queued`, `running`, `waiting`, `paused`, `completed`, `failed`, `cancelled`) with a typed Wait Reason on `waiting` (`provider_limit`, `needs_input`, `needs_approval`, `needs_permission`, `needs_manual_action`, `needs_budget`; names per RFC-009 Amendment 1). RFC-009 maps each UI state below onto it. The original sketch is kept for history:
 
 ```text
 queued
@@ -257,6 +257,6 @@ Implementation still requires an ADR for storage and interfaces and an authorize
 
 1. Owner review of this document.
 2. An RFC for mission concept and mission state model (C2), including its relationship to the knowledge lifecycle. Done: [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md), accepted October 2, 2026.
-3. An ADR for mission storage and the reporting interface (C2).
+3. An ADR for mission storage and the reporting interface (C2). Proposed as [ADR-005](../adr/ADR-005-mission-storage-and-reporting-interface.md).
 4. An RFC or ADR for the product UI shell and the transition away from the demo inspector (C2).
 5. A milestone under `docs/implementation/` for the first slice, validated against real Ocomic workflows.
