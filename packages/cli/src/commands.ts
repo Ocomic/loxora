@@ -3,10 +3,13 @@ import {
   CrossProjectImpactService,
   DEFAULT_SCOPE,
   LifecycleService,
+  MISSION_STATES,
+  MissionService,
   NavigationService,
   NodeKeyService,
   PLANNED_KNOWLEDGE_STATUSES,
   PlannedKnowledgeService,
+  WAIT_REASONS,
   assertNodeKey,
   ReviewInboxService,
   parseWorkspaceExport,
@@ -16,6 +19,10 @@ import {
   type ContextTemporalView,
   type CrossProjectRelationshipProposalId,
   type EvidenceReferenceId,
+  type Mission,
+  type MissionEvent,
+  type MissionId,
+  type MissionState,
   type NodeId,
   type PlannedKnowledgeChanges,
   type PlannedKnowledgeId,
@@ -27,6 +34,7 @@ import {
   type RelationshipConfidence,
   type SourceReferenceId,
   type SpaceId,
+  type WaitReason,
   type WorkspaceExportRecord,
 } from "@loxora/core";
 import { openSqliteStore } from "@loxora/sqlite";
@@ -565,6 +573,241 @@ export const COMMANDS: Readonly<Record<string, Handler>> = {
       };
     }),
 
+  "mission create": (context) =>
+    withWrite(context, async ({ store, actor, directory }) => {
+      const owner = directory.project(required(context.options, "project"));
+      const referenced = list(context.options, "ref-project").map((ref) => directory.project(ref));
+      const projects = [owner, ...referenced].map((project) => String(project.id));
+      const predecessor = optional(context.options, "predecessor");
+      const mission = await new MissionService(store).createMission({
+        ownerProjectId: owner.id as ProjectId,
+        title: required(context.options, "title"),
+        goal: required(context.options, "goal"),
+        referencedProjectIds: referenced.map((project) => project.id as ProjectId),
+        nodes: list(context.options, "node").map((ref) => {
+          for (const projectId of projects) {
+            try {
+              const node = directory.node(projectId, ref);
+              return { projectId: projectId as ProjectId, nodeId: node.id as NodeId };
+            } catch {
+              // try the next referenced Project
+            }
+          }
+          throw new CliUsageError(`Node "${ref}" was not found in the Mission's Projects`);
+        }),
+        plans: list(context.options, "plan").map((ref) => {
+          const plan = directory.plan(ref);
+          const projectId = projects.find(
+            (id) => id === plan.ownerProjectId || id === plan.relatedProjectId,
+          );
+          if (!projectId) {
+            throw new CliUsageError(`Plan "${plan.title}" is not in the Mission's Projects`);
+          }
+          return {
+            projectId: projectId as ProjectId,
+            plannedKnowledgeId: plan.id as PlannedKnowledgeId,
+          };
+        }),
+        ...(optional(context.options, "role")
+          ? { workerRole: required(context.options, "role") }
+          : {}),
+        ...(predecessor
+          ? { predecessorMissionId: directory.mission(predecessor).id as MissionId }
+          : {}),
+        actorId: actor,
+      });
+      return {
+        result: {
+          message: `Mission "${mission.title}" created (${mission.id}); state queued. Start it with "loxora mission start".`,
+          data: mission,
+        },
+        affected: [],
+      };
+    }),
+
+  "mission start": (context) =>
+    missionWrite(context, (missions, mission, actor) =>
+      missions.startMission({
+        missionId: mission,
+        actorId: actor,
+        ...(optional(context.options, "activity")
+          ? { activity: required(context.options, "activity") }
+          : {}),
+      }),
+    ),
+
+  "mission activity": (context) =>
+    missionWrite(context, (missions, mission, actor) =>
+      missions.reportActivity({
+        missionId: mission,
+        actorId: actor,
+        activity: required(context.options, "text"),
+      }),
+    ),
+
+  "mission wait": (context) =>
+    missionWrite(context, (missions, mission, actor) => {
+      const reason = required(context.options, "reason") as WaitReason;
+      if (!WAIT_REASONS.includes(reason)) {
+        throw new CliUsageError(`--reason must be one of ${WAIT_REASONS.join(", ")}`);
+      }
+      const options = list(context.options, "option");
+      const consequences = list(context.options, "consequence");
+      if (consequences.length > options.length) {
+        throw new CliUsageError("Each --consequence belongs to the --option at the same position");
+      }
+      const text = (name: string) =>
+        optional(context.options, name) ? { [camel(name)]: required(context.options, name) } : {};
+      return missions.waitMission({
+        missionId: mission,
+        actorId: actor,
+        reason,
+        ...text("detail"),
+        ...text("question"),
+        ...(optional(context.options, "why")
+          ? { rationale: required(context.options, "why") }
+          : {}),
+        ...(optional(context.options, "capability")
+          ? { limitedCapability: required(context.options, "capability") }
+          : {}),
+        ...(optional(context.options, "expected-resume")
+          ? { expectedResumeAt: required(context.options, "expected-resume") }
+          : {}),
+        options: options.map((option, index) => ({
+          option,
+          consequence: consequences[index] ?? null,
+        })),
+      });
+    }),
+
+  "mission answer": (context) =>
+    missionWrite(context, (missions, mission, actor, directory) => {
+      const raw = optional(context.options, "decision")?.toLowerCase();
+      if (raw !== undefined && raw !== "approve" && raw !== "reject") {
+        throw new CliUsageError("--decision must be approve or reject");
+      }
+      return missions.answerAttentionRequest({
+        missionId: mission,
+        actorId: actor,
+        response: required(context.options, "response"),
+        ...(raw ? { decision: raw } : {}),
+        evidence: qualifiedEvidence(directory, list(context.options, "evidence")),
+      });
+    }),
+
+  "mission resume": (context) =>
+    missionWrite(context, (missions, mission, actor) =>
+      missions.resumeMission({ missionId: mission, actorId: actor }),
+    ),
+
+  "mission pause": (context) =>
+    missionWrite(context, (missions, mission, actor) =>
+      missions.pauseMission({
+        missionId: mission,
+        actorId: actor,
+        ...(optional(context.options, "reason")
+          ? { reason: required(context.options, "reason") }
+          : {}),
+      }),
+    ),
+
+  "mission cancel": (context) =>
+    missionWrite(context, (missions, mission, actor) =>
+      missions.cancelMission({
+        missionId: mission,
+        actorId: actor,
+        reason: required(context.options, "reason"),
+      }),
+    ),
+
+  "mission complete": (context) =>
+    missionWrite(context, (missions, mission, actor, directory) =>
+      missions.completeMission({
+        missionId: mission,
+        actorId: actor,
+        summary: required(context.options, "summary"),
+        ...outcomeOptions(context, directory, mission),
+      }),
+    ),
+
+  "mission fail": (context) =>
+    missionWrite(context, (missions, mission, actor, directory) =>
+      missions.failMission({
+        missionId: mission,
+        actorId: actor,
+        summary: required(context.options, "reason"),
+        ...outcomeOptions(context, directory, mission),
+      }),
+    ),
+
+  "mission show": (context) =>
+    withWorkspace(context, async ({ store, directory }) => {
+      const missions = new MissionService(store);
+      const mission = await missions.getMission({
+        missionId: directory.mission(required(context.options, "mission")).id as MissionId,
+      });
+      if (!mission) throw new CliUsageError("Mission was not found");
+      const events = await missions.getMissionEvents({ missionId: mission.id });
+      return {
+        message: renderMission(directory, mission, events),
+        data: { mission, events },
+      };
+    }),
+
+  "mission list": (context) =>
+    withWorkspace(context, async ({ store, directory }) => {
+      const project = context.options.project
+        ? directory.project(required(context.options, "project"))
+        : null;
+      const state = optional(context.options, "state") as MissionState | undefined;
+      if (state !== undefined && !MISSION_STATES.includes(state)) {
+        throw new CliUsageError(`--state must be one of ${MISSION_STATES.join(", ")}`);
+      }
+      const reason = optional(context.options, "reason") as WaitReason | undefined;
+      if (reason !== undefined && !WAIT_REASONS.includes(reason)) {
+        throw new CliUsageError(`--reason must be one of ${WAIT_REASONS.join(", ")}`);
+      }
+      const missions = (
+        await new MissionService(store).listMissions({
+          ...(project ? { projectId: project.id as ProjectId } : {}),
+          ...(state ? { states: [state] } : {}),
+          ...(reason ? { waitReasons: [reason] } : {}),
+        })
+      )
+        .filter(
+          (mission) =>
+            context.options.attention !== true ||
+            (mission.state === "waiting" &&
+              mission.waitReason !== null &&
+              mission.waitReason !== "provider_limit"),
+        )
+        .slice()
+        .sort(
+          (a, b) =>
+            missionPriority(a) - missionPriority(b) ||
+            b.lastActivityAt.localeCompare(a.lastActivityAt),
+        );
+      const now = Date.now();
+      return {
+        message:
+          missions.length === 0
+            ? "No missions."
+            : missions
+                .map(
+                  (mission) =>
+                    `- [${missionStateLabel(mission)}] ${mission.title} (${short(mission.id)}, ${projectName(directory, mission.ownerProjectId)}) — last activity ${ago(mission.lastActivityAt, now)}${
+                      mission.attentionRequest && !mission.attentionRequest.answeredAt
+                        ? ` — needs you: ${mission.attentionRequest.question}`
+                        : mission.currentActivity && mission.state === "running"
+                          ? ` — ${mission.currentActivity}`
+                          : ""
+                    }`,
+                )
+                .join("\n"),
+        data: missions,
+      };
+    }),
+
   "relate propose": (context) =>
     withWrite(context, async ({ store, actor, directory, config }) => {
       const from = directory.project(required(context.options, "from-project"));
@@ -941,6 +1184,157 @@ function renderTree(directory: WorkspaceDirectory, project: WorkspaceExportRecor
     pendingPlanProposals(directory, String(project.id));
   if (pending > 0) {
     lines.push(`  (${plural(pending, "proposal")} awaiting review — see "loxora inbox")`);
+  }
+  return lines.join("\n");
+}
+
+/** Runs one mission write and prints the resulting Mission. */
+function missionWrite(
+  context: CommandContext,
+  operation: (
+    missions: MissionService,
+    missionId: MissionId,
+    actor: string,
+    directory: WorkspaceDirectory,
+  ) => Promise<Mission>,
+): Promise<CommandResult> {
+  return withWrite(context, async ({ store, actor, directory }) => {
+    const reference = directory.mission(required(context.options, "mission"));
+    const mission = await operation(
+      new MissionService(store),
+      reference.id as MissionId,
+      actor,
+      directory,
+    );
+    const external = mission.outcome?.logReferences.filter((entry) => !entry.portable) ?? [];
+    return {
+      result: {
+        message: `Mission "${mission.title}" is ${missionStateLabel(mission)} (event ${mission.sequence})${
+          external.length > 0
+            ? `\nWarning: ${plural(external.length, "external log reference")} not portable; it is not part of exports or other machines.`
+            : ""
+        }`,
+        data: mission,
+      },
+      affected: [],
+    };
+  });
+}
+
+function outcomeOptions(
+  context: CommandContext,
+  directory: WorkspaceDirectory,
+  missionId: MissionId,
+) {
+  const mission = directory.mission(missionId);
+  return {
+    outputs: list(context.options, "output"),
+    validations: list(context.options, "validation"),
+    decisions: list(context.options, "decision"),
+    proposalIds: list(context.options, "proposal").map((ref) => {
+      const proposal = directory.proposal(ref);
+      if (proposal.projectId !== mission.ownerProjectId) {
+        throw new CliUsageError(`Proposal ${proposal.id} is not in the Mission's owning Project`);
+      }
+      return proposal.id as ProposalId;
+    }),
+    logReferences: list(context.options, "log"),
+    evidence: qualifiedEvidence(directory, list(context.options, "evidence")),
+  };
+}
+
+function missionStateLabel(mission: Mission): string {
+  return mission.state === "waiting" && mission.waitReason
+    ? `waiting: ${mission.waitReason}`
+    : mission.state;
+}
+
+/** Exceptions first: humans needed, then provider limits, running, paused, queued, finished. */
+function missionPriority(mission: Mission): number {
+  if (mission.state === "waiting") return mission.waitReason === "provider_limit" ? 1 : 0;
+  return (
+    ["running", "paused", "queued", "failed", "completed", "cancelled"].indexOf(mission.state) + 2
+  );
+}
+
+function ago(iso: string, now: number): string {
+  const seconds = Math.max(0, Math.round((now - Date.parse(iso)) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h ago`;
+  return `${Math.round(seconds / 86400)}d ago`;
+}
+
+function camel(name: string): string {
+  return name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+}
+
+function renderMission(
+  directory: WorkspaceDirectory,
+  mission: Mission,
+  events: readonly MissionEvent[],
+): string {
+  const lines = [
+    `${mission.title} — ${missionStateLabel(mission)}`,
+    `Goal: ${mission.goal}`,
+    `Project: ${projectName(directory, mission.ownerProjectId)}${
+      mission.references.projectIds.length > 0
+        ? ` (references: ${mission.references.projectIds.map((id) => projectName(directory, id)).join(", ")})`
+        : ""
+    }`,
+    ...(mission.workerRole ? [`Role: ${mission.workerRole}`] : []),
+    ...(mission.currentActivity ? [`Current activity: ${mission.currentActivity}`] : []),
+    `Last activity: ${ago(mission.lastActivityAt, Date.now())} (${mission.lastActivityAt})`,
+  ];
+  if (mission.state === "waiting" && mission.waitReason === "provider_limit") {
+    lines.push(
+      `Paused by a provider limit — the Mission has not failed. ${mission.waitDetail ?? ""}`.trim(),
+      ...(mission.limitedCapability ? [`Limited capability: ${mission.limitedCapability}`] : []),
+      ...(mission.expectedResumeAt
+        ? [`Expected to continue: ${mission.expectedResumeAt} (nothing resumes automatically)`]
+        : []),
+    );
+  }
+  const request = mission.attentionRequest;
+  if (request) {
+    lines.push(
+      `Needs you (${request.waitReason}): ${request.question}`,
+      `Why: ${request.rationale}`,
+      ...request.options.map(
+        (entry, index) =>
+          `  ${index + 1}. ${entry.option}${entry.consequence ? ` — ${entry.consequence}` : ""}`,
+      ),
+      request.answeredAt
+        ? `Answered by ${request.responderId}: ${request.response}${request.decision ? ` (${request.decision})` : ""} — resume the Mission to continue`
+        : `Answer with "loxora mission answer --mission ${short(mission.id)} --response ..."`,
+    );
+  }
+  const outcome = mission.outcome;
+  if (outcome) {
+    lines.push(`${outcome.kind === "Completed" ? "Outcome" : "Failure"}: ${outcome.summary}`);
+    for (const [label, values] of [
+      ["Output", outcome.outputs],
+      ["Validation", outcome.validations],
+      ["Decision", outcome.decisions],
+    ] as const) {
+      for (const value of values) lines.push(`  ${label}: ${value}`);
+    }
+    for (const proposal of outcome.proposals) {
+      lines.push(
+        `  Proposal ${short(proposal.proposalId)}: ${proposal.status === "Submitted" ? "awaiting review" : proposal.status}`,
+      );
+    }
+    for (const log of outcome.logReferences) {
+      lines.push(`  Log: ${log.kind}:${log.locator}${log.portable ? "" : " (not portable)"}`);
+    }
+  }
+  lines.push("History:");
+  for (const event of events) {
+    lines.push(
+      `  ${event.sequence}. ${event.occurredAt} ${event.type} ${event.previousState ?? "-"} -> ${event.newState}${
+        event.waitReason && event.type === "Waiting" ? ` (${event.waitReason})` : ""
+      } by ${event.actorId}${event.reason ? `: ${event.reason}` : ""}`,
+    );
   }
   return lines.join("\n");
 }

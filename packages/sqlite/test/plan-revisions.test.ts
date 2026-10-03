@@ -426,7 +426,7 @@ test("revisions, proposals, decisions, and keys survive export and restore", asy
     evidence: [],
   });
   const text = serializeWorkspaceExport(await store.readWorkspaceExport());
-  assert.match(text, /"formatVersion": 2/);
+  assert.match(text, /"formatVersion": 3/);
   const directory = mkdtempSync(join(tmpdir(), "loxora-plan-restore-"));
   const target = await openSqliteStore(join(directory, "target.sqlite"));
   t.after(async () => {
@@ -458,11 +458,20 @@ test("a version 1 export is upgraded on parse without changing existing records"
     "plannedKnowledgeRevisionDecisions",
     "plannedKnowledgeRevisionDecisionEvidence",
     "knowledgeNodeKeys",
+    "missions",
+    "missionProjectReferences",
+    "missionKnowledgeReferences",
+    "missionEvents",
+    "missionEventEvidence",
+    "missionAttentionRequests",
+    "missionOutcomes",
+    "missionOutcomeProposals",
+    "missionLogReferences",
   ]) {
     delete v1.sections[name];
   }
   const upgraded = parseWorkspaceExport(JSON.stringify(v1));
-  assert.equal(upgraded.formatVersion, 2);
+  assert.equal(upgraded.formatVersion, 3);
   assert.equal(serializeWorkspaceExport(upgraded), serializeWorkspaceExport(current));
   const mixed = { ...v1, sections: { ...v1.sections, knowledgeNodeKeys: [] } };
   assert.throws(() => parseWorkspaceExport(JSON.stringify(mixed)), /must not contain section/);

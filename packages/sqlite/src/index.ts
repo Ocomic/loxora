@@ -2,6 +2,7 @@ import type {
   ContextPackageStore,
   CrossProjectImpactStore,
   LifecycleStore,
+  MissionStore,
   NodeKeyStore,
   NavigationStore,
   PlannedKnowledgeStore,
@@ -23,6 +24,7 @@ export async function openSqliteStore(
     PlannedKnowledgeStore &
     ReviewInboxStore &
     NodeKeyStore &
+    MissionStore &
     WorkspaceExportStore
 > {
   return new SqliteLifecycleStore(path);
