@@ -1,8 +1,9 @@
 # RFC-009 — Mission Concept and State Model
 
-**Status:** Proposed
+**Status:** Accepted
 **Version:** 0.1
 **Last Updated:** October 2, 2026
+**Decision Date:** October 2, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (RFC-008)
 
@@ -215,4 +216,6 @@ Rejected. A new Mission with a predecessor reference keeps the failed attempt vi
 
 ## Decision
 
-Pending. To be decided by the decision owner after review. Acceptance would authorize an ADR for storage and interfaces and a milestone for the first slice; it would not authorize orchestration, automatic resumption, notifications, or cost handling.
+Accepted by Ocomic on October 2, 2026, as proposed (pull request #15). The terms from section 1 and the reserved distinction "Mission vs. Knowledge" were added to RFC-002.
+
+This acceptance authorizes preparing an ADR for storage and interfaces and a milestone document for the first slice. Implementation starts only after that ADR is accepted and the milestone is authorized (RFC-008, C2). It does not authorize orchestration, automatic resumption, notifications, or cost handling. The open questions above remain open.
