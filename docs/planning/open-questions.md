@@ -16,7 +16,7 @@ Milestone 8 implements ADR-004. ADR-004 (accepted October 2, 2026) adds a local 
 
 ## Product UI direction
 
-The decision owner chose a Mission Control direction for the product UI (see [`UI-VISION.md`](./UI-VISION.md)). The existing demo inspector documented in `WEB-UI.md` is to be rebuilt. Open questions are listed in `UI-VISION.md`; the main ones are how missions relate to the knowledge lifecycle, who owns mission state before a multi-agent runtime exists, and how provider limits are detected without hard-coding providers. Implementation requires an RFC or ADR and an authorized milestone (RFC-008, C2). [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md) (accepted October 2, 2026) answers the first two and lists its own open questions. Next steps: [ADR-005](../adr/ADR-005-mission-storage-and-reporting-interface.md) (Proposed) for mission storage and the reporting interface, a small CLI improvement milestone first, then the mission milestone.
+The decision owner chose a Mission Control direction for the product UI (see [`UI-VISION.md`](./UI-VISION.md)). The existing demo inspector documented in `WEB-UI.md` is to be rebuilt. Open questions are listed in `UI-VISION.md`; the main ones are how missions relate to the knowledge lifecycle, who owns mission state before a multi-agent runtime exists, and how provider limits are detected without hard-coding providers. Implementation requires an RFC or ADR and an authorized milestone (RFC-008, C2). [RFC-009](../rfcs/RFC-009-mission-concept-and-state-model.md) (accepted October 2, 2026) answers the first two and lists its own open questions. Next steps: [ADR-005](../adr/ADR-005-mission-storage-and-reporting-interface.md) (accepted October 3, 2026) for mission storage and the reporting interface, a small CLI improvement milestone first, then the mission milestone.
 
 ## Post-demo portability
 
@@ -155,6 +155,8 @@ Open questions include:
 - Repository and license boundaries for optional proprietary hosted-service components.
 
 ## Findings from the first dogfooding session (October 2026)
+
+[ADR-006](../adr/ADR-006-plan-revisions-node-keys-and-cli-ergonomics.md) (accepted October 3, 2026; Milestone 9) addresses the plan, key, navigation, and review items below; compact Context Packages remain open.
 
 The first session captured decisions, roadmap phases, and one cross-project dependency from two real repositories with the Milestone 8 CLI. The full chain (proposal, review, relationship, Context Package across two Projects) worked, and provenance stayed traceable. The following friction is generalized here; project-specific details stay in the private workspace. Items that change the CLI contract or Context Package semantics are C2 under RFC-008.
 
