@@ -25,6 +25,7 @@ No implementation plan is final until the foundational RFCs are reviewed.
 - [Milestone 7 deterministic workspace export](../implementation/MILESTONE-7.md)
 - [Workspace Export API](../implementation/EXPORT-API.md)
 - [Milestone 8 local knowledge capture CLI](../implementation/MILESTONE-8.md)
+- [Milestone 9 plan revisions, Node keys, and CLI ergonomics](../implementation/MILESTONE-9.md)
 - [Loxora CLI](../implementation/CLI.md)
 - [Dogfooding guide](../implementation/DOGFOODING.md)
 - [Demo Runbook](../implementation/DEMO-RUNBOOK.md)

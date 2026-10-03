@@ -23,20 +23,26 @@ npm run loxora -- source add --project <project> --title "Decision log" \
   --locator "git:<owner>/<repository>@<commit>:docs/DECISION-LOG.md"
 npm run loxora -- evidence add --project <project> --source "Decision log" --summary "<decision>" --locator "#<anchor>"
 npm run loxora -- propose new --project <project> --space Decisions --collection <area> \
-  --title "<decision title>" --content "<decision and rationale>" --source "Decision log" --evidence <evidence-id>
+  --title "<decision title>" --content "<decision and rationale>" --source "Decision log" --evidence <evidence-id> \
+  --key <D-001>
 
 npm run loxora -- inbox
-npm run loxora -- review --proposal <id-prefix> --decision accept --reason "<why>" --evidence <evidence-id> --actor <your-id>
+npm run loxora -- review --proposal <id-prefix> --decision accept --reason "<why>" --actor <your-id>   # uses the proposal's Evidence
 npm run loxora -- show map --project <project>
+
+npm run loxora -- plan add --project <project> --title "<phase>" --description "<scope>" --status Ready \
+  --reason "<why>" --blocking-condition "<what must be true first>"
+npm run loxora -- plan update --plan "<phase>" --status InProgress --add-node <D-001> --reason "<why>"
+npm run loxora -- plan update --plan "<phase>" --status Completed --reason "<why>"   # agents: becomes a proposal for a reviewer
 ```
 
 ## Suggested mapping
 
 | Existing artifact | Loxora concept |
 |---|---|
-| Decision log entries | Proposals in a `Decisions` Space, reviewed into Current knowledge |
+| Decision log entries | Proposals in a `Decisions` Space with `--key` (for example `D-001`), reviewed into Current knowledge |
 | Changed decisions | `propose successor` with `--reason`; the earlier Revision stays in History |
-| Roadmap phases | `plan add` (Planned Knowledge), linked to affected Nodes |
+| Roadmap phases | `plan add` (Planned Knowledge); `plan update` changes status and links Nodes after their review |
 | Benchmark runs, test results | Sources and Evidence cited by Proposals and reviews |
 | A project that consumes another project's output | `relate propose --from-project <consumer> --to-project <provider>` |
 | Context for an agent task | `context --project <p> --node <n> --include-related` |
@@ -51,7 +57,8 @@ npm run loxora -- show map --project <project>
 
 - Push the commits you cite before others need to resolve them, and integrate diverged history with a merge rather than a rebase so cited hashes stay valid.
 - Cite committed content only. Commit first if the knowledge exists only in a working copy.
-- Plans and relationships can only reference Nodes with accepted knowledge. Have reviews done before linking plans or proposing dependencies.
+- Plans and relationships can only reference Nodes with accepted knowledge. Plans can be linked later with `plan update --add-node`. Relationships still need reviewed Nodes before `relate propose`.
+- Use Node keys for decision log ids. Keys are immutable and never reused; a reviewer can give an existing Node a key once with `node key`.
 
 ## After each session
 

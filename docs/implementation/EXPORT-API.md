@@ -1,10 +1,11 @@
 # Workspace Export API
 
-Milestone 7 implements ADR-003. The export is a versioned, canonical JSON snapshot of one workspace (every Project in one store) that can be restored into an empty store without loss.
+Milestone 7 implements ADR-003. Milestone 9 (ADR-006) introduces format version 2. The export is a versioned, canonical JSON snapshot of one workspace (every Project in one store) that can be restored into an empty store without loss.
 
 ## Core (`@loxora/core`)
 
-- `WORKSPACE_EXPORT_FORMAT` (`"loxora.workspace-export"`) and `WORKSPACE_EXPORT_FORMAT_VERSION` (`1`).
+- `WORKSPACE_EXPORT_FORMAT` (`"loxora.workspace-export"`) and `WORKSPACE_EXPORT_FORMAT_VERSION` (`2`). `WORKSPACE_EXPORT_SUPPORTED_VERSIONS` is `[1, 2]`.
+- `upgradeWorkspaceExport(value)`: upgrades a version 1 document to version 2 by adding the empty version 2 sections (`WORKSPACE_EXPORT_VERSION_2_SECTIONS`); existing records stay unchanged. `parseWorkspaceExport` applies it before validation. A version 1 document that already contains a version 2 section is rejected.
 - `WORKSPACE_EXPORT_SECTIONS` and `WORKSPACE_EXPORT_DERIVED_SECTIONS`: each section's name, its exact field list, and its sort key, in restore order. These lists are the public format contract.
 - `assertWorkspaceExport(value)` / `parseWorkspaceExport(text)`: these reject:
   - an unknown format or version;
@@ -29,7 +30,7 @@ Milestone 7 implements ADR-003. The export is a versioned, canonical JSON snapsh
 ```json
 {
   "format": "loxora.workspace-export",
-  "formatVersion": 1,
+  "formatVersion": 2,
   "sections": {
     "auditEventEvidence": [],
     "auditEvents": [],
@@ -41,11 +42,11 @@ Milestone 7 implements ADR-003. The export is a versioned, canonical JSON snapsh
       "navigationProjectionWarnings": []
     }
   },
-  "sourceSchema": ["001_initial_lifecycle", "002_lifecycle_lineage", "003_navigation_foundation", "004_cross_project_impact", "005_planned_knowledge"]
+  "sourceSchema": ["001_initial_lifecycle", "002_lifecycle_lineage", "003_navigation_foundation", "004_cross_project_impact", "005_planned_knowledge", "006_plan_revisions_node_keys"]
 }
 ```
 
-There are 31 canonical sections and 4 derived sections. Field names are the camelCase domain names listed in `packages/core/src/export.ts`. Nullable storage values are always present as `null`.
+Version 2 has 37 canonical sections and 4 derived sections. It adds `plannedKnowledgeRevisions`, `plannedKnowledgeRevisionNodes`, `plannedKnowledgeRevisionEvidence`, `plannedKnowledgeRevisionDecisions`, `plannedKnowledgeRevisionDecisionEvidence`, and `knowledgeNodeKeys` to the 31 sections of version 1. Field names are the camelCase domain names listed in `packages/core/src/export.ts`. Nullable storage values are always present as `null`.
 
 ## SQLite adapter (`@loxora/sqlite`)
 
@@ -68,7 +69,7 @@ npm run export -- --db path/to/store.sqlite --out out.json
 npm run export:verify -- --in var/export/workspace.json      # restore into a temp store, re-export, compare bytes
 ```
 
-`export` prints the SHA-256 of the written file. `export:verify` prints `Round trip identical` and the digest, or exits with code 1 if the bytes differ.
+`export` prints the SHA-256 of the written file. `export:verify` prints `Round trip identical` and the digest, or exits with code 1 if the bytes differ. These demo scripts expect documents of the current format version. For older backups use `loxora export verify`: it compares the upgraded document and ignores only the informational `sourceSchema`, which gains the migrations the restored store applied.
 
 ## Limits
 
