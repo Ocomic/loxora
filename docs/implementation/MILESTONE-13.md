@@ -65,8 +65,9 @@ The shared resolution in `@loxora/cli`, used by the CLI and the app, becomes:
 
 When the app starts **without** `--workspace` and `LOXORA_WORKSPACE`, it decides per request:
 
-- **Setup mode** when the settings file is missing, has no completed setup, or points to a folder without a workspace. The browser shows `/setup`.
-- **Normal mode** (Mission Control) when the setup is complete and the workspace exists.
+- **Setup mode** when the settings file is missing, has no `workspacePath`, or points to a folder without a workspace. The browser shows `/setup` (parts A to C).
+- **Normal mode** (Mission Control) as soon as the workspace exists, that is, once part B has created or opened it.
+- **First steps pending.** Parts D and E are not a precondition for Mission Control. While `setup.completedAt` is absent, Mission Control shows a banner that continues them where they stopped. Finishing or skipping them sets `setup.completedAt` and removes the banner. So Mission Control stays usable at every point, also between the two implementation pull requests (section 12).
 
 With `--workspace` or `LOXORA_WORKSPACE`, the app behaves exactly as in Milestone 12 (no setup, `--actor` for write mode). This keeps the developer path and the existing tests unchanged.
 
@@ -98,6 +99,7 @@ All texts are fixed and live in the label module in German and English. One ques
 | E4 Bridge | Short hints only for elements that exist: the input bar at the bottom, the Mission list ("red means I need you"). No bridge visualizer hint (milestone 4). A fixed closing sentence says what works today and that Xora will suggest next steps once she is on board. |
 
 - Every step can be skipped. Skipping B0 to B3 is not possible, because without a workspace nothing else works; D and E can be skipped, and the setup then ends on an empty Mission Control.
+- A person who already uses the CLI default workspace and has no settings file sees setup once, at B0; "Open this ship" leads to Mission Control with one click.
 - An interrupted setup continues where it stopped on the next start, using `setup` in the settings file.
 
 ### 5. Captain id
@@ -146,7 +148,7 @@ All routes keep the Milestone 12 request protection (127.0.0.1, `Origin`, `Host`
 | `GET /api/setup` | mode, current step, existing workspace if found, default logbook location (display text and full path), OneDrive and Git hints, Xora state, answers so far |
 | `POST /api/setup/answers` | store `name`, `shipName`, `logbookPath` (validated; Back can change them) |
 | `POST /api/setup/workspace` | `{ "action": "create" }` or `{ "action": "open", "captain"? }` |
-| `POST /api/setup/finish` | `{ "skipped"?: true }` marks the setup complete |
+| `POST /api/setup/finish` | `{ "skipped"?: true }` sets `setup.completedAt` after part E or when D and E are skipped (normal mode) |
 | `POST /api/assistant/message` | `{ "text" }` or `{ "choice" }` with the setup context; returns the reply, choices, and a proposed action if any |
 | `POST /api/assistant/confirm` | `{ "actionId", "confirm": true \| false }` |
 | `POST /api/settings/language` | `{ "language": "de" \| "en" \| null }` |
@@ -157,7 +159,8 @@ All routes keep the Milestone 12 request protection (127.0.0.1, `Origin`, `Host`
 
 ### 10. Language
 
-- The language moves from browser storage to the settings file (RFC-011 section 3), so Xora can use it from milestone 3 on. Without a stored choice the UI follows the browser's language, as today.
+- The language moves from browser storage to the settings file (RFC-011 section 3), so Xora can use it from milestone 3 on.
+- **Existing choice kept.** If the settings file has no language but the browser still holds a choice under `loxora.language` (Milestones 11 and 12), the UI uses it and saves it once through `POST /api/settings/language`; after that the settings file is authoritative. Without either, the UI follows the browser's language, as today. A test covers this import.
 - The DE/EN switch stays visible on every screen, including the setup, and applies at once.
 - All new fixed texts are in the label module in German and English; the label parity test covers them.
 
@@ -167,7 +170,8 @@ All routes keep the Milestone 12 request protection (127.0.0.1, `Origin`, `Host`
   - settings file: locations, atomic write, unknown version not overwritten;
   - resolution order with and without a settings file (CLI tests);
   - captain id derivation, including umlauts and unusable names;
-  - setup mode versus normal mode, and the unchanged behavior with `--workspace`;
+  - setup mode versus normal mode (normal as soon as the workspace exists, D and E pending), and the unchanged behavior with `--workspace`;
+  - the one-time import of a language choice from browser storage;
   - the settings actor resolver: an agent id or a non-reviewer captain leaves the app read-only;
   - workspace creation: Git guard, existing workspace, new store only for a new workspace, no migration of an existing one;
   - each proposed action executes only after confirmation and only once; a repeated step after a failure creates no duplicates;
@@ -180,8 +184,8 @@ All routes keep the Milestone 12 request protection (127.0.0.1, `Origin`, `Host`
 
 Two pull requests, so each stays reviewable:
 
-1. Settings file, resolution step, settings actor resolver, language in settings, setup mode with scenes A4 to C3 and workspace creation or opening.
-2. Assistant interface and `ScriptedAssistant`, confirmation cards, scenes D1 to E4, input bar, empty states, Playwright tests, and the CI job.
+1. Settings file, resolution step, settings actor resolver, language in settings, setup mode with scenes A4 to C3 and workspace creation or opening. After C3 the person lands in a usable Mission Control. D and E stay pending (no `setup.completedAt`), and no banner is shown yet because there is nothing to continue.
+2. Assistant interface and `ScriptedAssistant`, confirmation cards, scenes D1 to E4, the first-steps banner, input bar, empty states, Playwright tests, and the CI job. People who finished part C with the first pull request get the banner and can still do D and E.
 
 ## Choices made in this document
 
