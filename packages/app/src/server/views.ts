@@ -1,4 +1,5 @@
 import {
+  MISSION_TRANSITIONS,
   type Mission,
   type MissionEvent,
   type WorkspaceExport,
@@ -115,7 +116,40 @@ export function missionSummary(mission: Mission, labels: Labels) {
   };
 }
 
-export function missionDetail(mission: Mission, events: readonly MissionEvent[], labels: Labels) {
+/** Write actions of Mission Control (RFC-010, section 9; Milestone 12). */
+export const MISSION_ACTIONS = ["answer", "pause", "cancel", "resume"] as const;
+export type MissionAction = (typeof MISSION_ACTIONS)[number];
+
+/**
+ * The actions the configured human actor may offer for a Mission. A display aid only:
+ * Core validates every mutation again when it runs.
+ */
+export function availableActions(mission: Mission, actor: string | null): MissionAction[] {
+  if (!actor) return [];
+  const next = MISSION_TRANSITIONS[mission.state];
+  const request = mission.attentionRequest;
+  const actions: MissionAction[] = [];
+  if (mission.state === "waiting" && request && request.answeredAt === null) {
+    actions.push("answer");
+  }
+  if (next.includes("paused")) actions.push("pause");
+  if (next.includes("cancelled")) actions.push("cancel");
+  if (
+    mission.state === "paused" ||
+    (mission.state === "waiting" &&
+      (mission.waitReason === "provider_limit" || request?.answeredAt != null))
+  ) {
+    actions.push("resume");
+  }
+  return actions;
+}
+
+export function missionDetail(
+  mission: Mission,
+  events: readonly MissionEvent[],
+  labels: Labels,
+  actor: string | null = null,
+) {
   const started = events.find((event) => event.type === "Started");
   return {
     ...missionSummary(mission, labels),
@@ -137,7 +171,6 @@ export function missionDetail(mission: Mission, events: readonly MissionEvent[],
         labels.plan(plan.projectId, plan.plannedKnowledgeId),
       ),
     },
-    /** Write actions need a configured human actor (RFC-010, section 9); the MVP has none. */
-    availableActions: [] as const,
+    availableActions: availableActions(mission, actor),
   };
 }

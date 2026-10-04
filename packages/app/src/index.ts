@@ -1,1 +1,6 @@
-export { startAppServer, type AppServer, type AppServerOptions } from "./server/server.js";
+export {
+  ActorRejected,
+  type AppServer,
+  type AppServerOptions,
+  startAppServer,
+} from "./server/server.js";

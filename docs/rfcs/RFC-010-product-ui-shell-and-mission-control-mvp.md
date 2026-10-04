@@ -247,7 +247,7 @@ No data changes. `@loxora/app` reads the existing workspace. Removing the packag
 
 ## Decision
 
-Accepted by Ocomic on October 3, 2026 (pull request #23), including the actor decision in section 9. Section 9 was committed to the pull request after its merge and reached `main` with the Milestone 11 pull request. [Milestone 11](../implementation/MILESTONE-11.md) implements sections 1 to 8.
+Accepted by Ocomic on October 3, 2026 (pull request #23), including the actor decision in section 9. Section 9 was committed to the pull request after its merge and reached `main` with the Milestone 11 pull request. [Milestone 11](../implementation/MILESTONE-11.md) implements sections 1 to 8. [Milestone 12](../implementation/MILESTONE-12.md) implements section 9.
 
 The acceptance authorizes a milestone document (Milestone 11) for the read-only Mission Control MVP as described in sections 1 to 8. A following small write milestone implements section 9 (configured actor, `availableActions`, and the buttons in its table). It does not authorize the other shell sections or any C3 items. The other open questions remain open.
 

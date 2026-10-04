@@ -7,6 +7,9 @@ export class LoxoraError extends Error {
 
 export class ValidationError extends LoxoraError {}
 
+/** A Mission changed after the caller read it (stale `expectedSequence` or a concurrent write). */
+export class StaleMissionError extends ValidationError {}
+
 export class NotFoundError extends LoxoraError {}
 
 export class ProposalNotReviewableError extends LoxoraError {}

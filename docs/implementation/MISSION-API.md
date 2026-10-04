@@ -37,6 +37,8 @@ Milestone 10 implements ADR-005 on top of RFC-009 (with Amendment 1). A Mission 
 | `completeMission(…)`, `failMission(…)` | Record an Outcome: `summary`, `outputs`, `validations`, `decisions`, `proposalIds` (owning Project), `logReferences`, optional `evidence` |
 | `getMission`, `listMissions({ projectId?, states?, waitReasons? })`, `getMissionEvents` | Reads |
 
+**Expected sequence (Milestone 12):** `answerAttentionRequest`, `resumeMission`, `pauseMission`, and `cancelMission` accept an optional `expectedSequence`. When given, the change applies only if the Mission is still at that sequence; the store writes with it, so a concurrent change fails atomically. Both cases throw `StaleMissionError` (a `ValidationError`). Without it, behavior is unchanged.
+
 **Human vs. agent:** an actor starting with `agent:` is an agent; any other actor is treated as a human. This is a governance guard, not authentication.
 
 ## Records

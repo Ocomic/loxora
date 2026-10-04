@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { runCli } from "@loxora/cli";
-import { startAppServer } from "../src/index.js";
+import { ActorRejected, startAppServer } from "../src/index.js";
 import { LABELS, relativeTime, statusLabel, systemLanguage } from "../src/web/labels.js";
 
 async function cli(workspace: string, ...argv: string[]) {
@@ -123,11 +124,17 @@ async function workspaceWithMissions(t: test.TestContext) {
   };
 }
 
-async function serve(t: test.TestContext, workspaceDirectory: string, webRoot?: string) {
+async function serve(
+  t: test.TestContext,
+  workspaceDirectory: string,
+  webRoot?: string,
+  actor?: string,
+) {
   const server = await startAppServer({
     workspaceDirectory,
     port: 0,
     ...(webRoot ? { webRoot } : {}),
+    ...(actor !== undefined ? { actor } : {}),
   });
   t.after(() => server.close());
   return server;
@@ -202,6 +209,228 @@ test("mission detail and events come from Core; writes are refused", async (t) =
     body: "{}",
   });
   assert.equal(write.status, 405);
+});
+
+/** Sends a write request with full control over Origin, Host, and content type. */
+function send(
+  baseUrl: string,
+  path: string,
+  body: unknown,
+  options: { origin?: string | null; host?: string; contentType?: string; raw?: string } = {},
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const url = new URL(path, baseUrl);
+  const payload = options.raw ?? JSON.stringify(body);
+  const headers: Record<string, string> = {
+    "content-type": options.contentType ?? "application/json",
+    "content-length": String(Buffer.byteLength(payload)),
+    host: options.host ?? url.host,
+  };
+  const origin = options.origin === undefined ? baseUrl : options.origin;
+  if (origin !== null) headers.origin = origin;
+  return new Promise((done, fail) => {
+    const request = httpRequest(url, { method: "POST", headers }, (response) => {
+      let text = "";
+      response.on("data", (chunk) => {
+        text += chunk;
+      });
+      response.on("end", () =>
+        done({ status: response.statusCode ?? 0, body: JSON.parse(text || "{}") }),
+      );
+    });
+    request.on("error", (error) => {
+      // The server may close the socket after rejecting an oversized body.
+      if ((error as NodeJS.ErrnoException).code === "ECONNRESET") done({ status: 0, body: {} });
+      else fail(error);
+    });
+    request.end(payload);
+  });
+}
+
+async function detailOf(baseUrl: string, id: string) {
+  return (await get(`${baseUrl}/api/missions/${id}`)).body as {
+    state: string;
+    sequence: number;
+    availableActions: string[];
+    attentionRequest: { answeredAt: string | null; response: string | null } | null;
+  };
+}
+
+test("write mode needs a human workspace actor", async (t) => {
+  const { workspace } = await workspaceWithMissions(t);
+  await assert.rejects(
+    startAppServer({ workspaceDirectory: workspace, port: 0, actor: "agent:codex" }),
+    ActorRejected,
+  );
+  await assert.rejects(
+    startAppServer({ workspaceDirectory: workspace, port: 0, actor: "Someone" }),
+    ActorRejected,
+  );
+  await assert.rejects(
+    startAppServer({ workspaceDirectory: join(workspace, "missing"), port: 0, actor: "Ocomic" }),
+    ActorRejected,
+  );
+  const server = await serve(t, workspace, undefined, "Ocomic");
+  const info = await get(`${server.url}/api/workspace`);
+  assert.deepEqual(info.body, {
+    name: "lab",
+    reviewers: ["Ocomic"],
+    actor: "Ocomic",
+    readOnly: false,
+  });
+});
+
+test("answer, pause, resume, and cancel run through Core with the configured actor", async (t) => {
+  const { workspace, input, limited, running } = await workspaceWithMissions(t);
+  const server = await serve(t, workspace, undefined, "Ocomic");
+  const post = (id: string, action: string, body: Record<string, unknown>) =>
+    send(server.url, `/api/missions/${id}/${action}`, body);
+
+  assert.deepEqual((await detailOf(server.url, input)).availableActions, [
+    "answer",
+    "pause",
+    "cancel",
+  ]);
+  assert.deepEqual((await detailOf(server.url, running)).availableActions, ["pause", "cancel"]);
+  assert.deepEqual((await detailOf(server.url, limited)).availableActions, [
+    "pause",
+    "cancel",
+    "resume",
+  ]);
+
+  const before = await detailOf(server.url, input);
+  const stale = await post(input, "answer", { sequence: before.sequence - 1, response: "512" });
+  assert.equal(stale.status, 409);
+  assert.equal((await post(input, "answer", { response: "512" })).status, 400);
+  assert.equal((await detailOf(server.url, input)).sequence, before.sequence);
+
+  const answered = await post(input, "answer", { sequence: before.sequence, response: "512" });
+  assert.equal(answered.status, 200);
+  assert.equal((answered.body.attentionRequest as { response: string }).response, "512");
+  assert.deepEqual(answered.body.availableActions, ["pause", "cancel", "resume"]);
+  const events = await fetch(`${server.url}/api/missions/${input}/events`);
+  assert.equal(
+    ((await events.json()) as { type: string; actorId: string }[]).at(-1)?.actorId,
+    "Ocomic",
+  );
+
+  const resumed = await post(input, "resume", { sequence: answered.body.sequence });
+  assert.equal(resumed.body.state, "running");
+  const paused = await post(input, "pause", { sequence: resumed.body.sequence });
+  assert.equal(paused.body.state, "paused");
+  assert.deepEqual(paused.body.availableActions, ["cancel", "resume"]);
+  assert.equal(
+    (await post(input, "answer", { sequence: paused.body.sequence, response: "x" })).status,
+    403,
+  );
+  assert.equal((await post(input, "cancel", { sequence: paused.body.sequence })).status, 400);
+  const cancelled = await post(input, "cancel", {
+    sequence: paused.body.sequence,
+    reason: "Not needed",
+  });
+  assert.equal(cancelled.body.state, "cancelled");
+  assert.deepEqual(cancelled.body.availableActions, []);
+  assert.equal((await post(input, "pause", { sequence: cancelled.body.sequence })).status, 403);
+
+  const limit = await detailOf(server.url, limited);
+  assert.equal((await post(limited, "resume", { sequence: limit.sequence })).body.state, "running");
+});
+
+test("needs_approval answers require approve or reject", async (t) => {
+  const { workspace } = await workspaceWithMissions(t);
+  const agent = ["--actor", "agent:codex"];
+  const mission = await cli(
+    workspace,
+    "mission",
+    "create",
+    "--project",
+    "Game",
+    "--title",
+    "Ship it",
+    "--goal",
+    "Release",
+    ...agent,
+  );
+  const id = String(mission.id);
+  await cli(workspace, "mission", "start", "--mission", id, ...agent);
+  await cli(
+    workspace,
+    "mission",
+    "wait",
+    "--mission",
+    id,
+    "--reason",
+    "needs_approval",
+    "--question",
+    "Release now?",
+    "--why",
+    "Tests pass",
+    ...agent,
+  );
+  const server = await serve(t, workspace, undefined, "Ocomic");
+  const { sequence } = await detailOf(server.url, id);
+  const path = `/api/missions/${id}/answer`;
+  assert.equal((await send(server.url, path, { sequence, response: "ok" })).status, 400);
+  assert.equal(
+    (await send(server.url, path, { sequence, response: "ok", decision: "maybe" })).status,
+    400,
+  );
+  const approved = await send(server.url, path, { sequence, response: "ok", decision: "approve" });
+  assert.equal(approved.status, 200);
+  assert.equal((approved.body.attentionRequest as { decision: string }).decision, "approve");
+});
+
+test("writes are rejected before workspace access without the app's origin, host, or JSON", async (t) => {
+  const { workspace, input } = await workspaceWithMissions(t);
+  const server = await serve(t, workspace, undefined, "Ocomic");
+  const readOnly = await serve(t, workspace);
+  const { sequence } = await detailOf(server.url, input);
+  const body = { sequence, response: "512" };
+  const path = `/api/missions/${input}/answer`;
+  assert.equal((await send(server.url, path, body, { origin: "https://example.com" })).status, 403);
+  assert.equal((await send(server.url, path, body, { origin: null })).status, 403);
+  assert.equal(
+    (await send(server.url, path, body, { host: `evil.example:${new URL(server.url).port}` }))
+      .status,
+    403,
+  );
+  assert.equal((await send(server.url, path, body, { contentType: "text/plain" })).status, 415);
+  const large = await send(server.url, path, null, {
+    raw: JSON.stringify({ ...body, response: "x".repeat(20_000) }),
+  });
+  assert.ok(large.status === 413 || large.status === 0, `status ${large.status}`);
+  assert.equal((await send(server.url, path, null, { raw: "{" })).status, 400);
+  const readOnlyAnswer = await send(readOnly.url, path, body);
+  assert.equal(readOnlyAnswer.status, 403);
+  assert.equal(readOnlyAnswer.body.error, "ReadOnly");
+  assert.equal((await detailOf(server.url, input)).attentionRequest?.answeredAt, null);
+});
+
+test("write mode never migrates either", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "loxora-app-write-old-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const outdated = join(root, "outdated");
+  mkdirSync(outdated);
+  writeFileSync(
+    join(outdated, "workspace.json"),
+    JSON.stringify({ configVersion: 1, name: "old", reviewers: ["Ocomic"] }),
+  );
+  new DatabaseSync(join(outdated, "workspace.sqlite")).close();
+  const server = await serve(t, outdated, undefined, "Ocomic");
+  const response = await send(server.url, "/api/missions/abc/answer", {
+    sequence: 1,
+    response: "x",
+  });
+  assert.equal(response.status, 503);
+  const database = new DatabaseSync(join(outdated, "workspace.sqlite"));
+  try {
+    assert.equal(
+      (database.prepare("SELECT COUNT(*) count FROM sqlite_master").get() as { count: number })
+        .count,
+      0,
+    );
+  } finally {
+    database.close();
+  }
 });
 
 test("the UI never migrates: a missing or outdated workspace answers 503", async (t) => {

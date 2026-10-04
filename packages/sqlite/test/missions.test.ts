@@ -11,6 +11,7 @@ import {
   MissionService,
   NavigationService,
   PlannedKnowledgeService,
+  StaleMissionError,
   ValidationError,
   parseLogReference,
   parseWorkspaceExport,
@@ -403,9 +404,20 @@ test("stale writes are refused and the schema guards history", async (t) => {
           evidence: [],
         },
       }),
-    ValidationError,
+    StaleMissionError,
   );
   assert.equal((await missions.getMission({ missionId: mission.id }))?.state, "running");
+  await assert.rejects(
+    () => missions.pauseMission({ missionId: mission.id, actorId: "ocomic", expectedSequence: 1 }),
+    StaleMissionError,
+  );
+  assert.equal((await missions.getMission({ missionId: mission.id }))?.state, "running");
+  const paused = await missions.pauseMission({
+    missionId: mission.id,
+    actorId: "ocomic",
+    expectedSequence: 2,
+  });
+  assert.equal(paused.state, "paused");
   await store.close();
   const db = new DatabaseSync(path);
   try {

@@ -14,6 +14,7 @@ import {
   waitReasonLabel,
 } from "../labels.js";
 import type { MissionDetail, MissionEvent } from "../types.js";
+import { AnswerForm, MissionActionBar } from "./MissionActions.js";
 import { StatusBadge } from "./StatusBadge.js";
 
 /**
@@ -36,6 +37,10 @@ export function MissionDetailView({ id }: { id: string }) {
   }
   const mission = detail.data;
   if (!mission) return <p className="muted">{t.detail.loading}</p>;
+  const reload = () => {
+    void detail.reload();
+    void events.reload();
+  };
   return (
     <article className="detail" aria-labelledby={titleId}>
       <nav className="breadcrumb" aria-label={t.detail.breadcrumb}>
@@ -70,11 +75,12 @@ export function MissionDetailView({ id }: { id: string }) {
               <dd>{relativeTime(t, mission.lastActivityAt)}</dd>
             </div>
           </dl>
+          <MissionActionBar mission={mission} onDone={reload} />
         </div>
       </header>
       <div className="detail-grid">
         <div className="detail-main">
-          <StatePanel mission={mission} />
+          <StatePanel mission={mission} onDone={reload} />
           <Timeline events={events.data ?? []} live={events.updatedAt !== null} />
         </div>
         <aside className="detail-side" aria-label={t.detail.projectAndContext}>
@@ -86,7 +92,7 @@ export function MissionDetailView({ id }: { id: string }) {
   );
 }
 
-function StatePanel({ mission }: { mission: MissionDetail }) {
+function StatePanel({ mission, onDone }: { mission: MissionDetail; onDone: () => void }) {
   const t = useLabels();
   if (mission.state === "running") {
     return (
@@ -113,16 +119,19 @@ function StatePanel({ mission }: { mission: MissionDetail }) {
             {untilTime(t, mission.expectedResumeAt)})
           </p>
         ) : null}
-        <p className="muted">
-          {t.detail.noAutoResume}{" "}
-          <code>loxora mission resume --mission {mission.id.slice(0, 8)}</code>
-        </p>
+        {mission.availableActions.includes("resume") ? null : (
+          <p className="muted">
+            {t.detail.noAutoResume}{" "}
+            <code>loxora mission resume --mission {mission.id.slice(0, 8)}</code>
+          </p>
+        )}
       </section>
     );
   }
   if (mission.state === "waiting" && mission.attentionRequest) {
     const request = mission.attentionRequest;
     const answered = request.answeredAt !== null;
+    const canAnswer = mission.availableActions.includes("answer");
     return (
       <section className={`panel ${answered ? "panel-answered" : "panel-input"}`}>
         <h2>
@@ -134,7 +143,7 @@ function StatePanel({ mission }: { mission: MissionDetail }) {
           <span className="muted">{t.detail.why} </span>
           {request.rationale}
         </p>
-        {request.options.length > 0 ? (
+        {request.options.length > 0 && !(canAnswer && request.waitReason !== "needs_approval") ? (
           <ol className="options">
             {request.options.map((option) => (
               <li key={option.option} className="option">
@@ -152,6 +161,8 @@ function StatePanel({ mission }: { mission: MissionDetail }) {
               : ""}
             . {t.detail.waitsForResume}
           </p>
+        ) : canAnswer ? (
+          <AnswerForm mission={mission} onDone={onDone} />
         ) : (
           <p className="muted">
             {t.detail.answerWith}{" "}

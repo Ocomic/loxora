@@ -503,6 +503,100 @@ code {
 .option span {
   color: var(--muted);
 }
+.option-button {
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.option-button:hover:not(:disabled),
+.option-button:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px #3b82f644;
+}
+.option-button:focus-visible,
+.button:focus-visible,
+.answer-form textarea:focus-visible,
+.stop-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Write actions (Milestone 12) */
+.mission-actions,
+.answer-form,
+.stop-form {
+  display: grid;
+  gap: 8px;
+}
+.mission-actions {
+  margin-top: 12px;
+}
+.answer-form {
+  margin-top: 4px;
+}
+.answer-form label,
+.stop-form label {
+  color: var(--muted);
+  font-size: 13px;
+}
+.answer-form textarea,
+.stop-form input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  background: #0a1122;
+  color: var(--text);
+  font: inherit;
+}
+.action-row {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.answer-form .action-row {
+  justify-content: flex-start;
+}
+.stop-form {
+  padding: 12px;
+  border: 1px solid var(--failed);
+  border-radius: var(--radius-small);
+  background: #2a0f1655;
+}
+.button {
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-small);
+  background: var(--accent-strong);
+  color: #fff;
+  font: 600 14px / 1.5 var(--font);
+  cursor: pointer;
+}
+.button-quiet {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.button-danger {
+  border-color: var(--failed);
+  background: transparent;
+  color: #fca5a5;
+}
+.button:disabled,
+.option-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.action-error {
+  margin: 0;
+  color: #fca5a5;
+}
 .plain li {
   padding: 3px 0;
 }
