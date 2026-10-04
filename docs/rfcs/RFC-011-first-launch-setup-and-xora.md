@@ -1,8 +1,9 @@
 # RFC-011 — First Launch, Setup, and Xora
 
-**Status:** Proposed (draft for review)
-**Version:** 0.1
+**Status:** Accepted
+**Version:** 1.0
 **Last Updated:** October 4, 2026
+**Decision Date:** October 4, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (new UI surfaces, new HTTP routes, workspace discovery, an assistant capability), with C3 parts that only the decision owner decides (section 11)
 
@@ -270,4 +271,4 @@ Rejected. The system language is almost always right, and the switch is always v
 
 ## Decision
 
-Not yet decided. Acceptance would authorize milestone documents for the milestones in section 12, one at a time. It would not authorize the C3 items in section 11.
+Accepted by Ocomic on October 4, 2026, after the proposal was merged in pull request #27. The acceptance authorizes milestone documents for the milestones in section 12, one at a time; each milestone starts only when its document is merged. It does not authorize the C3 items in section 11, and the open questions above remain open. The first milestone document is [Milestone 12](../implementation/MILESTONE-12.md) (UI write path).
