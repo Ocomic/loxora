@@ -1,6 +1,7 @@
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { usePolling } from "../api.js";
-import { FILTER_LABELS, relativeTime } from "../labels.js";
+import { useLabels } from "../i18n.js";
+import { relativeTime } from "../labels.js";
 import type { MissionFilter, MissionList, MissionSummary } from "../types.js";
 import { MissionDetailView } from "./MissionDetailView.js";
 import { StatusBadge } from "./StatusBadge.js";
@@ -18,6 +19,7 @@ const TERMINAL = new Set(["completed", "failed", "cancelled"]);
 export function MissionOverview() {
   const { id } = useParams();
   const [params] = useSearchParams();
+  const t = useLabels();
   const filter = (params.get("filter") ?? "all") as MissionFilter;
   const all = usePolling<MissionList>("/api/missions");
   const filtered = usePolling<MissionList>(`/api/missions?filter=${filter}`);
@@ -31,12 +33,12 @@ export function MissionOverview() {
     .slice(0, 5);
   return (
     <div className="missions-layout">
-      <aside className="sidebar" aria-label="Missionen">
-        <h1 className="sidebar-title">Missionen</h1>
+      <aside className="sidebar" aria-label={t.shell.missions}>
+        <h1 className="sidebar-title">{t.shell.missions}</h1>
         <p className="hint">
-          Neue Mission: <code>loxora mission create</code>
+          {t.overview.newMission} <code>loxora mission create</code>
         </p>
-        <nav aria-label="Statusfilter">
+        <nav aria-label={t.overview.statusFilter}>
           <ul className="filters">
             {FILTERS.map((name) => (
               <li key={name}>
@@ -45,21 +47,21 @@ export function MissionOverview() {
                   className={`filter filter-${name}${filter === name && !id ? " active" : ""}`}
                   aria-current={filter === name && !id ? "page" : undefined}
                 >
-                  <span>{FILTER_LABELS[name]}</span>
+                  <span>{t.filters[name]}</span>
                   <span className="count">{all.data?.counts[name] ?? "–"}</span>
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        <MissionGroup title="Aktive Missionen" missions={active} selected={id} />
-        <MissionGroup title="Letzte Missionen" missions={recent} selected={id} />
+        <MissionGroup title={t.overview.active} missions={active} selected={id} />
+        <MissionGroup title={t.overview.recent} missions={recent} selected={id} />
       </aside>
       <main className="main">
         {id ? (
           <MissionDetailView id={id} />
         ) : (
-          <MissionTable title={FILTER_LABELS[filter]} list={filtered.data} />
+          <MissionTable title={t.filters[filter] ?? t.filters.all} list={filtered.data} />
         )}
       </main>
     </div>
@@ -75,6 +77,7 @@ function MissionGroup({
   missions: readonly MissionSummary[];
   selected: string | undefined;
 }) {
+  const t = useLabels();
   if (missions.length === 0) return null;
   return (
     <section className="mission-group">
@@ -90,7 +93,7 @@ function MissionGroup({
               <span className="chip-meta">
                 <span className="tag">{mission.project.name}</span>
                 <StatusBadge state={mission.state} waitReason={mission.waitReason} />
-                <span className="muted">{relativeTime(mission.lastActivityAt)}</span>
+                <span className="muted">{relativeTime(t, mission.lastActivityAt)}</span>
               </span>
             </Link>
           </li>
@@ -101,16 +104,17 @@ function MissionGroup({
 }
 
 function MissionTable({ title, list }: { title: string; list: MissionList | null }) {
-  if (!list) return <p className="muted">Lade Missionen …</p>;
+  const t = useLabels();
+  if (!list) return <p className="muted">{t.overview.loading}</p>;
   return (
     <section className="panel">
       <header className="panel-header">
         <h2>{title}</h2>
-        <span className="muted">Sortiert nach Bedarf an Aufmerksamkeit</span>
+        <span className="muted">{t.overview.sortedBy}</span>
       </header>
       {list.missions.length === 0 ? (
         <p className="empty">
-          Keine Missionen. Agenten erfassen ihre Arbeit mit <code>loxora mission create</code>.
+          {t.overview.empty} <code>loxora mission create</code>.
         </p>
       ) : (
         <ul className="mission-rows">
@@ -126,13 +130,15 @@ function MissionTable({ title, list }: { title: string; list: MissionList | null
                     ) : null}
                   </span>
                   {mission.question ? (
-                    <span className="row-question">Braucht dich: {mission.question}</span>
+                    <span className="row-question">
+                      {t.overview.needsYou} {mission.question}
+                    </span>
                   ) : mission.state === "running" && mission.currentActivity ? (
                     <span className="muted">{mission.currentActivity}</span>
                   ) : null}
                 </span>
                 <StatusBadge state={mission.state} waitReason={mission.waitReason} />
-                <span className="muted row-time">{relativeTime(mission.lastActivityAt)}</span>
+                <span className="muted row-time">{relativeTime(t, mission.lastActivityAt)}</span>
               </Link>
             </li>
           ))}
@@ -143,9 +149,10 @@ function MissionTable({ title, list }: { title: string; list: MissionList | null
 }
 
 function Unavailable({ message }: { message: string }) {
+  const t = useLabels();
   return (
     <section className="panel panel-warning unavailable" role="alert">
-      <h1>Workspace nicht verfügbar</h1>
+      <h1>{t.overview.unavailable}</h1>
       <p>{message}</p>
     </section>
   );

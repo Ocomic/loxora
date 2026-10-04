@@ -6,6 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { runCli } from "@loxora/cli";
 import { startAppServer } from "../src/index.js";
+import { LABELS, relativeTime, statusLabel, systemLanguage } from "../src/web/labels.js";
 
 async function cli(workspace: string, ...argv: string[]) {
   let stdout = "";
@@ -246,6 +247,29 @@ test("the web client is served with a single-page fallback and no path traversal
   assert.match(await page.text(), /Loxora Mission Control/);
   const traversal = await fetch(`${server.url}/..%2Fsecret.txt`);
   assert.doesNotMatch(await traversal.text(), /secret/);
+});
+
+test("labels have German and English entries for the same keys", () => {
+  const keys = (value: object, prefix = ""): string[] =>
+    Object.entries(value).flatMap(([key, entry]) =>
+      entry !== null && typeof entry === "object"
+        ? keys(entry, `${prefix}${key}.`)
+        : [`${prefix}${key}`],
+    );
+  assert.deepEqual(keys(LABELS.en).sort(), keys(LABELS.de).sort());
+  assert.equal(statusLabel(LABELS.de, "waiting", "needs_input"), "Benötigt Input");
+  assert.equal(statusLabel(LABELS.en, "waiting", "needs_input"), "Needs input");
+  const now = Date.parse("2026-10-04T12:00:00Z");
+  assert.equal(relativeTime(LABELS.de, "2026-10-04T11:55:00Z", now), "vor 5 Min.");
+  assert.equal(relativeTime(LABELS.en, "2026-10-01T12:00:00Z", now), "3 days ago");
+});
+
+test("the default language follows the system language", () => {
+  assert.equal(systemLanguage(["de-DE", "en-US"]), "de");
+  assert.equal(systemLanguage(["de-AT"]), "de");
+  assert.equal(systemLanguage(["en-US", "de-DE"]), "en");
+  assert.equal(systemLanguage(["fr-FR"]), "en");
+  assert.equal(systemLanguage([]), "en");
 });
 
 test("browser source cannot import server, Core, SQLite, CLI, or Node APIs", () => {

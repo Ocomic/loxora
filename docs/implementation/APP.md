@@ -29,16 +29,24 @@ The server binds to `127.0.0.1`, serves the web client and `/api` from one origi
 - **Status codes:** 400 for an invalid filter, 404 for an unknown Mission or route, 405 for any write, 503 for a missing or outdated workspace.
 - **Response content:** never SQL, stacks, or absolute paths, except the workspace directory printed by the start command.
 
+## Language
+
+The UI is available in German and English (RFC-010, Amendment 1). All UI text lives in `src/web/labels.ts`, with one entry per language for the same keys; a test checks that both languages have the same keys.
+
+- **Default:** German if the browser's first preferred language is German, English otherwise.
+- **Switch:** the DE/EN buttons in the top bar. The choice is stored in the browser (`localStorage`), not in the workspace, because it is a viewing preference and not project knowledge.
+- **Not translated:** Mission content written by agents and people, error messages from the read API, and CLI commands.
+
 ## Filters
 
-| Filter | Missions |
+| Filter (German / English) | Missions |
 |---|---|
-| Alle | all |
-| Läuft | `running` |
-| Wartet | `waiting` + `provider_limit` |
-| Benötigt Input | `waiting` + `needs_input`, `needs_approval`, `needs_permission`, `needs_manual_action` |
-| Abgeschlossen | `completed` |
-| Fehlgeschlagen | `failed` |
+| Alle / All | all |
+| Läuft / Running | `running` |
+| Wartet / Waiting | `waiting` + `provider_limit` |
+| Benötigt Input / Needs input | `waiting` + `needs_input`, `needs_approval`, `needs_permission`, `needs_manual_action` |
+| Abgeschlossen / Completed | `completed` |
+| Fehlgeschlagen / Failed | `failed` |
 
 ## What is shown, and what is not
 

@@ -1,3 +1,4 @@
+import { useLabels } from "../i18n.js";
 import { statusLabel, statusTone } from "../labels.js";
 import type { MissionState } from "../types.js";
 
@@ -11,11 +12,12 @@ export function StatusBadge({
   waitReason: string | null;
   large?: boolean;
 }) {
+  const t = useLabels();
   const tone = statusTone(state, waitReason);
   return (
     <span className={`badge badge-${tone}${large ? " badge-large" : ""}`}>
       <span className="dot" aria-hidden="true" />
-      {statusLabel(state, waitReason)}
+      {statusLabel(t, state, waitReason)}
     </span>
   );
 }

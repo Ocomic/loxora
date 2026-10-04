@@ -138,6 +138,38 @@ code {
 .workspace-name {
   color: var(--muted);
 }
+.language-switch {
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+.language-switch button {
+  border: 0;
+  border-radius: 6px;
+  padding: 2px 8px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 12px / 1.5 var(--font);
+  cursor: pointer;
+}
+.language-switch button[aria-pressed="true"] {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.language-switch button:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* Layout */
 .missions-layout {

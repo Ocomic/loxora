@@ -94,7 +94,7 @@ It is the decision step "RFC or ADR for the product UI shell and the transition 
   - "Active missions" (non-terminal, sorted by need for attention);
   - "Recent missions" (terminal, sorted by last activity).
 - **"New Mission" button:** shown only as a hint to the CLI command until writing exists.
-- **Labels:** German and English are required (Amendment 1); the shipped app is German only until the English follow-up lands. All UI text is kept in one label module, which will hold one entry per language. German is the language of the designs. Model names (`needs_input`, …) never appear as raw codes in the main view, only in technical details.
+- **Labels:** German and English (Amendment 1). All UI text is kept in one label module with one entry per language. German is the language of the designs. Model names (`needs_input`, …) never appear as raw codes in the main view, only in technical details.
 
 ### 4. Status mapping
 
@@ -257,7 +257,7 @@ The acceptance authorizes a milestone document (Milestone 11) for the read-only 
 
 Decided by Ocomic. This answers open question 7.
 
-- `@loxora/app` must support German and English. This is a requirement, not yet implemented: once the follow-up below lands, every UI text has an entry for both languages in the label module.
-- Planned behavior: the default language follows the system language: German if it is German, English otherwise. The user can switch the language.
+- `@loxora/app` supports German and English. Every UI text has an entry for both languages in the label module.
+- The default language follows the system language: German if it is German, English otherwise. The user can switch the language.
 - Raw model codes stay out of the main view in both languages, as in section 3.
-- Milestone 11 shipped German labels only. Adding the English entries and the language switch is a small follow-up within this RFC; it does not change the data model or the read API.
+- Milestone 11 shipped German labels only. The English entries and the language switch followed as a small change within this RFC (October 4, 2026); it does not change the data model or the read API. The choice is stored in the browser, not in the workspace; see [APP.md](../implementation/APP.md#language).
