@@ -19,6 +19,7 @@ import {
   type ProjectId,
   type ProjectQualifiedNodeId,
   type ProposalId,
+  StaleMissionError,
   ValidationError,
   type WaitReason,
 } from "@loxora/core";
@@ -97,7 +98,7 @@ export class SqliteMissionStore implements MissionStore {
           input.expectedSequence,
         );
       if (Number(updated.changes) !== 1) {
-        throw new ValidationError(
+        throw new StaleMissionError(
           `Mission ${input.missionId} changed concurrently; reload it and retry`,
         );
       }

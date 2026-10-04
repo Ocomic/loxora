@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { NotFoundError, ValidationError } from "./errors.js";
+import { NotFoundError, StaleMissionError, ValidationError } from "./errors.js";
 import type { ProjectQualifiedEvidenceId } from "./cross-project.js";
 import type { ProjectQualifiedNodeId } from "./planned.js";
 import type { Clock, IdGenerator } from "./ports.js";
@@ -507,6 +507,7 @@ export class MissionService {
     response: string;
     decision?: "approve" | "reject";
     evidence?: readonly ProjectQualifiedEvidenceId[];
+    expectedSequence?: number;
   }): Promise<Mission> {
     const response = text(input.response, "Response");
     return this.transition(
@@ -543,43 +544,79 @@ export class MissionService {
           },
         };
       },
+      input.expectedSequence,
     );
   }
 
-  public resumeMission(input: { missionId: MissionId; actorId: string }): Promise<Mission> {
-    return this.transition(input.missionId, input.actorId, "Resumed", "running", (mission) => {
-      if (mission.state === "paused") {
-        requireHuman(input.actorId, "resume a paused Mission");
-      } else if (mission.state === "waiting") {
-        if (mission.waitReason !== "provider_limit" && !mission.attentionRequest?.answeredAt) {
-          throw new ValidationError(
-            `The Mission waits for a human (${mission.waitReason}); answer the Attention Request first`,
-          );
+  public resumeMission(input: {
+    missionId: MissionId;
+    actorId: string;
+    expectedSequence?: number;
+  }): Promise<Mission> {
+    return this.transition(
+      input.missionId,
+      input.actorId,
+      "Resumed",
+      "running",
+      (mission) => {
+        if (mission.state === "paused") {
+          requireHuman(input.actorId, "resume a paused Mission");
+        } else if (mission.state === "waiting") {
+          if (mission.waitReason !== "provider_limit" && !mission.attentionRequest?.answeredAt) {
+            throw new ValidationError(
+              `The Mission waits for a human (${mission.waitReason}); answer the Attention Request first`,
+            );
+          }
+        } else {
+          throw invalid(mission, "running");
         }
-      } else {
-        throw invalid(mission, "running");
-      }
-      return clearedWait();
-    });
+        return clearedWait();
+      },
+      input.expectedSequence,
+    );
   }
 
-  public pauseMission(input: { missionId: MissionId; actorId: string; reason?: string }) {
-    return this.transition(input.missionId, input.actorId, "Paused", "paused", (mission) => {
-      requireHuman(input.actorId, "pause a Mission");
-      if (mission.state !== "running" && mission.state !== "waiting") {
-        throw invalid(mission, "paused");
-      }
-      return { ...clearedWait(), reason: optionalText(input.reason) };
-    });
+  public pauseMission(input: {
+    missionId: MissionId;
+    actorId: string;
+    reason?: string;
+    expectedSequence?: number;
+  }) {
+    return this.transition(
+      input.missionId,
+      input.actorId,
+      "Paused",
+      "paused",
+      (mission) => {
+        requireHuman(input.actorId, "pause a Mission");
+        if (mission.state !== "running" && mission.state !== "waiting") {
+          throw invalid(mission, "paused");
+        }
+        return { ...clearedWait(), reason: optionalText(input.reason) };
+      },
+      input.expectedSequence,
+    );
   }
 
-  public cancelMission(input: { missionId: MissionId; actorId: string; reason: string }) {
+  public cancelMission(input: {
+    missionId: MissionId;
+    actorId: string;
+    reason: string;
+    expectedSequence?: number;
+  }) {
     const reason = text(input.reason, "Cancellation reason");
-    return this.transition(input.missionId, input.actorId, "Cancelled", "cancelled", (mission) => {
-      requireHuman(input.actorId, "cancel a Mission");
-      if (TERMINAL_MISSION_STATES.includes(mission.state)) throw invalid(mission, "cancelled");
-      return { ...clearedWait(), reason };
-    });
+    return this.transition(
+      input.missionId,
+      input.actorId,
+      "Cancelled",
+      "cancelled",
+      (mission) => {
+        requireHuman(input.actorId, "cancel a Mission");
+        if (TERMINAL_MISSION_STATES.includes(mission.state)) throw invalid(mission, "cancelled");
+        return { ...clearedWait(), reason };
+      },
+      input.expectedSequence,
+    );
   }
 
   public async completeMission(input: FinishMissionInput): Promise<Mission> {
@@ -682,9 +719,19 @@ export class MissionService {
       readonly answer?: Parameters<MissionStore["applyMissionChange"]>[0]["answer"] | undefined;
       readonly outcome?: Parameters<MissionStore["applyMissionChange"]>[0]["outcome"] | undefined;
     },
+    /**
+     * The sequence the caller last saw. When given, the change applies only to exactly that
+     * state: the store writes with this sequence, so a concurrent change fails atomically.
+     */
+    expectedSequence?: number,
   ): Promise<Mission> {
     const actorId = text(actorIdInput, "Actor");
     const mission = await this.require(missionId);
+    if (expectedSequence !== undefined && mission.sequence !== expectedSequence) {
+      throw new StaleMissionError(
+        `Mission ${missionId} changed since sequence ${expectedSequence}; reload it and retry`,
+      );
+    }
     if (mission.state !== newState && !MISSION_TRANSITIONS[mission.state].includes(newState)) {
       throw invalid(mission, newState);
     }

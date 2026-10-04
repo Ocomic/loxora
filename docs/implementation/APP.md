@@ -41,7 +41,7 @@ The server binds to `127.0.0.1`, serves the web client and `/api` from one origi
 
 - **Actor:** the server assigns the configured actor to every write; the browser never sends one.
 - **Available actions** (`availableActions`): `answer` while an Attention Request is open; `pause` and `cancel` where the Core transition table allows them; `resume` for `provider_limit`, after an answer, or when paused. Core validates every write again.
-- **Stale state:** `sequence` is the Mission sequence the page showed. A changed Mission answers 409 and nothing is written.
+- **Stale state:** `sequence` is the Mission sequence the page showed. Core applies the write only at exactly that sequence (`expectedSequence`, atomic in the store). A changed Mission answers 409 and nothing is written.
 - **Request protection:** every write needs `Content-Type: application/json`, an `Origin` equal to the app's own origin, a `Host` of `127.0.0.1:<port>` or `localhost:<port>`, and a body under 16 KB. Otherwise it is rejected (403, 413, or 415) before the workspace is opened. This guards against other pages in the browser and DNS rebinding; it is not authentication.
 - **Status codes:** 200 with the updated Mission detail; 400 invalid input or a write Core refuses; 403 read-only mode, a foreign origin or host, or an action not available; 404 unknown Mission; 409 stale sequence; 413 body too large; 415 not JSON; 503 missing or outdated workspace.
 - **Never migrates:** writes open the workspace writable but without migrations, and require `007_missions` like reads.

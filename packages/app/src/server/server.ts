@@ -9,6 +9,7 @@ import {
   type MissionId,
   MissionService,
   NotFoundError,
+  StaleMissionError,
 } from "@loxora/core";
 import { openSqliteReadOnlyStore, openSqliteWritableStore } from "@loxora/sqlite";
 import {
@@ -96,6 +97,13 @@ export async function startAppServer(options: AppServerOptions): Promise<AppServ
         return json(response, 503, {
           error: "WorkspaceUnavailable",
           message: error.message,
+          requestId,
+        });
+      }
+      if (error instanceof StaleMissionError) {
+        return json(response, 409, {
+          error: "Stale",
+          message: "The mission has changed since it was loaded; reload it and try again.",
           requestId,
         });
       }
@@ -333,12 +341,9 @@ async function act(
   if (typeof body.sequence !== "number") {
     throw new RequestRejected(400, "Invalid", "sequence must be the mission sequence shown");
   }
-  if (body.sequence !== mission.sequence) {
-    throw new RequestRejected(
-      409,
-      "Stale",
-      "The mission has changed since it was loaded; reload it and try again.",
-    );
+  const expectedSequence = body.sequence;
+  if (expectedSequence !== mission.sequence) {
+    throw new StaleMissionError(`Mission ${missionId} changed since sequence ${expectedSequence}`);
   }
   if (!availableActions(mission, actorId).includes(action)) {
     throw new RequestRejected(403, "NotAllowed", `${action} is not available for this mission`);
@@ -354,20 +359,31 @@ async function act(
         missionId,
         actorId,
         response: optional("response") ?? "",
+        expectedSequence,
         ...(decision ? { decision } : {}),
       });
       break;
     }
     case "pause": {
       const reason = optional("reason");
-      await missions.pauseMission({ missionId, actorId, ...(reason ? { reason } : {}) });
+      await missions.pauseMission({
+        missionId,
+        actorId,
+        expectedSequence,
+        ...(reason ? { reason } : {}),
+      });
       break;
     }
     case "cancel":
-      await missions.cancelMission({ missionId, actorId, reason: optional("reason") ?? "" });
+      await missions.cancelMission({
+        missionId,
+        actorId,
+        reason: optional("reason") ?? "",
+        expectedSequence,
+      });
       break;
     case "resume":
-      await missions.resumeMission({ missionId, actorId });
+      await missions.resumeMission({ missionId, actorId, expectedSequence });
       break;
   }
   const updated = await missions.getMission({ missionId });

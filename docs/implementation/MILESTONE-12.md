@@ -97,6 +97,7 @@ Requests that fail these checks are rejected before any workspace access. This p
 ## Design notes
 
 - **Write mode is fixed at start.** The actor check reads `workspace.json` once at start. Changing reviewers needs an app restart.
+- **Atomic stale check.** The page's `sequence` is passed to Core as `expectedSequence` on answer, pause, cancel, and resume. Core refuses a different sequence, and the store's update uses it, so a CLI write or a second request between the check and the write still fails. Core reports both as `StaleMissionError`, which the app maps to 409. This came out of review on the implementation pull request.
 - **Pre-check, then Core.** The server rejects an action that is not in `availableActions` with 403 before calling Core; Core's own refusal (for example a missing cancellation reason) answers 400.
 - **Oversized bodies.** The server answers 413 as soon as the limit is passed and stops reading; a client that keeps sending may see the connection close instead.
 - **Sidebar refresh.** After an action, the Mission detail and timeline reload at once; the sidebar counts follow with the next poll (5 seconds).
