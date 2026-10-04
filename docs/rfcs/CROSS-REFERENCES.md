@@ -15,6 +15,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 9. RFC-008 — Post-Hackathon Governance and Work Authorization
 10. RFC-009 — Mission Concept and State Model
 11. RFC-010 — Product UI Shell and Mission Control MVP
+12. RFC-011 — First Launch, Setup, and Xora (proposed)
 
 ## Dependency matrix
 
@@ -31,6 +32,7 @@ This document explains how the foundational Loxora RFCs depend on and constrain 
 | RFC-008 | RFC-001, RFC-004, RFC-007 | `AGENTS.md`, `CONTRIBUTING.md`, all post-Hackathon milestones and pull requests | Refines RFC-004 change classes into an authorization model, keeps RFC-007/ADR-001/ADR-002 as current baseline, and reserves licensing, security, cost, and data-boundary decisions for the owner. |
 | RFC-009 | RFC-002, RFC-003, RFC-004, RFC-006, RFC-008 | `docs/planning/UI-VISION.md`, future mission ADR and milestone, Mission Control UI | Defines Missions as execution state separate from knowledge, a seven-state model with typed Wait Reasons, and review-gated paths from mission results to knowledge. |
 | RFC-010 | RFC-006, RFC-008, RFC-009 | `@loxora/app`, UI milestones, `WEB-UI.md` (frozen demo) | Defines the product UI shell, the read-only Mission Control MVP on real workspace data, the no-invented-data rule for design elements without a data source, and the transition away from the demo inspector. |
+| RFC-011 (proposed) | RFC-005, RFC-008, RFC-009, RFC-010 | `@loxora/app` setup surface, CLI workspace resolution, setup and Xora milestones | Proposes a guided first launch that ends with a workspace, a project, and a first Mission; Xora as a replaceable local assistant acting as `agent:xora` with confirmation cards; a script mode without a model as fallback and test stub. |
 
 ## Mandatory cross-RFC rules
 
