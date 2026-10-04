@@ -1,8 +1,9 @@
 # RFC-010 — Product UI Shell and Mission Control MVP
 
-**Status:** Proposed
-**Version:** 0.1
+**Status:** Accepted
+**Version:** 0.2
 **Last Updated:** October 3, 2026
+**Decision Date:** October 3, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (new UI surface, new package; RFC-008)
 
@@ -30,6 +31,7 @@ It is the decision step "RFC or ADR for the product UI shell and the transition 
   - four Mission Detail states: Running, Codex Limit, Needs Input, and Completed;
   - a dark space-station visual language with crew avatars.
 - **Decision owner, October 3, 2026:** take over these designs for the first MVP, and build the product UI as a new package `@loxora/app` (variant A).
+- **Decision owner, October 3, 2026 (open question 1):** the first UI write path identifies the human through a workspace actor configured at server start (`--actor`). This is recorded in section 9.
 
 ## Problem statement
 
@@ -47,7 +49,7 @@ It is the decision step "RFC or ADR for the product UI shell and the transition 
 
 ## Non-goals
 
-- Writing through the UI: answering Attention Requests, pausing, cancelling, or creating Missions. The CLI stays the write path in the MVP.
+- Writing through the UI in the MVP: answering Attention Requests, pausing, cancelling, or creating Missions. The CLI stays the write path in the MVP. Section 9 decides how a following write slice identifies the human, so that slice is no longer blocked.
 - Station dashboard, Crew, Chat, Memory, Settings, and the "New Mission" and "Context Review" flows.
 - Automatic resumption, notifications, budgets and costs, and system telemetry (C3 or later decisions).
 - Changes to the mission model (for example Mission Steps or a crew model).
@@ -145,6 +147,52 @@ The client polls every 5 seconds while a Mission view is visible. "Live" in the 
 - Knowledge views (Project Map, Node, History, Plans, Review Inbox, Evidence, Context) move into `@loxora/app` in later milestones, under "Memory". At that point, the demo is retired from the default developer workflow, but stays runnable for the record.
 - The demo's guarantees become requirements of `@loxora/app`: server-authoritative state, boundary tests, accessibility, and progressive disclosure.
 
+### 9. Human actor resolution for UI writes
+
+This section records the decision on open question 1. The Mission Control MVP stays read-only; the decision unblocks the write slice that follows it.
+
+**Identity is not authorization.**
+- A `HumanActorResolver` answers only: *which human performs this action?*
+- Core and its existing policies answer: *may this actor perform this specific action?* Examples: the human-only rules of ADR-005, and the reviewer gate of ADR-006.
+- The UI never derives permissions or valid Mission transitions itself.
+
+**Flow:**
+
+```text
+UI → Local App Server → HumanActorResolver → Core (operation + policy)
+```
+
+**First resolver: `ConfiguredActorResolver`.**
+- `@loxora/app` is started with a known human workspace actor, for example `loxora app --actor <actor>`.
+- At start, the server checks that the actor is **not** an `agent:*` id and is a **known human of the workspace**. Today that means listed in `workspace.json` `reviewers`, the only registry of humans. Otherwise the server refuses to start in write mode.
+- The server assigns this actor to **every** UI mutation. The browser never sends an actor id.
+- **Without a configured actor, `@loxora/app` is fully read-only.** Mutation routes are not offered, and no write actions are shown.
+- The UI shows the active actor visibly in the header. It is **not** a switchable dropdown.
+- The local UI authenticates no user. As with the CLI's `--actor`, this is a local governance guard, not authentication.
+
+**Allowed actions come from the server.**
+- Read responses for a Mission include `availableActions`: for example `answer`, `pause`, `cancel`, and `resume`, each with its options where relevant.
+- The server computes them from the Mission's state and the configured actor, using the Core transition table and policies.
+- Every mutation is still validated by Core when it is executed.
+- If no actor is configured, `availableActions` is empty.
+
+**Buttons in the following write slice:**
+
+| Button | Shown when |
+|---|---|
+| "Option wählen" | an open Attention Request may be answered by the actor |
+| "Pause", "Stoppen" (cancel) | the human-only transition is allowed |
+| "Fortsetzen" | resuming is allowed for the current state and Wait Reason |
+
+All of them call the same Core operations as the CLI.
+
+**Adapters, not coupling.**
+- `--actor` is only the first resolver. Core does not depend on how the actor was resolved; it only receives an actor id, as it does from the CLI.
+- Later resolvers can replace it without changing Core: a local Loxora user profile, a real user or team identity, or optional OS integration.
+- **Not used for the MVP:**
+  - **OS user mapping:** it couples Loxora to operating-system accounts and does not map cleanly to workspace identities;
+  - **free actor selection in the UI:** without authentication it is only a claim of identity and adds little over `--actor`.
+
 ## Alternatives considered
 
 ### Evolve the demo UI (variant B)
@@ -157,7 +205,7 @@ Rejected. Invented values (costs, crew load, steps) contradict "prefer evidence 
 
 ### Write path in the MVP
 
-Deferred. Answering Attention Requests from the UI is the most valuable next step, but it needs a decision on how the local UI identifies the human (open question 1). It is a small follow-up once decided.
+Deferred to the following write slice. Answering Attention Requests from the UI is the most valuable next step. Section 9 now decides how the human is identified, so the write slice is unblocked.
 
 ### Server-sent events for live updates
 
@@ -188,9 +236,7 @@ No data changes. `@loxora/app` reads the existing workspace. Removing the packag
 
 ## Open questions
 
-1. **UI identity for writing.** How does the local UI know which human acts?
-   - Options: a workspace reviewer chosen at server start (`--actor`), a selection in the UI, or local OS user mapping.
-   - This decides when "choose option", "pause", and "stop" become buttons.
+1. ~~UI identity for writing.~~ **Decided October 3, 2026:** a configured workspace actor at server start (`--actor`); see section 9. Open within that decision: whether a separate list of human workspace actors should exist besides `reviewers`.
 2. **Mission Steps.** The designs rely on step progress and checklists. Should RFC-009's Mission Steps be added (F5 revisited), and from which source: agent-reported or derived?
 3. **Crew model.** Which agents exist, their role, availability, and load. This needs a capability or agent registry (gated, `PRODUCT-VISION.md`).
 4. **Mission ↔ Context Package.** Linking a Mission to the Context Package it used (Memory Nodes, files, token size), still open in ADR-005.
@@ -201,4 +247,6 @@ No data changes. `@loxora/app` reads the existing workspace. Removing the packag
 
 ## Decision
 
-Pending. To be decided by the decision owner. Acceptance would authorize a milestone document (Milestone 11) for the Mission Control MVP as described in sections 1 to 8. It would not authorize write actions, the other shell sections, or any C3 items.
+Accepted by Ocomic on October 3, 2026 (pull request #23), including the actor decision in section 9. Section 9 was committed to the pull request after its merge and reached `main` with the Milestone 11 pull request. [Milestone 11](../implementation/MILESTONE-11.md) implements sections 1 to 8.
+
+The acceptance authorizes a milestone document (Milestone 11) for the read-only Mission Control MVP as described in sections 1 to 8. A following small write milestone implements section 9 (configured actor, `availableActions`, and the buttons in its table). It does not authorize the other shell sections or any C3 items. The other open questions remain open.

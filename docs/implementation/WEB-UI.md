@@ -2,7 +2,7 @@
 
 The React 19/Vite 8 UI is a local inspector and controller. It renders server/Core results without reimplementing Current selection, History order, severity, Assessment applicability, dependency traversal, freshness, or budgeting.
 
-This document describes the current Hackathon implementation, not the long-term product UI. The intended direction (Mission Control) is recorded in [`docs/planning/UI-VISION.md`](../planning/UI-VISION.md); rebuilding this UI requires its own RFC or ADR and an authorized milestone. [RFC-010](../rfcs/RFC-010-product-ui-shell-and-mission-control-mvp.md) (Proposed) keeps this demo frozen as the Hackathon proof and builds the product UI as a new package `@loxora/app`.
+This document describes the current Hackathon implementation, not the long-term product UI. The intended direction (Mission Control) is recorded in [`docs/planning/UI-VISION.md`](../planning/UI-VISION.md); rebuilding this UI requires its own RFC or ADR and an authorized milestone. [RFC-010](../rfcs/RFC-010-product-ui-shell-and-mission-control-mvp.md) (accepted) keeps this demo frozen as the Hackathon proof; the product UI is `@loxora/app` ([`APP.md`](./APP.md)).
 
 ## Guided and Explore modes
 

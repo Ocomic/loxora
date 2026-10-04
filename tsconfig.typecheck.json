@@ -9,7 +9,8 @@
       "@loxora/sqlite": ["packages/sqlite/src/index.ts"],
       "@loxora/mcp": ["packages/mcp/src/index.ts"],
       "@loxora/cli": ["packages/cli/src/index.ts"],
-      "@loxora/demo": ["packages/demo/src/index.ts"]
+      "@loxora/demo": ["packages/demo/src/index.ts"],
+      "@loxora/app": ["packages/app/src/index.ts"]
     },
     "jsx": "react-jsx"
   },

@@ -26,7 +26,7 @@ Before proposing architecture or implementation, read:
 
 For work touching the existing implementation, also read `docs/rfcs/RFC-007-initial-architecture-and-mvp-boundaries.md`, the ADRs under `docs/adr/`, and the relevant API documents under `docs/implementation/`.
 
-For work touching the UI or missions, also read `docs/planning/UI-VISION.md`, `docs/rfcs/RFC-009-mission-concept-and-state-model.md`, and `docs/implementation/WEB-UI.md`. The current demo UI is not the long-term product UI.
+For work touching the UI or missions, also read `docs/planning/UI-VISION.md`, `docs/rfcs/RFC-009-mission-concept-and-state-model.md`, `docs/rfcs/RFC-010-product-ui-shell-and-mission-control-mvp.md`, and `docs/implementation/APP.md`. The product UI is `@loxora/app`; the demo UI (`docs/implementation/WEB-UI.md`) is frozen.
 
 For contributions, read `CONTRIBUTING.md`.
 
@@ -115,7 +115,7 @@ Do not implement without an accepted RFC/ADR and authorized milestone, or an own
 
 Record such ideas in `docs/planning/open-questions.md` or propose an RFC.
 
-The Hackathon milestone history is recorded in `docs/hackathon/PRE-HACKATHON-BOUNDARY.md` and `docs/implementation/MILESTONE-*.md`. Those documents are historical and are not edited to describe later work. Post-Hackathon milestones start with `docs/implementation/MILESTONE-7.md` (deterministic workspace export, ADR-003) `docs/implementation/MILESTONE-8.md` (local knowledge capture CLI, ADR-004), `docs/implementation/MILESTONE-9.md` (plan revisions, Node keys, CLI ergonomics, ADR-006), and `docs/implementation/MILESTONE-10.md` (mission persistence, ADR-005).
+The Hackathon milestone history is recorded in `docs/hackathon/PRE-HACKATHON-BOUNDARY.md` and `docs/implementation/MILESTONE-*.md`. Those documents are historical and are not edited to describe later work. Post-Hackathon milestones start with `docs/implementation/MILESTONE-7.md` (deterministic workspace export, ADR-003) `docs/implementation/MILESTONE-8.md` (local knowledge capture CLI, ADR-004), `docs/implementation/MILESTONE-9.md` (plan revisions, Node keys, CLI ergonomics, ADR-006), `docs/implementation/MILESTONE-10.md` (mission persistence, ADR-005), and `docs/implementation/MILESTONE-11.md` (read-only Mission Control in `@loxora/app`, RFC-010).
 
 ## Knowledge evolution
 

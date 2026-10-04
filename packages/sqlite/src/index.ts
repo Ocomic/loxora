@@ -41,3 +41,26 @@ export async function openSqliteReadOnlyContextStore(path: string): Promise<Cont
     },
   );
 }
+
+/**
+ * Opens a workspace store read-only for the product UI (RFC-010): it never runs migrations
+ * and fails with IntegrityError when `requiredMigrationId` is missing.
+ */
+export async function openSqliteReadOnlyStore(
+  path: string,
+  requiredMigrationId: string,
+): Promise<
+  LifecycleStore &
+    NavigationStore &
+    PlannedKnowledgeStore &
+    ReviewInboxStore &
+    NodeKeyStore &
+    MissionStore &
+    WorkspaceExportStore
+> {
+  return new SqliteLifecycleStore(
+    path,
+    {},
+    { readOnly: true, runMigrations: false, requiredMigrationId },
+  );
+}
