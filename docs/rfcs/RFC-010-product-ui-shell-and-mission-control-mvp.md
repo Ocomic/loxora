@@ -1,8 +1,8 @@
 # RFC-010 — Product UI Shell and Mission Control MVP
 
 **Status:** Accepted
-**Version:** 0.2
-**Last Updated:** October 3, 2026
+**Version:** 0.3 (Amendment 1)
+**Last Updated:** October 4, 2026
 **Decision Date:** October 3, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (new UI surface, new package; RFC-008)
@@ -94,7 +94,7 @@ It is the decision step "RFC or ADR for the product UI shell and the transition 
   - "Active missions" (non-terminal, sorted by need for attention);
   - "Recent missions" (terminal, sorted by last activity).
 - **"New Mission" button:** shown only as a hint to the CLI command until writing exists.
-- **Labels:** German by default, as in the designs, and kept in one label module so that an English version is possible later. Model names (`needs_input`, …) never appear as raw codes in the main view, only in technical details.
+- **Labels:** German and English are required (Amendment 1); the shipped app is German only until the English follow-up lands. All UI text is kept in one label module, which will hold one entry per language. German is the language of the designs. Model names (`needs_input`, …) never appear as raw codes in the main view, only in technical details.
 
 ### 4. Status mapping
 
@@ -242,7 +242,7 @@ No data changes. `@loxora/app` reads the existing workspace. Removing the packag
 4. **Mission ↔ Context Package.** Linking a Mission to the Context Package it used (Memory Nodes, files, token size), still open in ADR-005.
 5. **Limits and costs.** Provider limit percentage, next window, and costs need telemetry or budget data (C3: Cost Guard).
 6. **Additional filters** for `queued`, `paused`, and `cancelled`.
-7. **Language.** German only for the MVP, or German and English from the start?
+7. ~~Language.~~ **Decided October 4, 2026:** German and English; see Amendment 1.
 8. **Artwork.** Origin and license of avatars and station art before they can be committed.
 
 ## Decision
@@ -250,3 +250,14 @@ No data changes. `@loxora/app` reads the existing workspace. Removing the packag
 Accepted by Ocomic on October 3, 2026 (pull request #23), including the actor decision in section 9. Section 9 was committed to the pull request after its merge and reached `main` with the Milestone 11 pull request. [Milestone 11](../implementation/MILESTONE-11.md) implements sections 1 to 8.
 
 The acceptance authorizes a milestone document (Milestone 11) for the read-only Mission Control MVP as described in sections 1 to 8. A following small write milestone implements section 9 (configured actor, `availableActions`, and the buttons in its table). It does not authorize the other shell sections or any C3 items. The other open questions remain open.
+
+## Amendments
+
+### Amendment 1 — German and English (October 4, 2026)
+
+Decided by Ocomic. This answers open question 7.
+
+- `@loxora/app` must support German and English. This is a requirement, not yet implemented: once the follow-up below lands, every UI text has an entry for both languages in the label module.
+- Planned behavior: the default language follows the system language: German if it is German, English otherwise. The user can switch the language.
+- Raw model codes stay out of the main view in both languages, as in section 3.
+- Milestone 11 shipped German labels only. Adding the English entries and the language switch is a small follow-up within this RFC; it does not change the data model or the read API.

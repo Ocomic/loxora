@@ -52,6 +52,27 @@ A space-station or mission-control metaphor is the general visual direction. It 
 
 The UI must remain professional, readable, fast, and useful for real work. The metaphor should enhance understanding, not replace normal UI conventions.
 
+### Starship bridge and visualizer (decision owner, October 4, 2026)
+
+The decision owner extends the metaphor to a starship. The user should feel like the captain who steers the ship:
+
+| Term | Meaning |
+|---|---|
+| Ship | The user's workspace with all projects |
+| Captain | The user, the human who decides |
+| Ship computer | Loxora itself |
+| First officer (Xora) | A bundled local assistant model that guides setup, knows Loxora's tools, and makes proposals |
+| Crew | The connected AI agents |
+| Stations | Capabilities such as programming or 3D work |
+| Logbook | Project knowledge with its history |
+| Bridge | The main screen (Mission Control) |
+
+- **Terms are explained.** Every term is explained to the user in plain words where it first appears, for example during first-run setup. The plain meaning stays reachable in the UI, for example in help.
+- **Bridge visualizer.** An optional 2D or 3D scene shows the bridge with agents at their stations and speech bubbles while they work. It is an additional layer: the text-driven UI must work completely without it. The user can hide it, and later detach it. The first slice is a simple 2D scene.
+- **Usability first.** The visualizer must not hide information that the text UI does not also show. Accessibility rules apply as in the rest of the UI, including reduced motion.
+
+This direction relaxes the "no game-like gimmick" rule above only for the optional visualizer. It does not authorize implementation. First-run setup, the bundled local model, and the visualizer need their own RFC and milestone (RFC-008, C2; licensing of a bundled model is C3).
+
 ## 3. Core near-term screen: Mission Detail
 
 The most important new UI concept is the Mission Detail screen. A mission is a meaningful unit of work assigned to or coordinated by Loxora.
