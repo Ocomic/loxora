@@ -1,10 +1,12 @@
 import { useId } from "react";
 import { Link } from "react-router-dom";
 import { usePolling } from "../api.js";
+import { useLabels } from "../i18n.js";
 import {
   clockTime,
   dateTime,
-  EVENT_LABELS,
+  eventLabel,
+  type Labels,
   planStatusLabel,
   proposalStatusLabel,
   relativeTime,
@@ -20,23 +22,25 @@ import { StatusBadge } from "./StatusBadge.js";
  */
 export function MissionDetailView({ id }: { id: string }) {
   const titleId = useId();
+  const t = useLabels();
   const detail = usePolling<MissionDetail>(`/api/missions/${encodeURIComponent(id)}`);
   const events = usePolling<MissionEvent[]>(`/api/missions/${encodeURIComponent(id)}/events`);
   if (detail.error) {
     return (
       <section className="panel" role="alert">
-        <h1>Mission nicht gefunden</h1>
+        <h1>{t.detail.notFound}</h1>
         <p>{detail.error.message}</p>
-        <Link to="/missions">Zurück zu den Missionen</Link>
+        <Link to="/missions">{t.detail.back}</Link>
       </section>
     );
   }
   const mission = detail.data;
-  if (!mission) return <p className="muted">Lade Mission …</p>;
+  if (!mission) return <p className="muted">{t.detail.loading}</p>;
   return (
     <article className="detail" aria-labelledby={titleId}>
-      <nav className="breadcrumb" aria-label="Pfad">
-        <Link to="/missions">Missionen</Link> <span aria-hidden="true">›</span> {mission.title}
+      <nav className="breadcrumb" aria-label={t.detail.breadcrumb}>
+        <Link to="/missions">{t.shell.missions}</Link> <span aria-hidden="true">›</span>{" "}
+        {mission.title}
       </nav>
       <header className="detail-header">
         <div>
@@ -52,18 +56,18 @@ export function MissionDetailView({ id }: { id: string }) {
           <dl className="facts">
             {mission.startedAt ? (
               <div>
-                <dt>Gestartet</dt>
-                <dd>{dateTime(mission.startedAt)}</dd>
+                <dt>{t.detail.started}</dt>
+                <dd>{dateTime(t, mission.startedAt)}</dd>
               </div>
             ) : (
               <div>
-                <dt>Erstellt</dt>
-                <dd>{dateTime(mission.createdAt)}</dd>
+                <dt>{t.detail.created}</dt>
+                <dd>{dateTime(t, mission.createdAt)}</dd>
               </div>
             )}
             <div>
-              <dt>Letzte Aktivität</dt>
-              <dd>{relativeTime(mission.lastActivityAt)}</dd>
+              <dt>{t.detail.lastActivity}</dt>
+              <dd>{relativeTime(t, mission.lastActivityAt)}</dd>
             </div>
           </dl>
         </div>
@@ -73,7 +77,7 @@ export function MissionDetailView({ id }: { id: string }) {
           <StatePanel mission={mission} />
           <Timeline events={events.data ?? []} live={events.updatedAt !== null} />
         </div>
-        <aside className="detail-side" aria-label="Projekt und Kontext">
+        <aside className="detail-side" aria-label={t.detail.projectAndContext}>
           <ContextPanel mission={mission} />
           <TechnicalDetails mission={mission} />
         </aside>
@@ -83,14 +87,13 @@ export function MissionDetailView({ id }: { id: string }) {
 }
 
 function StatePanel({ mission }: { mission: MissionDetail }) {
+  const t = useLabels();
   if (mission.state === "running") {
     return (
       <section className="panel">
-        <h2>Aktueller Stand</h2>
-        <p className="current-activity">
-          {mission.currentActivity ?? "Der Agent hat noch keine Tätigkeit gemeldet."}
-        </p>
-        <p className="muted">Gemeldet von {mission.latestActor}</p>
+        <h2>{t.detail.currentState}</h2>
+        <p className="current-activity">{mission.currentActivity ?? t.detail.noActivity}</p>
+        <p className="muted">{t.detail.reportedBy(mission.latestActor)}</p>
       </section>
     );
   }
@@ -98,18 +101,20 @@ function StatePanel({ mission }: { mission: MissionDetail }) {
     return (
       <section className="panel panel-limit">
         <h2>
-          {mission.limitedCapability ? `${mission.limitedCapability}: ` : ""}Limit erreicht –
-          Mission sicher pausiert
+          {mission.limitedCapability ? `${mission.limitedCapability}: ` : ""}
+          {t.detail.limitReached}
         </h2>
-        <p>Die Mission ist nicht fehlgeschlagen. {mission.waitDetail}</p>
+        <p>
+          {t.detail.notFailed} {mission.waitDetail}
+        </p>
         {mission.expectedResumeAt ? (
           <p className="next-window">
-            Nächstes Fenster: <strong>{dateTime(mission.expectedResumeAt)}</strong> (
-            {untilTime(mission.expectedResumeAt)})
+            {t.detail.nextWindow} <strong>{dateTime(t, mission.expectedResumeAt)}</strong> (
+            {untilTime(t, mission.expectedResumeAt)})
           </p>
         ) : null}
         <p className="muted">
-          Nichts wird automatisch fortgesetzt. Fortsetzen mit{" "}
+          {t.detail.noAutoResume}{" "}
           <code>loxora mission resume --mission {mission.id.slice(0, 8)}</code>
         </p>
       </section>
@@ -121,12 +126,12 @@ function StatePanel({ mission }: { mission: MissionDetail }) {
     return (
       <section className={`panel ${answered ? "panel-answered" : "panel-input"}`}>
         <h2>
-          {answered ? "Antwort erhalten" : "Entscheidung erforderlich"} ·{" "}
-          {waitReasonLabel(request.waitReason)}
+          {answered ? t.detail.answerReceived : t.detail.decisionRequired} ·{" "}
+          {waitReasonLabel(t, request.waitReason)}
         </h2>
         <p className="question">{request.question}</p>
         <p>
-          <span className="muted">Warum: </span>
+          <span className="muted">{t.detail.why} </span>
           {request.rationale}
         </p>
         {request.options.length > 0 ? (
@@ -141,15 +146,15 @@ function StatePanel({ mission }: { mission: MissionDetail }) {
         ) : null}
         {answered ? (
           <p>
-            Beantwortet von <strong>{request.responderId}</strong>: {request.response}
+            {t.detail.answeredBy} <strong>{request.responderId}</strong>: {request.response}
             {request.decision
-              ? ` (${request.decision === "approve" ? "freigegeben" : "abgelehnt"})`
+              ? ` (${request.decision === "approve" ? t.detail.approved : t.detail.rejected})`
               : ""}
-            . Die Mission wartet auf das Fortsetzen.
+            . {t.detail.waitsForResume}
           </p>
         ) : (
           <p className="muted">
-            Antworten mit{" "}
+            {t.detail.answerWith}{" "}
             <code>
               loxora mission answer --mission {mission.id.slice(0, 8)} --response "…"
               {request.waitReason === "needs_approval" ? " --decision approve|reject" : ""}
@@ -163,20 +168,20 @@ function StatePanel({ mission }: { mission: MissionDetail }) {
     const outcome = mission.outcome;
     return (
       <section className={`panel ${outcome.kind === "Completed" ? "panel-done" : "panel-failed"}`}>
-        <h2>{outcome.kind === "Completed" ? "Mission abgeschlossen" : "Mission fehlgeschlagen"}</h2>
+        <h2>{outcome.kind === "Completed" ? t.detail.completed : t.detail.failed}</h2>
         <p className="question">{outcome.summary}</p>
-        <OutcomeList title="Ergebnisse" values={outcome.outputs} />
-        <OutcomeList title="Prüfungen" values={outcome.validations} />
-        <OutcomeList title="Entscheidungen" values={outcome.decisions} />
+        <OutcomeList title={t.detail.outputs} values={outcome.outputs} />
+        <OutcomeList title={t.detail.validations} values={outcome.validations} />
+        <OutcomeList title={t.detail.decisions} values={outcome.decisions} />
         {outcome.proposals.length > 0 ? (
           <div>
-            <h3>Wissensvorschläge</h3>
+            <h3>{t.detail.proposals}</h3>
             <ul className="plain">
               {outcome.proposals.map((proposal) => (
                 <li key={proposal.proposalId}>
-                  Vorschlag {proposal.proposalId.slice(0, 8)} —{" "}
+                  {t.detail.proposal} {proposal.proposalId.slice(0, 8)} —{" "}
                   <span className={`proposal-${proposal.status.toLowerCase()}`}>
-                    {proposalStatusLabel(proposal.status)}
+                    {proposalStatusLabel(t, proposal.status)}
                   </span>
                 </li>
               ))}
@@ -185,38 +190,30 @@ function StatePanel({ mission }: { mission: MissionDetail }) {
         ) : null}
         {outcome.logReferences.length > 0 ? (
           <div>
-            <h3>Logs</h3>
+            <h3>{t.detail.logs}</h3>
             <ul className="plain">
               {outcome.logReferences.map((log) => (
                 <li key={`${log.kind}:${log.locator}`}>
                   <code>{log.locator}</code>
-                  {log.portable ? "" : " (nicht portabel)"}
+                  {log.portable ? "" : ` ${t.detail.notPortable}`}
                 </li>
               ))}
             </ul>
           </div>
         ) : null}
-        <p className="muted">
-          Ein Abschluss ist noch kein angenommenes Wissen; Vorschläge laufen durch das Review.
-        </p>
+        <p className="muted">{t.detail.notAccepted}</p>
       </section>
     );
   }
   return (
     <section className="panel">
-      <h2>
-        {mission.state === "queued"
-          ? "Geplant"
-          : mission.state === "paused"
-            ? "Pausiert"
-            : "Abgebrochen"}
-      </h2>
+      <h2>{t.states[mission.state]}</h2>
       <p className="muted">
         {mission.state === "queued"
-          ? "Die Mission wurde erfasst und wartet auf den Start."
+          ? t.detail.queuedText
           : mission.state === "paused"
-            ? "Ein Mensch hat die Mission bewusst angehalten."
-            : "Die Mission wurde abgebrochen."}
+            ? t.detail.pausedText
+            : t.detail.cancelledText}
       </p>
     </section>
   );
@@ -237,31 +234,32 @@ function OutcomeList({ title, values }: { title: string; values: readonly string
 }
 
 function Timeline({ events, live }: { events: readonly MissionEvent[]; live: boolean }) {
+  const t = useLabels();
   return (
     <section className="panel">
       <header className="panel-header">
-        <h2>Timeline</h2>
+        <h2>{t.detail.timeline}</h2>
         {live ? (
-          <span className="live" title="Aktualisiert alle 5 Sekunden">
-            <span className="dot" aria-hidden="true" /> Live
+          <span className="live" title={t.detail.liveTitle}>
+            <span className="dot" aria-hidden="true" /> {t.detail.live}
           </span>
         ) : null}
       </header>
       <ol className="timeline">
         {[...events].reverse().map((event) => (
           <li key={event.id} className={`event event-${event.newState}`}>
-            <time dateTime={event.occurredAt}>{clockTime(event.occurredAt)}</time>
+            <time dateTime={event.occurredAt}>{clockTime(t, event.occurredAt)}</time>
             <span className="event-dot" aria-hidden="true" />
             <span className="event-body">
               <strong>
-                {EVENT_LABELS[event.type] ?? event.type}
+                {eventLabel(t, event.type)}
                 {event.type === "Waiting" && event.waitReason
-                  ? ` · ${waitReasonLabel(event.waitReason)}`
+                  ? ` · ${waitReasonLabel(t, event.waitReason)}`
                   : ""}
               </strong>
-              <span className="muted">{eventText(event)}</span>
+              <span className="muted">{eventText(t, event)}</span>
             </span>
-            <span className="muted event-time">{relativeTime(event.occurredAt)}</span>
+            <span className="muted event-time">{relativeTime(t, event.occurredAt)}</span>
           </li>
         ))}
       </ol>
@@ -269,12 +267,12 @@ function Timeline({ events, live }: { events: readonly MissionEvent[]; live: boo
   );
 }
 
-function eventText(event: MissionEvent): string {
+function eventText(t: Labels, event: MissionEvent): string {
   const payload = event.payload;
   const text =
     (typeof payload.activity === "string" && payload.activity) ||
     (typeof payload.question === "string" && payload.question) ||
-    (typeof payload.response === "string" && `Antwort: ${payload.response}`) ||
+    (typeof payload.response === "string" && `${t.detail.answer} ${payload.response}`) ||
     (typeof payload.detail === "string" && payload.detail) ||
     event.reason ||
     "";
@@ -282,25 +280,26 @@ function eventText(event: MissionEvent): string {
 }
 
 function ContextPanel({ mission }: { mission: MissionDetail }) {
+  const t = useLabels();
   const { references } = mission;
   return (
     <section className="panel">
-      <h2>Projekt &amp; Kontext</h2>
+      <h2>{t.detail.projectAndContext}</h2>
       <dl className="facts facts-stacked">
         <div>
-          <dt>Projekt</dt>
+          <dt>{t.detail.project}</dt>
           <dd>{mission.project.name}</dd>
         </div>
         {references.projects.length > 0 ? (
           <div>
-            <dt>Weitere Projekte</dt>
+            <dt>{t.detail.otherProjects}</dt>
             <dd>{references.projects.map((project) => project.name).join(", ")}</dd>
           </div>
         ) : null}
       </dl>
       {references.nodes.length > 0 ? (
         <>
-          <h3>Wissensknoten</h3>
+          <h3>{t.detail.nodes}</h3>
           <ul className="plain">
             {references.nodes.map((node) => (
               <li key={node.nodeId}>
@@ -312,13 +311,13 @@ function ContextPanel({ mission }: { mission: MissionDetail }) {
       ) : null}
       {references.plans.length > 0 ? (
         <>
-          <h3>Pläne</h3>
+          <h3>{t.detail.plans}</h3>
           <ul className="plain">
             {references.plans.map((plan) => (
               <li key={plan.planId}>
                 {plan.title}
                 {plan.status ? (
-                  <span className="muted"> · {planStatusLabel(plan.status)}</span>
+                  <span className="muted"> · {planStatusLabel(t, plan.status)}</span>
                 ) : null}
               </li>
             ))}
@@ -326,25 +325,26 @@ function ContextPanel({ mission }: { mission: MissionDetail }) {
         </>
       ) : null}
       {references.nodes.length === 0 && references.plans.length === 0 ? (
-        <p className="muted">Keine verknüpften Knoten oder Pläne.</p>
+        <p className="muted">{t.detail.noReferences}</p>
       ) : null}
     </section>
   );
 }
 
 function TechnicalDetails({ mission }: { mission: MissionDetail }) {
+  const t = useLabels();
   return (
     <details className="panel technical">
-      <summary>Technische Details</summary>
+      <summary>{t.detail.technical}</summary>
       <dl className="facts facts-stacked">
         <div>
-          <dt>Mission-ID</dt>
+          <dt>{t.detail.missionId}</dt>
           <dd>
             <code>{mission.id}</code>
           </dd>
         </div>
         <div>
-          <dt>Zustand</dt>
+          <dt>{t.detail.state}</dt>
           <dd>
             <code>
               {mission.state}
@@ -353,16 +353,16 @@ function TechnicalDetails({ mission }: { mission: MissionDetail }) {
           </dd>
         </div>
         <div>
-          <dt>Ereignisse</dt>
+          <dt>{t.detail.events}</dt>
           <dd>{mission.sequence}</dd>
         </div>
         <div>
-          <dt>Erstellt von</dt>
+          <dt>{t.detail.createdBy}</dt>
           <dd>{mission.createdBy}</dd>
         </div>
         {mission.predecessorMissionId ? (
           <div>
-            <dt>Vorgänger</dt>
+            <dt>{t.detail.predecessor}</dt>
             <dd>
               <Link to={`/missions/${mission.predecessorMissionId}`}>
                 {mission.predecessorMissionId.slice(0, 8)}
