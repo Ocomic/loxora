@@ -83,7 +83,7 @@ export interface MissionDetail extends MissionSummary {
       status: string | null;
     }[];
   };
-  readonly availableActions: readonly string[];
+  readonly availableActions: readonly MissionAction[];
 }
 
 export interface MissionEvent {
@@ -98,6 +98,9 @@ export interface MissionEvent {
   readonly reason: string | null;
   readonly payload: Record<string, unknown>;
 }
+
+/** Write actions offered by the server (Milestone 12). */
+export type MissionAction = "answer" | "pause" | "cancel" | "resume";
 
 export interface WorkspaceInfo {
   readonly name: string;

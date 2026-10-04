@@ -18,6 +18,20 @@ export async function api<T>(path: string): Promise<T> {
   return value as T;
 }
 
+/** Sends a write action; the server checks origin, actor, and state (Milestone 12). */
+export async function post<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { accept: "application/json", "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const value = (await response.json()) as { message?: string; error?: string };
+  if (!response.ok) {
+    throw new ApiError(value.message ?? value.error ?? "Request failed", response.status);
+  }
+  return value as T;
+}
+
 /** Polls a read route (RFC-010, section 6); "Live" in the UI means this polling. */
 export function usePolling<T>(path: string, intervalMs = 5000) {
   const [state, setState] = useState<{ path: string; data: T } | null>(null);
@@ -40,5 +54,5 @@ export function usePolling<T>(path: string, intervalMs = 5000) {
     }, intervalMs);
     return () => window.clearInterval(timer);
   }, [load, intervalMs]);
-  return { data: state?.path === path ? state.data : null, error, updatedAt };
+  return { data: state?.path === path ? state.data : null, error, updatedAt, reload: load };
 }

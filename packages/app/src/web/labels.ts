@@ -53,6 +53,23 @@ export interface Labels {
     readonly needsYou: string;
     readonly unavailable: string;
   };
+  readonly actions: {
+    readonly label: string;
+    readonly pause: string;
+    readonly resume: string;
+    readonly stop: string;
+    readonly stopTitle: string;
+    readonly stopReason: string;
+    readonly stopConfirm: string;
+    readonly keepRunning: string;
+    readonly yourAnswer: string;
+    readonly send: string;
+    readonly approve: string;
+    readonly reject: string;
+    readonly saving: string;
+    readonly stale: string;
+    readonly failed: (message: string) => string;
+  };
   readonly detail: {
     readonly notFound: string;
     readonly back: string;
@@ -190,6 +207,24 @@ const de: Labels = {
     empty: "Keine Missionen. Agenten erfassen ihre Arbeit mit",
     needsYou: "Braucht dich:",
     unavailable: "Workspace nicht verfügbar",
+  },
+  actions: {
+    label: "Aktionen",
+    pause: "Pausieren",
+    resume: "Fortsetzen",
+    stop: "Stoppen",
+    stopTitle: "Mission stoppen?",
+    stopReason: "Grund",
+    stopConfirm: "Endgültig stoppen",
+    keepRunning: "Nicht stoppen",
+    yourAnswer: "Deine Antwort",
+    send: "Antworten",
+    approve: "Freigeben",
+    reject: "Ablehnen",
+    saving: "Wird gespeichert …",
+    stale:
+      "Die Mission hat sich inzwischen geändert. Sie wurde neu geladen; bitte prüfe sie noch einmal.",
+    failed: (message) => `Das hat nicht geklappt: ${message}`,
   },
   detail: {
     notFound: "Mission nicht gefunden",
@@ -329,6 +364,23 @@ const en: Labels = {
     empty: "No missions. Agents record their work with",
     needsYou: "Needs you:",
     unavailable: "Workspace unavailable",
+  },
+  actions: {
+    label: "Actions",
+    pause: "Pause",
+    resume: "Resume",
+    stop: "Stop",
+    stopTitle: "Stop this mission?",
+    stopReason: "Reason",
+    stopConfirm: "Stop for good",
+    keepRunning: "Don't stop",
+    yourAnswer: "Your answer",
+    send: "Answer",
+    approve: "Approve",
+    reject: "Reject",
+    saving: "Saving …",
+    stale: "The mission has changed in the meantime. It was reloaded; please check it again.",
+    failed: (message) => `That did not work: ${message}`,
   },
   detail: {
     notFound: "Mission not found",
