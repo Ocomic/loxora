@@ -117,6 +117,8 @@ The first production-quality profile may therefore be an Ocomic/software-and-cre
 
 The initial experience should optimize for a useful local baseline rather than a provider-selection wizard.
 
+[RFC-011](../rfcs/RFC-011-first-launch-setup-and-xora.md) (accepted October 4, 2026) defines the first concrete step: a guided first launch with Xora, a bundled small local model, and a script mode without a model. The rest of this section remains vision.
+
 A future installer may bundle or bootstrap:
 - the Loxora local daemon/runtime,
 - local persistence,

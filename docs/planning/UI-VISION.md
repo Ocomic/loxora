@@ -71,7 +71,7 @@ The decision owner extends the metaphor to a starship. The user should feel like
 - **Bridge visualizer.** An optional 2D or 3D scene shows the bridge with agents at their stations and speech bubbles while they work. It is an additional layer: the text-driven UI must work completely without it. The user can hide it, and later detach it. The first slice is a simple 2D scene.
 - **Usability first.** The visualizer must not hide information that the text UI does not also show. Accessibility rules apply as in the rest of the UI, including reduced motion.
 
-This direction relaxes the "no game-like gimmick" rule above only for the optional visualizer. It does not authorize implementation. First-run setup, the bundled local model, and the visualizer need their own RFC and milestone (RFC-008, C2; licensing of a bundled model is C3). [RFC-011](../rfcs/RFC-011-first-launch-setup-and-xora.md) proposes them.
+This direction relaxes the "no game-like gimmick" rule above only for the optional visualizer. It does not authorize implementation. First-run setup, the bundled local model, and the visualizer need their own RFC and milestone (RFC-008, C2; licensing of a bundled model is C3). [RFC-011](../rfcs/RFC-011-first-launch-setup-and-xora.md) (accepted October 4, 2026) defines them.
 
 ## 3. Core near-term screen: Mission Detail
 
