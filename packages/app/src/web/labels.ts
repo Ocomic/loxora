@@ -91,6 +91,7 @@ export interface Labels {
     readonly pausedText: string;
     readonly cancelledText: string;
     readonly timeline: string;
+    readonly live: string;
     readonly liveTitle: string;
     readonly answer: string;
     readonly project: string;
@@ -229,6 +230,7 @@ const de: Labels = {
     pausedText: "Ein Mensch hat die Mission bewusst angehalten.",
     cancelledText: "Die Mission wurde abgebrochen.",
     timeline: "Timeline",
+    live: "Live",
     liveTitle: "Aktualisiert alle 5 Sekunden",
     answer: "Antwort:",
     project: "Projekt",
@@ -366,6 +368,7 @@ const en: Labels = {
     pausedText: "A person paused the mission on purpose.",
     cancelledText: "The mission was cancelled.",
     timeline: "Timeline",
+    live: "Live",
     liveTitle: "Updates every 5 seconds",
     answer: "Answer:",
     project: "Project",

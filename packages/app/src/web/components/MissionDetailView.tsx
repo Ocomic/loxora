@@ -241,7 +241,7 @@ function Timeline({ events, live }: { events: readonly MissionEvent[]; live: boo
         <h2>{t.detail.timeline}</h2>
         {live ? (
           <span className="live" title={t.detail.liveTitle}>
-            <span className="dot" aria-hidden="true" /> Live
+            <span className="dot" aria-hidden="true" /> {t.detail.live}
           </span>
         ) : null}
       </header>
