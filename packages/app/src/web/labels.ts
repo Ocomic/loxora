@@ -13,6 +13,25 @@ export function systemLanguage(preferred: readonly string[]): Language {
   return preferred[0]?.toLowerCase().startsWith("de") ? "de" : "en";
 }
 
+/**
+ * The language on start (Milestone 13): the settings file wins; without a stored language a
+ * choice from browser storage (Milestones 11 and 12) is used and imported once; otherwise the
+ * system language.
+ */
+export function startLanguage(
+  stored: { readonly available: boolean; readonly language: Language | null },
+  browser: Language | null,
+  system: Language,
+): { readonly language: Language; readonly importBrowserChoice: boolean } {
+  if (stored.available && stored.language) {
+    return { language: stored.language, importBrowserChoice: false };
+  }
+  return {
+    language: browser ?? system,
+    importBrowserChoice: stored.available && browser !== null,
+  };
+}
+
 export interface Labels {
   readonly locale: string;
   readonly languageName: string;
@@ -122,6 +141,51 @@ export interface Labels {
     readonly events: string;
     readonly createdBy: string;
     readonly predecessor: string;
+  };
+  readonly setup: {
+    readonly title: string;
+    readonly progress: (step: number, total: number) => string;
+    readonly back: string;
+    readonly next: string;
+    readonly systems: string;
+    readonly shipComputer: string;
+    readonly ready: string;
+    readonly logbook: string;
+    readonly logbookPending: string;
+    readonly logbookFound: string;
+    readonly xoraNotOnBoard: string;
+    readonly existing: (ship: string) => string;
+    readonly openShip: string;
+    readonly newShip: string;
+    readonly whoAreYou: string;
+    readonly nameQuestion: string;
+    readonly nameLabel: string;
+    readonly nameEmpty: string;
+    readonly shortNameQuestion: string;
+    readonly shortNameLabel: string;
+    readonly shipQuestion: (name: string) => string;
+    readonly shipLabel: string;
+    readonly ownName: string;
+    readonly logbookQuestion: (ship: string) => string;
+    readonly documents: string;
+    readonly details: string;
+    readonly fits: string;
+    readonly otherFolder: string;
+    readonly folderLabel: string;
+    readonly folderHint: string;
+    readonly useFolder: string;
+    readonly inRepository: string;
+    readonly oneDrive: string;
+    readonly hasWorkspace: string;
+    readonly openLogbook: string;
+    readonly notOnShip: string;
+    readonly working: string;
+    readonly orientation: readonly string[];
+    readonly scriptMode: string;
+    readonly bridgeReady: string;
+    readonly toBridge: string;
+    readonly settingsError: string;
+    readonly failed: (message: string) => string;
   };
 }
 
@@ -280,6 +344,67 @@ const de: Labels = {
     createdBy: "Erstellt von",
     predecessor: "Vorgänger",
   },
+  setup: {
+    title: "Erster Start",
+    progress: (step, total) => `Schritt ${step} von ${total}`,
+    back: "Zurück",
+    next: "Weiter",
+    systems: "Schiffssysteme",
+    shipComputer: "Bordcomputer",
+    ready: "bereit",
+    logbook: "Logbuch",
+    logbookPending: "wird gleich angelegt",
+    logbookFound: "gefunden",
+    xoraNotOnBoard: "in dieser Version noch nicht an Bord",
+    existing: (ship) =>
+      `Auf diesem Rechner gibt es schon ein Schiff: „${ship}“. Willst du damit weiterfliegen?`,
+    openShip: "Dieses Schiff öffnen",
+    newShip: "Neues Schiff anlegen",
+    whoAreYou: "Wer von euch bist du?",
+    nameQuestion:
+      "Willkommen an Bord. Ich bin Xora, deine Erste Offizierin. Ein paar Dinge klären wir gleich zu Beginn. Wie soll ich dich nennen?",
+    nameLabel: "Dein Name",
+    nameEmpty:
+      "Ich brauche einen Namen, damit ich weiß, wer an Bord entscheidet. Ein Spitzname reicht.",
+    shortNameQuestion:
+      "Aus diesem Namen kann ich keine Kennung für deine Freigaben machen. Gib mir bitte einen kurzen Namen aus Buchstaben oder Ziffern, etwa „alex“.",
+    shortNameLabel: "Kurzer Name",
+    shipQuestion: (name) =>
+      `Schön, dich kennenzulernen, ${name}. Dein Schiff ist dein Arbeitsbereich für alle deine Projekte, und es braucht einen Namen. Wie soll deins heißen?`,
+    shipLabel: "Schiffsname",
+    ownName: "Selbst eingeben",
+    logbookQuestion: (ship) =>
+      `Wo soll ich das Logbuch der ${ship} aufbewahren, also alles, was wir über deine Projekte festhalten? Ich schlage diesen Ordner vor. Alles bleibt auf diesem Rechner.`,
+    documents: "Dokumente",
+    details: "Details",
+    fits: "Passt so",
+    otherFolder: "Anderen Ordner wählen",
+    folderLabel: "Voller Pfad des Ordners",
+    folderHint: "Zum Beispiel C:\\Users\\alex\\Documents\\Loxora. Fehlende Ordner lege ich an.",
+    useFolder: "Diesen Ordner nehmen",
+    inRepository:
+      "Dieser Ordner gehört zu einem Code-Projekt. Das Logbuch sollte getrennt davon liegen.",
+    oneDrive:
+      "Dieser Ordner wird mit OneDrive synchronisiert. Dann läge dein Logbuch auch in der Cloud. Wenn du das nicht willst, wähle einen anderen Ordner.",
+    hasWorkspace: "In diesem Ordner liegt schon ein Logbuch.",
+    openLogbook: "Dieses Logbuch öffnen",
+    notOnShip:
+      "Dein Name steht nicht auf der Liste dieses Schiffs. Wähle einen anderen Ordner für dein Logbuch.",
+    working: "Einen Moment …",
+    orientation: [
+      "Kurz zur Orientierung: Das hier ist die Brücke. Von hier aus steuerst du deine Projekte.",
+      "Später arbeiten hier weitere KI-Helfer als deine Crew. Ich koordiniere sie und hole dich, wenn etwas entschieden werden muss.",
+      "Das Wichtigste an Bord: Ich schlage vor, du entscheidest. Nichts wird ohne dich festgeschrieben.",
+    ],
+    scriptMode:
+      "In dieser Version bin ich noch nicht ganz an Bord und kann noch nicht frei antworten. Wir kommen trotzdem ans Ziel: Bis dahin gebe ich dir feste Auswahlmöglichkeiten.",
+    bridgeReady:
+      "Dein Logbuch ist angelegt. Auf der Brücke siehst du deine Missionen, also Aufgaben, an denen die Crew arbeitet. Rot heißt: Ich brauche dich.",
+    toBridge: "Zur Brücke",
+    settingsError:
+      "Deine Einstellungsdatei lässt sich nicht lesen. Loxora ändert sie nicht. Korrigiere oder entferne sie und lade die Seite dann neu.",
+    failed: (message) => `Das hat nicht geklappt: ${message}`,
+  },
 };
 
 const en: Labels = {
@@ -434,6 +559,65 @@ const en: Labels = {
     events: "Events",
     createdBy: "Created by",
     predecessor: "Predecessor",
+  },
+  setup: {
+    title: "First launch",
+    progress: (step, total) => `Step ${step} of ${total}`,
+    back: "Back",
+    next: "Continue",
+    systems: "Ship systems",
+    shipComputer: "Ship computer",
+    ready: "ready",
+    logbook: "Logbook",
+    logbookPending: "created in a moment",
+    logbookFound: "found",
+    xoraNotOnBoard: "not on board in this version yet",
+    existing: (ship) =>
+      `There is already a ship on this computer: “${ship}”. Do you want to keep flying it?`,
+    openShip: "Open this ship",
+    newShip: "Create a new ship",
+    whoAreYou: "Which of these are you?",
+    nameQuestion:
+      "Welcome aboard. I'm Xora, your first officer. Let's settle a few things first. What should I call you?",
+    nameLabel: "Your name",
+    nameEmpty: "I need a name so I know who decides on board. A nickname is fine.",
+    shortNameQuestion:
+      "I can't make an id for your approvals from this name. Please give me a short name with letters or digits, such as “alex”.",
+    shortNameLabel: "Short name",
+    shipQuestion: (name) =>
+      `Nice to meet you, ${name}. Your ship is your workspace for all your projects, and it needs a name. What should yours be called?`,
+    shipLabel: "Ship name",
+    ownName: "Enter my own",
+    logbookQuestion: (ship) =>
+      `Where should I keep the logbook of the ${ship}, that is, everything we record about your projects? I suggest this folder. Everything stays on this computer.`,
+    documents: "Documents",
+    details: "Details",
+    fits: "Looks good",
+    otherFolder: "Choose another folder",
+    folderLabel: "Full path of the folder",
+    folderHint: "For example C:\\Users\\alex\\Documents\\Loxora. I create missing folders.",
+    useFolder: "Use this folder",
+    inRepository:
+      "This folder belongs to a code project. The logbook should be kept separate from it.",
+    oneDrive:
+      "OneDrive synchronizes this folder. Your logbook would then also be in the cloud. If you don't want that, choose another folder.",
+    hasWorkspace: "This folder already holds a logbook.",
+    openLogbook: "Open this logbook",
+    notOnShip: "Your name is not on this ship's list. Choose another folder for your logbook.",
+    working: "One moment …",
+    orientation: [
+      "A quick orientation: this is the bridge. From here you steer your projects.",
+      "Later, more AI helpers will work here as your crew. I coordinate them and fetch you when something needs a decision.",
+      "The most important rule on board: I propose, you decide. Nothing is recorded without you.",
+    ],
+    scriptMode:
+      "In this version I'm not fully on board yet and can't answer freely. We'll still get there: until then, I'll give you fixed choices.",
+    bridgeReady:
+      "Your logbook is ready. On the bridge you see your missions, the tasks the crew works on. Red means: I need you.",
+    toBridge: "To the bridge",
+    settingsError:
+      "Your settings file cannot be read. Loxora does not change it. Fix or remove it, then reload the page.",
+    failed: (message) => `That didn't work: ${message}`,
   },
 };
 

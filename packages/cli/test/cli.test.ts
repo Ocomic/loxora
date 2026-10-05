@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { runCli } from "../src/cli.js";
+import { settingsPath, writeSettings } from "../src/settings.js";
+import { resolveWorkspaceDirectory } from "../src/workspace.js";
 
 interface Run {
   readonly code: number;
@@ -145,6 +147,41 @@ test("workspace init uses the home default and requires a reviewer", async (t) =
   assert.equal(again.code, 2);
   const status = await cli.json("workspace", "status");
   assert.deepEqual(status.projects, []);
+});
+
+test("the app settings file is resolution step 3, after --workspace and LOXORA_WORKSPACE", async (t) => {
+  const cli = harness(t);
+  const settings = join(cli.env.LOXORA_HOME ?? "", ".loxora", "settings.json");
+  assert.equal(settingsPath(cli.env), settings);
+  assert.equal(
+    settingsPath({ APPDATA: "C:\\Users\\alex\\AppData\\Roaming" }, "win32"),
+    join("C:\\Users\\alex\\AppData\\Roaming", "Loxora", "settings.json"),
+  );
+  assert.equal(
+    settingsPath({ XDG_CONFIG_HOME: "/cfg" }, "linux"),
+    join("/cfg", "loxora", "settings.json"),
+  );
+  const logbook = join(cli.root, "Documents", "Loxora");
+  writeSettings(settings, { configVersion: 1, workspacePath: logbook });
+  const created = await cli.json("workspace", "init", "--reviewer", "alex", "--name", "Nova");
+  assert.equal(created.directory, logbook);
+  assert.equal(resolveWorkspaceDirectory(undefined, cli.env), logbook);
+  const explicit = join(cli.root, "explicit");
+  assert.equal(resolveWorkspaceDirectory(explicit, cli.env), explicit);
+  assert.equal(
+    resolveWorkspaceDirectory(undefined, { ...cli.env, LOXORA_WORKSPACE: explicit }),
+    explicit,
+  );
+  writeSettings(settings, { configVersion: 1 });
+  assert.equal(
+    resolveWorkspaceDirectory(undefined, cli.env),
+    join(cli.env.LOXORA_HOME ?? "", ".loxora", "workspaces", "default"),
+  );
+  writeFileSync(settings, "{ broken", "utf8");
+  const broken = await cli.run("workspace", "status");
+  assert.equal(broken.code, 2);
+  assert.match(broken.stderr, /not valid JSON\. Fix the file or pass --workspace/);
+  assert.equal(readFileSync(settings, "utf8"), "{ broken");
 });
 
 test("workspace init refuses a Git working tree unless explicitly allowed", async (t) => {

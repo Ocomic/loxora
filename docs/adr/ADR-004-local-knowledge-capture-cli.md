@@ -38,6 +38,7 @@ Add a small local command-line interface, `loxora`, in a new package `@loxora/cl
   1. `--workspace <dir>`;
   2. the `LOXORA_WORKSPACE` environment variable;
   3. the default `<home>/.loxora/workspaces/default`, where `<home>` is the user's home directory on Windows, macOS, or Linux.
+- **Amendment (RFC-011 section 4, implemented in Milestone 13, October 2026):** a new step 3 reads `workspacePath` from the per-user app settings file written by the setup of `@loxora/app`; the default above becomes step 4. Without a settings file the order is unchanged. The CLI only reads that file. See `docs/implementation/CLI.md`.
 - `loxora workspace init` creates the directory and the configuration. It refuses to initialize inside a Git working tree unless `--allow-in-repository` is given. This keeps private project knowledge out of repositories by default.
 - Backups use the Milestone 7 export: `loxora export --out <file>` and `loxora export verify --in <file>`.
 

@@ -106,5 +106,33 @@ export interface WorkspaceInfo {
   readonly name: string;
   readonly reviewers: readonly string[];
   readonly actor: string | null;
+  readonly actorSource: "flag" | "settings" | null;
   readonly readOnly: boolean;
+  readonly setupComplete: boolean;
+}
+
+/** `GET /api/setup` (Milestone 13); the setup fields are present only in setup mode. */
+export interface SetupInfo {
+  readonly mode: "fixed" | "ready" | "setup" | "settingsError";
+  readonly settingsError?: string;
+  readonly answers?: {
+    readonly name: string | null;
+    readonly captain: string | null;
+    readonly shipName: string | null;
+    readonly logbookPath: string | null;
+  };
+  readonly existing?: {
+    readonly path: string;
+    readonly name: string;
+    readonly reviewers: readonly string[];
+  } | null;
+  readonly logbook?: {
+    readonly path: string;
+    readonly isDefault: boolean;
+    readonly documentsPath: readonly string[] | null;
+    readonly inRepository: boolean;
+    readonly oneDrive: boolean;
+    readonly hasWorkspace: boolean;
+  };
+  readonly xora?: { readonly state: "not_installed" };
 }

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { readSettings, SettingsUnreadable, settingsPath } from "./settings.js";
 
 export const WORKSPACE_CONFIG_FILE = "workspace.json";
 export const WORKSPACE_DATABASE_FILE = "workspace.sqlite";
@@ -19,13 +20,32 @@ export class CliUsageError extends Error {
   }
 }
 
-/** Resolution order (ADR-004): --workspace, then LOXORA_WORKSPACE, then <home>/.loxora/workspaces/default. */
+/**
+ * Resolution order (ADR-004, amended by RFC-011 section 4): --workspace, then
+ * LOXORA_WORKSPACE, then `workspacePath` from the app settings file, then
+ * <home>/.loxora/workspaces/default.
+ */
 export function resolveWorkspaceDirectory(
   explicit: string | undefined,
   env: Readonly<Record<string, string | undefined>>,
 ): string {
   if (explicit) return resolve(explicit);
   if (env.LOXORA_WORKSPACE) return resolve(env.LOXORA_WORKSPACE);
+  let settings: ReturnType<typeof readSettings>;
+  try {
+    settings = readSettings(settingsPath(env));
+  } catch (error) {
+    if (!(error instanceof SettingsUnreadable)) throw error;
+    throw new CliUsageError(`${error.message}. Fix the file or pass --workspace.`);
+  }
+  if (settings?.workspacePath) return settings.workspacePath;
+  return defaultWorkspaceDirectory(env);
+}
+
+/** The CLI default workspace, `<home>/.loxora/workspaces/default` (ADR-004). */
+export function defaultWorkspaceDirectory(
+  env: Readonly<Record<string, string | undefined>>,
+): string {
   return join(
     env.LOXORA_HOME ? resolve(env.LOXORA_HOME) : homedir(),
     ".loxora",

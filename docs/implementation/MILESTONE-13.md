@@ -1,6 +1,7 @@
 # Milestone 13: First-launch setup in script mode
 
-**Status:** Proposed — awaiting the decision owner's approval
+**Status:** Authorized; first part (section 12, delivery 1) implemented — awaiting review and merge
+**Authorization date:** October 5, 2026 (this document merged in pull request #30)
 **Decision Owner:** Ocomic
 **Change class:** C2 (RFC-008): new HTTP routes, a new per-user settings file, a changed CLI workspace resolution, and a new UI surface
 **Implements:** RFC-011 section 12, milestone 2 (sections 1 to 4, 6 to 9, without a model)

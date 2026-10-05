@@ -717,3 +717,121 @@ code {
 }
 
 /* No animations or transitions are used, so reduced-motion needs no overrides. */
+
+/* First-launch setup (Milestone 13): one question per screen, ship systems beside it. */
+.setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: var(--space);
+  max-width: 980px;
+  margin: 32px auto;
+  padding: 0 var(--space);
+}
+
+.setup-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.setup-header h1,
+.setup-systems h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.setup-question {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.xora-line {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.55;
+}
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setup-form input {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  padding: 10px 12px;
+  max-width: 520px;
+}
+
+.setup-back {
+  align-self: flex-start;
+}
+
+.setup-warning {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--limit);
+  border-radius: var(--radius-small);
+  background: #f59e0b14;
+}
+
+.folder-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  background: var(--surface-2);
+}
+
+.folder-card summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.setup-systems ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 8px;
+  border-radius: 50%;
+}
+
+.status-ready {
+  background: var(--running);
+}
+
+.status-waiting {
+  background: var(--limit);
+}
+
+.status-off {
+  background: var(--neutral);
+}
+
+@media (max-width: 760px) {
+  .setup {
+    grid-template-columns: 1fr;
+    margin: 16px auto;
+  }
+}

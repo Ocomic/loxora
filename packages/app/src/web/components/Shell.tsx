@@ -7,10 +7,10 @@ import type { WorkspaceInfo } from "../types.js";
 
 /**
  * Stable shell (RFC-010, section 3). Only implemented sections appear in the navigation,
- * so there are no dead ends; Station, Crew, Chat, Memory, and Settings follow later.
+ * so there are no dead ends; Station, Crew, Chat, Memory, and Settings follow later. During
+ * the first-launch setup only the language switch is shown.
  */
-export function Shell({ children }: { children: ReactNode }) {
-  const workspace = usePolling<WorkspaceInfo>("/api/workspace", 30000);
+export function Shell({ children, setup = false }: { children: ReactNode; setup?: boolean }) {
   const mainId = useId();
   const t = useLabels();
   const { language, setLanguage } = useLanguage();
@@ -27,22 +27,15 @@ export function Shell({ children }: { children: ReactNode }) {
             <small>Local · Knowledge · Crew</small>
           </span>
         </div>
-        <nav aria-label={t.shell.sections} className="sections">
-          <NavLink to="/missions" className="section">
-            {t.shell.missions}
-          </NavLink>
-        </nav>
+        {setup ? null : (
+          <nav aria-label={t.shell.sections} className="sections">
+            <NavLink to="/missions" className="section">
+              {t.shell.missions}
+            </NavLink>
+          </nav>
+        )}
         <div className="topbar-status">
-          {workspace.data ? (
-            <>
-              <span className="workspace-name" title={t.shell.workspace}>
-                {workspace.data.name}
-              </span>
-              <span className="badge badge-neutral" title={t.shell.actorTitle}>
-                {workspace.data.actor ? t.shell.actor(workspace.data.actor) : t.shell.readOnly}
-              </span>
-            </>
-          ) : null}
+          {setup ? null : <WorkspaceStatus />}
           <fieldset className="language-switch">
             <legend className="visually-hidden">{t.shell.language}</legend>
             {LANGUAGES.map((option) => (
@@ -64,5 +57,22 @@ export function Shell({ children }: { children: ReactNode }) {
         {children}
       </div>
     </div>
+  );
+}
+
+/** The workspace name and the acting human; not shown during the setup, which has neither. */
+function WorkspaceStatus() {
+  const workspace = usePolling<WorkspaceInfo>("/api/workspace", 30000);
+  const t = useLabels();
+  if (!workspace.data) return null;
+  return (
+    <>
+      <span className="workspace-name" title={t.shell.workspace}>
+        {workspace.data.name}
+      </span>
+      <span className="badge badge-neutral" title={t.shell.actorTitle}>
+        {workspace.data.actor ? t.shell.actor(workspace.data.actor) : t.shell.readOnly}
+      </span>
+    </>
   );
 }

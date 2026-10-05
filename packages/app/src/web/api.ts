@@ -4,6 +4,8 @@ export class ApiError extends Error {
   public constructor(
     message: string,
     public readonly status: number,
+    /** The server's error kind, for example "CaptainNeeded". */
+    public readonly kind: string | null = null,
   ) {
     super(message);
   }
@@ -13,7 +15,11 @@ export async function api<T>(path: string): Promise<T> {
   const response = await fetch(path, { headers: { accept: "application/json" } });
   const value = (await response.json()) as { message?: string; error?: string };
   if (!response.ok) {
-    throw new ApiError(value.message ?? value.error ?? "Request failed", response.status);
+    throw new ApiError(
+      value.message ?? value.error ?? "Request failed",
+      response.status,
+      value.error ?? null,
+    );
   }
   return value as T;
 }
@@ -27,7 +33,11 @@ export async function post<T>(path: string, body: Record<string, unknown>): Prom
   });
   const value = (await response.json()) as { message?: string; error?: string };
   if (!response.ok) {
-    throw new ApiError(value.message ?? value.error ?? "Request failed", response.status);
+    throw new ApiError(
+      value.message ?? value.error ?? "Request failed",
+      response.status,
+      value.error ?? null,
+    );
   }
   return value as T;
 }
