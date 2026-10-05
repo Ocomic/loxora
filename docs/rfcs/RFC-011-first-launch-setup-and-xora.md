@@ -1,8 +1,8 @@
 # RFC-011 — First Launch, Setup, and Xora
 
 **Status:** Accepted
-**Version:** 1.0
-**Last Updated:** October 4, 2026
+**Version:** 1.1 (Amendment 1)
+**Last Updated:** October 5, 2026
 **Decision Date:** October 4, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (new UI surfaces, new HTTP routes, workspace discovery, an assistant capability), with C3 parts that only the decision owner decides (section 11)
@@ -272,3 +272,38 @@ Rejected. The system language is almost always right, and the switch is always v
 ## Decision
 
 Accepted by Ocomic on October 4, 2026, after the proposal was merged in pull request #27. The acceptance authorizes milestone documents for the milestones in section 12, one at a time; each milestone starts only when its document is merged. It does not authorize the C3 items in section 11, and the open questions above remain open. The first milestone document is [Milestone 12](../implementation/MILESTONE-12.md) (UI write path). The second is [Milestone 13](../implementation/MILESTONE-13.md) (setup in script mode), implemented in two parts; the manual Windows check by the decision owner is still open.
+
+Amendment 1 (October 5, 2026) changes the shape of the setup to a conversation with Xora and authorizes a third milestone document for it, [Milestone 14](../implementation/MILESTONE-14.md). It does not change sections 2 to 7 or 9 to 11.
+
+## Amendments
+
+### Amendment 1 — Setup as a conversation with Xora (October 5, 2026)
+
+Decided by Ocomic after reviewing a clickable design prototype (validation stage 2 in section 10, without a live human playing Xora yet). The prototype was built and reviewed outside the repository; the fixed texts move into the label module with the implementation.
+
+**What changes**
+
+- **One conversation instead of screens.** Parts B, C, and D of section 1 become one conversation with Xora on the setup surface. The Xora input bar at the bottom is the real input during the setup: the person can type an answer or tap one of two to four answer buttons under Xora's latest message. Everything can still be completed by clicking only.
+- **Five visible steps.** A progress bar shows: Name, Ship, Logbook, Project, Bridge. The captain's name is asked first and used in every later message and in the header.
+- **Short.** The setup ends on the bridge as soon as a project exists, or earlier if the person chooses "Look around first". The first Mission (part E) leaves the setup. It becomes the first task offered on the bridge (see below). This replaces the goal "The setup ends with a project and a first Mission in the needs input state" with: the setup ends on the bridge with a project, and the bridge offers the first Mission.
+- **Start screen.** While the server, the logbook, and Xora start, the setup shows "Establishing connection to the command center" ("Verbindung zum Kommandozentrum wird hergestellt") with one line per real start state (part A). It shows no invented progress: each line reports a state the server has actually checked. Xora's picture stays dimmed until she is available (in script mode: until the scripted assistant is ready).
+- **Terms explained as they appear.** Next to Xora, a "Ship terms" list ("Bordbegriffe") collects each metaphor term the first time it is used, with one sentence each: captain, first officer, ship, logbook, project, bridge, Mission, crew. This is how the UI-VISION requirement "every term is explained" is met in the setup.
+- **New or existing project.** Xora asks whether to start a new project, add an existing one, or look around first. "New" asks for one or two sentences about the plan, stored unchanged as the purpose, and shows the project on a confirmation card in the conversation. **Adding an existing project is shown but not active**: reading an existing folder is RFC-005 project preparation, an import, and stays a separate decision (AGENTS.md, "Always gated"). Until then Xora says in one sentence that this comes in a later version and offers to start a new project instead.
+- **Script mode is visible, quietly.** While no model runs, a status line next to Xora reads "Online · script mode". When Xora does not understand typed text, she says so in one sentence and points to the answer buttons. She never pretends to understand free text she cannot handle.
+- **Back.** Instead of a Back button on every screen, each confirmation card offers "Change", and nothing is written before the card is confirmed (section 6 is unchanged).
+
+**Visual direction**
+
+- The decision owner chose the "console" style for the product UI: dark background with a fine grid, cyan for the ship's elements, magenta for Xora, cut corners, and a display typeface only for headings and buttons. In the setup, Xora sits in a column on the left with her picture, name plate, status, and the ship terms; the conversation is on the right.
+- Xora's picture is a character illustration supplied by the decision owner. The same picture is used in color and, for transmissions, with a hologram effect created by the UI. Before it is committed to the repository, the decision owner records which tool created it and confirms that its terms allow use in an Apache-2.0 project.
+- Typefaces are bundled with the app and never loaded from the internet, so the local-first rule holds.
+
+**What stays**
+
+- Sections 2 to 7 and 9 to 11: script mode, where answers are stored, workspace resolution, the assistant capability, Xora's rights and confirmation cards, the first knowledge proposal, the setup API, the validation stages, and the C3 decisions.
+- Milestone 13's setup state, writes, and tests remain the base. Milestone 14 changes the surface and the order, not the data model.
+
+**Open questions added**
+
+8. **Bridge tutorial.** How the bridge introduces the first Mission (part E): as an empty-state offer, as a guided tour, or by Xora on her first live start. Milestone 14 keeps the existing first-Mission steps reachable from the bridge; their final shape follows with the bridge design.
+9. **Ship terms after setup.** Where the ship terms stay reachable after the setup (for example a help panel or a question to Xora).
