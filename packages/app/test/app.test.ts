@@ -7,7 +7,13 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { runCli } from "@loxora/cli";
 import { ActorRejected, startAppServer } from "../src/index.js";
-import { LABELS, relativeTime, statusLabel, systemLanguage } from "../src/web/labels.js";
+import {
+  LABELS,
+  relativeTime,
+  startLanguage,
+  statusLabel,
+  systemLanguage,
+} from "../src/web/labels.js";
 
 async function cli(workspace: string, ...argv: string[]) {
   let stdout = "";
@@ -149,7 +155,14 @@ test("the read API lists missions by attention, with counts per filter", async (
   const { workspace, input, limited, running } = await workspaceWithMissions(t);
   const server = await serve(t, workspace);
   const info = await get(`${server.url}/api/workspace`);
-  assert.deepEqual(info.body, { name: "lab", reviewers: ["Ocomic"], actor: null, readOnly: true });
+  assert.deepEqual(info.body, {
+    name: "lab",
+    reviewers: ["Ocomic"],
+    actor: null,
+    actorSource: null,
+    readOnly: true,
+    setupComplete: true,
+  });
   const list = await get(`${server.url}/api/missions`);
   assert.equal(list.status, 200);
   assert.deepEqual(list.body.counts, {
@@ -275,7 +288,9 @@ test("write mode needs a human workspace actor", async (t) => {
     name: "lab",
     reviewers: ["Ocomic"],
     actor: "Ocomic",
+    actorSource: "flag",
     readOnly: false,
+    setupComplete: true,
   });
 });
 
@@ -499,6 +514,25 @@ test("the default language follows the system language", () => {
   assert.equal(systemLanguage(["en-US", "de-DE"]), "en");
   assert.equal(systemLanguage(["fr-FR"]), "en");
   assert.equal(systemLanguage([]), "en");
+});
+
+test("the settings file decides the language; a browser choice is imported once", () => {
+  assert.deepEqual(startLanguage({ available: true, language: "en" }, "de", "de"), {
+    language: "en",
+    importBrowserChoice: false,
+  });
+  assert.deepEqual(startLanguage({ available: true, language: null }, "en", "de"), {
+    language: "en",
+    importBrowserChoice: true,
+  });
+  assert.deepEqual(startLanguage({ available: true, language: null }, null, "de"), {
+    language: "de",
+    importBrowserChoice: false,
+  });
+  assert.deepEqual(startLanguage({ available: false, language: null }, "en", "de"), {
+    language: "en",
+    importBrowserChoice: false,
+  });
 });
 
 test("browser source cannot import server, Core, SQLite, CLI, or Node APIs", () => {
