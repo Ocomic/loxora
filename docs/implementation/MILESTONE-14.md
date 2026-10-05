@@ -13,7 +13,7 @@
 
 ## Goal
 
-A person starts `@loxora/app` without a workspace and sets up their ship in a short conversation with Xora, in German or English: name, ship, logbook, project, bridge. They can type or tap every answer. The setup ends on the bridge, where the first Mission is offered.
+A person starts `@loxora/app` without a workspace and sets up their ship in a short conversation with Xora, in German or English: name, ship, logbook, project, bridge. They can type every answer, and every answer except their name can also be tapped. The setup ends on the bridge, where the first Mission is offered.
 
 There is still no language model. Xora's replies are fixed texts, and typed answers are matched by a small, documented keyword list per language (script mode, RFC-011 section 2). When Xora does not understand, she says so.
 
@@ -47,7 +47,7 @@ The Milestone 13 setup screens (scenes A4 to C3) and the first-steps screen for 
 
 - **Existing ship (Milestone 13 scene B0).** If the settings file or the CLI default has a workspace, Xora offers to open it in place before the Ship step. The captain must be a reviewer, as in Milestone 13. The Ship and Logbook steps are then marked done.
 - **Logbook.** The OneDrive hint, the Git guard, and the existing-workspace check of Milestone 13 section 6 stay; Xora says them as messages. "Choose another folder" shows a path field inside the conversation. The workspace is created after the person confirms the folder (Milestone 13 section 7, unchanged).
-- **New project.** Xora asks for one or two sentences about the plan. The text is stored unchanged as the project purpose. Xora suggests a name and the knowledge spaces from the keyword list (a game, a website, texts or a book, otherwise the "other" spaces of Milestone 13) and shows a confirmation card in the conversation with "Create" and "Change name". Only "Create" executes the existing `createProject` action (Milestone 13 sections 7 and 8).
+- **New project.** Xora asks for one or two sentences about the plan, with the answer buttons "A game", "A website", "Texts or a book", and "Something else". A typed text is stored unchanged as the project purpose; a button uses the purpose of the matching Milestone 13 goal template, and "Something else" asks for a short text. Xora suggests a name and the knowledge spaces from the keyword list (a game, a website, texts or a book, otherwise the "other" spaces of Milestone 13) and shows a confirmation card in the conversation with "Create" and "Change name". Only "Create" executes the existing `createProject` action (Milestone 13 sections 7 and 8).
 - **Add an existing project.** Shown, but not active. Xora says in one sentence that this comes in a later version and offers "Start a new project instead" and "Look around first". No folder is read.
 - **Look around first.** Ends the setup without a project.
 - **End.** The setup ends on the bridge (Mission Control) after "Create" or "Look around first". It sets `setup.completedAt`.
@@ -86,7 +86,7 @@ The Milestone 13 routes stay with their request protection. Changes:
 
 - Console style tokens (colors, cut corners, glow, grid background) as CSS custom properties in `@loxora/app`. They are used by the setup surface, the header, and the input bar on every screen.
 - Typefaces: Orbitron (headings and buttons), Exo 2 (text), Share Tech Mono (labels), all under the SIL Open Font License. They are bundled with the app with their license texts and never loaded from the internet.
-- Mission Control's own layouts (overview and Mission detail) keep their structure in this milestone and are restyled with the bridge design.
+- Mission Control's own layouts (overview and Mission detail) are not restyled in this milestone; only the header and the input bar get the new style there (see non-scope). Their restyling follows with the bridge design in a later milestone.
 
 ### 9. Xora's picture
 
@@ -98,7 +98,7 @@ The Milestone 13 routes stay with their request protection. Changes:
 
 - **Unit tests:** the keyword list per language (each step's matches, the "not understood" fallback, free-text steps never rejected); label parity for all new texts and ship terms.
 - **Server tests:** the setup conversation runs the Milestone 13 writes unchanged; the existing-project choice writes nothing and reads no folder; "Look around first" ends the setup without a project; the first Mission offer appears on the bridge and is gone after it is finished or dismissed; a settings file with the old intro flag still loads.
-- **Playwright end-to-end tests** in script mode, with a temporary `LOXORA_HOME`: the full setup in German by tapping, the full setup in English by typing, opening an existing workspace, "Look around first", the not-understood reply, and the first Mission from the bridge. The Milestone 13 tests are replaced where they cover removed screens.
+- **Playwright end-to-end tests** in script mode, with a temporary `LOXORA_HOME`: the full setup in German by tapping (apart from the name), the full setup in English by typing, opening an existing workspace, "Look around first", the not-understood reply, and the first Mission from the bridge. The Milestone 13 tests are replaced where they cover removed screens.
 - **Manual check** on Windows by the decision owner: the whole conversation in both languages, the Documents location, and typing and tapping. The Milestone 13 Windows check can be recorded in the same pass.
 - **Documentation:** `APP.md` (setup surface, routes, keyword list), RFC-011 (Milestone 14 implemented), the RFC index, `open-questions.md`, and `AGENTS.md` (milestone list).
 
@@ -106,8 +106,8 @@ The Milestone 13 routes stay with their request protection. Changes:
 
 Two pull requests:
 
-1. Visual base (tokens, typefaces, header and input bar style, placeholder picture), start screen, the conversation with script-mode parsing, ship terms, routes, and the setup tests. The first Mission stays reachable through the Milestone 13 banner.
-2. First Mission on the bridge (section 4), the remaining Playwright tests, and the documentation. Xora's real picture is added here or later, once section 9 is satisfied.
+1. Tokens and typefaces for the setup surface, placeholder picture, start screen, the conversation with script-mode parsing, ship terms, routes, and the first Mission offer on the bridge (section 4), with their server and Playwright tests. The offer ships together with the new end of the setup, because ending the setup sets `setup.completedAt`, which hides the Milestone 13 first-steps banner; so there is no state in which a new project has no route to its first Mission.
+2. Header and input bar style on every screen, the remaining Playwright tests, and the documentation. Xora's real picture is added here or later, once section 9 is satisfied.
 
 ## Choices made in this document
 
@@ -134,7 +134,7 @@ These follow from Amendment 1 but were not decided there. The decision owner can
 
 | Check | Evidence |
 |---|---|
-| The setup is one conversation with five visible steps, completable by tapping only and by typing only | Playwright |
+| The setup is one conversation with five visible steps, completable by typing only, and by tapping only apart from the name (with the default logbook and a fixed project button) | Playwright |
 | The start screen shows only states the server reported | server and Playwright tests |
 | Unknown typed answers get the not-understood reply; free-text steps accept any text | unit tests |
 | The setup writes exactly what Milestone 13 section 7 lists for parts B and D, only after confirmed cards | server tests |
