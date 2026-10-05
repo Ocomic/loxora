@@ -1,6 +1,6 @@
 # Milestone 13: First-launch setup in script mode
 
-**Status:** Authorized; first part (section 12, delivery 1) implemented — awaiting review and merge
+**Status:** Authorized; both parts (section 12) implemented: delivery 1 in pull request #31, delivery 2 awaiting review and merge. The manual Windows check (section 11) is still open.
 **Authorization date:** October 5, 2026 (this document merged in pull request #30)
 **Decision Owner:** Ocomic
 **Change class:** C2 (RFC-008): new HTTP routes, a new per-user settings file, a changed CLI workspace resolution, and a new UI surface

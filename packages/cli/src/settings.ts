@@ -24,6 +24,18 @@ export interface AppSettings {
     readonly logbookPath?: string;
     /** When the orientation (scenes C2 and C3) was shown to the end. */
     readonly introducedAt?: string;
+    /**
+     * What the first steps (parts D and E) already wrote, so a repeated step continues
+     * instead of creating duplicates.
+     */
+    readonly purpose?: string;
+    readonly projectId?: string;
+    readonly spaceIds?: readonly string[];
+    readonly collectionId?: string;
+    readonly missionId?: string;
+    readonly sourceId?: string;
+    readonly evidenceId?: string;
+    readonly proposalId?: string;
     readonly completedAt?: string;
   };
 }
@@ -94,6 +106,14 @@ function validateSettings(path: string, value: unknown): AppSettings {
     }
     return entry.trim();
   };
+  const textList = (key: string, source: Record<string, unknown>) => {
+    const entry = source[key];
+    if (entry === undefined) return undefined;
+    if (!Array.isArray(entry) || entry.some((item) => typeof item !== "string" || !item)) {
+      throw new SettingsUnreadable(path, `Settings field ${key} must be a list of strings`);
+    }
+    return entry as readonly string[];
+  };
   const absolute = (key: string, source?: Record<string, unknown>) => {
     const entry = text(key, source);
     if (entry !== undefined && !isAbsolute(entry)) {
@@ -118,6 +138,14 @@ function validateSettings(path: string, value: unknown): AppSettings {
     ...optionalField("shipName", text("shipName", setupRecord)),
     ...optionalField("logbookPath", absolute("logbookPath", setupRecord)),
     ...optionalField("introducedAt", text("introducedAt", setupRecord)),
+    ...optionalField("purpose", text("purpose", setupRecord)),
+    ...optionalField("projectId", text("projectId", setupRecord)),
+    ...optionalField("spaceIds", textList("spaceIds", setupRecord)),
+    ...optionalField("collectionId", text("collectionId", setupRecord)),
+    ...optionalField("missionId", text("missionId", setupRecord)),
+    ...optionalField("sourceId", text("sourceId", setupRecord)),
+    ...optionalField("evidenceId", text("evidenceId", setupRecord)),
+    ...optionalField("proposalId", text("proposalId", setupRecord)),
     ...optionalField("completedAt", text("completedAt", setupRecord)),
   };
   return {

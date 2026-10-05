@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { runCli } from "@loxora/cli";
+import { WORKSPACE_EXPORT_SECTIONS, workspaceExportRecords } from "@loxora/core";
+import { openSqliteReadOnlyStore } from "@loxora/sqlite";
 import { startAppServer } from "../src/index.js";
 import { captainId, isOneDrivePath } from "../src/server/setup.js";
 
@@ -143,12 +145,28 @@ test("without a workspace the app runs the setup, then Mission Control with the 
   assert.deepEqual((await get(`${server.url}/api/setup`)).body, {
     mode: "ready",
     introPending: true,
+    firstSteps: {
+      pending: true,
+      stage: "goal",
+      projectId: null,
+      purpose: null,
+      missionId: null,
+      answer: null,
+    },
   });
   const intro = await post(server.url, "/api/setup/intro", {});
   assert.deepEqual(intro.body, { mode: "ready", introPending: false });
   assert.deepEqual((await get(`${server.url}/api/setup`)).body, {
     mode: "ready",
     introPending: false,
+    firstSteps: {
+      pending: true,
+      stage: "goal",
+      projectId: null,
+      purpose: null,
+      missionId: null,
+      answer: null,
+    },
   });
   assert.match(
     String((settingsOf(place).setup as { introducedAt?: string }).introducedAt),
@@ -353,4 +371,263 @@ test("a fixed workspace never runs the setup, and setup writes keep the request 
   );
   assert.equal(foreign.status, 403);
   assert.equal(existsSync(place.settingsPath), false);
+});
+
+/** A set-up logbook with the captain "alex", ready for the first steps (parts D and E). */
+async function setUp(t: test.TestContext) {
+  const place = home(t);
+  const server = await serve(t, place);
+  await post(server.url, "/api/setup/answers", { name: "Alex", shipName: "Nova" });
+  await post(server.url, "/api/setup/workspace", { action: "create" });
+  await post(server.url, "/api/setup/intro", {});
+  return { place, server, logbook: join(place.documents, "Loxora") };
+}
+
+async function records(logbook: string, name: string) {
+  const store = await openSqliteReadOnlyStore(join(logbook, "workspace.sqlite"), "007_missions");
+  try {
+    const spec = WORKSPACE_EXPORT_SECTIONS.find((entry) => entry.name === name);
+    assert.ok(spec, name);
+    return workspaceExportRecords(await store.readWorkspaceExport(), spec) as readonly Record<
+      string,
+      unknown
+    >[];
+  } finally {
+    await store.close();
+  }
+}
+
+async function propose(url: string, body: Record<string, unknown>) {
+  const reply = await post(url, "/api/assistant/message", { language: "en", ...body });
+  assert.equal(reply.status, 200, JSON.stringify(reply.body));
+  const action = reply.body.action as Record<string, unknown>;
+  assert.equal(typeof action.id, "string");
+  return action;
+}
+
+async function confirm(url: string, actionId: unknown, yes = true) {
+  return post(url, "/api/assistant/confirm", { actionId, confirm: yes });
+}
+
+test("the first steps write the project, the Mission, and accepted knowledge after confirmation", async (t) => {
+  const { server, logbook, place } = await setUp(t);
+  const goal = { choice: "goal", goal: "game", projectName: "My game" };
+  const declined = await propose(server.url, goal);
+  assert.deepEqual(
+    { ...declined, id: "" },
+    {
+      id: "",
+      kind: "createProject",
+      name: "My game",
+      purpose: "Develop a game of my own.",
+      spaces: ["Ideas", "Tasks", "Decisions"],
+      collection: "Project goal",
+    },
+  );
+  assert.equal((await records(logbook, "projects")).length, 0, "a proposal never writes");
+  assert.equal((await confirm(server.url, declined.id, false)).body.confirmed, false);
+  assert.equal((await records(logbook, "projects")).length, 0, "declined");
+  assert.equal((await confirm(server.url, declined.id)).body.error, "UnknownAction");
+
+  const project = await propose(server.url, goal);
+  const created = await confirm(server.url, project.id);
+  assert.equal(created.status, 200, JSON.stringify(created.body));
+  assert.equal((created.body.firstSteps as Record<string, unknown>).stage, "mission");
+  assert.equal((await confirm(server.url, project.id)).body.error, "UnknownAction", "only once");
+  const again = await confirm(server.url, (await propose(server.url, goal)).id);
+  assert.equal(again.status, 409);
+  assert.equal(again.body.error, "WrongStep");
+
+  const mission = await propose(server.url, { choice: "firstMission" });
+  assert.equal(mission.question, "Who is the project for?");
+  assert.equal(mission.goal, "Record the goal of the project in a few sentences.");
+  assert.equal(mission.rationale, "Scope and style depend on it.");
+  const started = await confirm(server.url, mission.id);
+  const steps = started.body.firstSteps as Record<string, unknown>;
+  assert.equal(steps.stage, "answer");
+  const missionId = String(steps.missionId);
+  const detail = (await get(`${server.url}/api/missions/${missionId}`)).body;
+  assert.equal(detail.state, "waiting");
+  const answered = await post(server.url, `/api/missions/${missionId}/answer`, {
+    sequence: detail.sequence,
+    response: "For myself",
+  });
+  assert.equal(answered.status, 200, JSON.stringify(answered.body));
+  const ready = (await get(`${server.url}/api/setup`)).body.firstSteps as Record<string, unknown>;
+  assert.equal(ready.stage, "record");
+  assert.equal(ready.answer, "For myself");
+  assert.equal(ready.purpose, "Develop a game of my own.");
+
+  const text = "A small game for myself.";
+  const recorded = await confirm(
+    server.url,
+    (await propose(server.url, { choice: "goalText", text })).id,
+  );
+  assert.equal(recorded.status, 200, JSON.stringify(recorded.body));
+  assert.equal((recorded.body.firstSteps as Record<string, unknown>).stage, "hints");
+
+  const projects = await records(logbook, "projects");
+  assert.deepEqual(
+    projects.map((entry) => [entry.name, entry.purpose]),
+    [["My game", "Develop a game of my own."]],
+  );
+  const spaces = await records(logbook, "knowledgeSpaces");
+  assert.deepEqual(spaces.map((entry) => entry.name).sort(), ["Decisions", "Ideas", "Tasks"]);
+  const collections = await records(logbook, "knowledgeCollections");
+  assert.equal(collections.length, 1);
+  assert.equal(
+    spaces.find((entry) => entry.id === collections[0]?.spaceId)?.name,
+    "Ideas",
+    "the collection lies in the first space",
+  );
+  const sources = await records(logbook, "sourceReferences");
+  assert.deepEqual(
+    sources.map((entry) => [entry.kind, entry.title]),
+    [["setup", "Setup conversation"]],
+  );
+  const evidence = await records(logbook, "evidenceReferences");
+  assert.deepEqual(
+    evidence.map((entry) => [entry.summary, entry.locator]),
+    [["Answer to “Who is the project for?”: For myself", `mission:${missionId}`]],
+  );
+  const proposals = await records(logbook, "knowledgeProposals");
+  assert.deepEqual(
+    proposals.map((entry) => [entry.proposedNodeTitle, entry.proposedContent, entry.proposerId]),
+    [["Project goal", text, "agent:xora"]],
+  );
+  const reviews = await records(logbook, "reviewDecisions");
+  assert.deepEqual(
+    reviews.map((entry) => [entry.decision, entry.reviewerId]),
+    [["Accepted", "alex"]],
+  );
+  assert.equal((await records(logbook, "knowledgeRevisions")).length, 1);
+  const audit = await records(logbook, "auditEvents");
+  assert.deepEqual(
+    [...new Set(audit.map((entry) => entry.actorId))].sort(),
+    ["agent:xora", "alex"],
+    "every write is attributed to Xora or the captain",
+  );
+  const finished = (await get(`${server.url}/api/missions/${missionId}`)).body;
+  assert.equal(finished.state, "completed");
+  const events = (await get(`${server.url}/api/missions/${missionId}/events`)).body as unknown as {
+    type: string;
+    actorId: string;
+  }[];
+  assert.deepEqual(
+    events.map((event) => `${event.type}:${event.actorId}`),
+    [
+      "Created:agent:xora",
+      "Started:agent:xora",
+      "Waiting:agent:xora",
+      "AttentionAnswered:alex",
+      "Resumed:agent:xora",
+      "Completed:agent:xora",
+    ],
+  );
+
+  const finish = await post(server.url, "/api/setup/finish", {});
+  assert.deepEqual(finish.body, { mode: "ready", setupComplete: true });
+  assert.equal((await get(`${server.url}/api/workspace`)).body.setupComplete, true);
+  const late = await confirm(
+    server.url,
+    (await propose(server.url, { choice: "goalText", text })).id,
+  );
+  assert.equal(late.body.error, "SetupFinished");
+  assert.match(String((settingsOf(place).setup as Record<string, unknown>).completedAt), /^\d{4}-/);
+});
+
+test("a repeated first step continues from the ids it already wrote", async (t) => {
+  const { server, logbook, place } = await setUp(t);
+  const goal = { choice: "goal", goal: "other", purpose: "Plan a garden.", projectName: "Garden" };
+  assert.equal((await confirm(server.url, (await propose(server.url, goal)).id)).status, 200);
+  // Simulate a failure after the second space: forget the last space and the collection.
+  const settings = settingsOf(place);
+  const setup = settings.setup as Record<string, unknown>;
+  const spaceIds = setup.spaceIds as string[];
+  writeFileSync(
+    place.settingsPath,
+    JSON.stringify({
+      ...settings,
+      setup: { ...setup, spaceIds: spaceIds.slice(0, 2), collectionId: undefined },
+    }),
+  );
+  assert.equal(
+    ((await get(`${server.url}/api/setup`)).body.firstSteps as Record<string, unknown>).stage,
+    "goal",
+  );
+  const repeated = await confirm(server.url, (await propose(server.url, goal)).id);
+  assert.equal(repeated.status, 200, JSON.stringify(repeated.body));
+  assert.equal((await records(logbook, "projects")).length, 1, "no second project");
+  assert.equal((await records(logbook, "knowledgeSpaces")).length, 4, "only the missing space");
+  assert.equal((await records(logbook, "knowledgeCollections")).length, 2);
+  assert.equal(
+    ((await records(logbook, "projects"))[0] as Record<string, unknown>).purpose,
+    "Plan a garden.",
+  );
+});
+
+test("two confirmations of the same step at once write the project only once", async (t) => {
+  const { server, logbook } = await setUp(t);
+  const goal = { choice: "goal", goal: "writing", projectName: "Book" };
+  const first = await propose(server.url, goal);
+  const second = await propose(server.url, goal);
+  const results = await Promise.all([
+    confirm(server.url, first.id),
+    confirm(server.url, second.id),
+  ]);
+  assert.deepEqual(results.map((result) => result.status).sort(), [200, 409]);
+  assert.equal((await records(logbook, "projects")).length, 1);
+  assert.equal((await records(logbook, "knowledgeSpaces")).length, 3);
+  assert.equal((await records(logbook, "knowledgeCollections")).length, 1);
+});
+
+test("the first steps need a human captain, a set-up logbook, and valid choices", async (t) => {
+  const place = home(t);
+  const server = await serve(t, place);
+  const early = await post(server.url, "/api/assistant/message", { choice: "firstMission" });
+  assert.equal(early.status, 409);
+  assert.equal(early.body.error, "NotReady");
+  const bar = await post(server.url, "/api/assistant/message", { text: "Hello Xora" });
+  assert.deepEqual(bar.body, { reply: "notOnBoard" });
+  const topic = await post(server.url, "/api/assistant/message", {
+    text: "What are missions?",
+    topic: "missions",
+  });
+  assert.deepEqual(topic.body, { reply: "missions" });
+  assert.equal(
+    (await post(server.url, "/api/assistant/message", { choice: "launch" })).body.error,
+    "Invalid",
+  );
+  assert.equal(
+    (await post(server.url, "/api/assistant/message", { text: "x" }, "http://evil.example")).status,
+    403,
+  );
+  assert.equal((await post(server.url, "/api/setup/finish", {})).body.error, "NotReady");
+
+  const workspace = join(place.root, "ws");
+  await cli(workspace, "workspace", "init", "--reviewer", "Ocomic", "--name", "lab");
+  mkdirSync(join(place.root, ".loxora"), { recursive: true });
+  writeFileSync(
+    place.settingsPath,
+    JSON.stringify({ configVersion: 1, captain: "Someone", workspacePath: workspace }),
+  );
+  const refused = await post(server.url, "/api/assistant/message", {
+    choice: "goal",
+    goal: "website",
+    projectName: "Site",
+  });
+  assert.equal(refused.status, 403);
+  assert.equal(refused.body.error, "ReadOnly");
+  assert.equal((await confirm(server.url, "unknown")).body.error, "ReadOnly");
+  assert.equal(
+    (
+      await post(server.url, "/api/assistant/message", {
+        choice: "goal",
+        goal: "other",
+        projectName: "X",
+      })
+    ).body.error,
+    "Invalid",
+    "something else needs a purpose",
+  );
 });

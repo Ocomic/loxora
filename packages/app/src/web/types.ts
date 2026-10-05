@@ -138,4 +138,46 @@ export interface SetupInfo {
     readonly reviewers: readonly string[];
   };
   readonly xora?: { readonly state: "not_installed" };
+  /** Ready mode: the first steps (parts D and E). */
+  readonly firstSteps?: FirstSteps;
+}
+
+export type FirstStepsStage = "goal" | "mission" | "answer" | "record" | "hints";
+
+export interface FirstSteps {
+  readonly pending: boolean;
+  readonly stage: FirstStepsStage;
+  readonly projectId: string | null;
+  readonly purpose: string | null;
+  readonly missionId: string | null;
+  readonly answer: string | null;
+}
+
+export type Goal = "game" | "website" | "writing" | "other";
+
+/** A proposed action of `POST /api/assistant/message`; nothing is written before confirm. */
+export type ProposedAction = { readonly id: string } & (
+  | {
+      readonly kind: "createProject";
+      readonly name: string;
+      readonly purpose: string;
+      readonly spaces: readonly string[];
+      readonly collection: string;
+    }
+  | {
+      readonly kind: "startFirstMission";
+      readonly title: string;
+      readonly goal: string;
+      readonly question: string;
+      readonly rationale: string;
+      readonly options: readonly { option: string; consequence: string }[];
+    }
+  | { readonly kind: "recordGoal"; readonly title: string; readonly content: string }
+);
+
+export interface AssistantReply {
+  readonly text?: string;
+  /** A fixed reply key; the text is in the labels. */
+  readonly reply?: "notOnBoard" | "missions";
+  readonly action?: ProposedAction;
 }

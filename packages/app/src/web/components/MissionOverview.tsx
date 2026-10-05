@@ -5,6 +5,7 @@ import { relativeTime } from "../labels.js";
 import type { MissionFilter, MissionList, MissionSummary } from "../types.js";
 import { MissionDetailView } from "./MissionDetailView.js";
 import { StatusBadge } from "./StatusBadge.js";
+import { useXora } from "./XoraBar.js";
 
 const FILTERS: readonly MissionFilter[] = [
   "all",
@@ -105,6 +106,7 @@ function MissionGroup({
 
 function MissionTable({ title, list }: { title: string; list: MissionList | null }) {
   const t = useLabels();
+  const xora = useXora();
   if (!list) return <p className="muted">{t.overview.loading}</p>;
   return (
     <section className="panel">
@@ -113,9 +115,16 @@ function MissionTable({ title, list }: { title: string; list: MissionList | null
         <span className="muted">{t.overview.sortedBy}</span>
       </header>
       {list.missions.length === 0 ? (
-        <p className="empty">
-          {t.overview.empty} <code>loxora mission create</code>.
-        </p>
+        <div className="empty">
+          <p>{t.overview.empty}</p>
+          <button
+            type="button"
+            className="button button-quiet"
+            onClick={() => xora.ask(t.xora.askMissions, "missions")}
+          >
+            {t.xora.askMissions}
+          </button>
+        </div>
       ) : (
         <ul className="mission-rows">
           {list.missions.map((mission) => (
