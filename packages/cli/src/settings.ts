@@ -22,6 +22,8 @@ export interface AppSettings {
     /** Answers of part B kept until the workspace exists. */
     readonly shipName?: string;
     readonly logbookPath?: string;
+    /** When the orientation (scenes C2 and C3) was shown to the end. */
+    readonly introducedAt?: string;
     readonly completedAt?: string;
   };
 }
@@ -115,6 +117,7 @@ function validateSettings(path: string, value: unknown): AppSettings {
   const setupValue = {
     ...optionalField("shipName", text("shipName", setupRecord)),
     ...optionalField("logbookPath", absolute("logbookPath", setupRecord)),
+    ...optionalField("introducedAt", text("introducedAt", setupRecord)),
     ...optionalField("completedAt", text("completedAt", setupRecord)),
   };
   return {

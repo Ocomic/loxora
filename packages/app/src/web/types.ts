@@ -115,6 +115,8 @@ export interface WorkspaceInfo {
 export interface SetupInfo {
   readonly mode: "fixed" | "ready" | "setup" | "settingsError";
   readonly settingsError?: string;
+  /** Ready, but the orientation after creating the logbook was not shown to the end. */
+  readonly introPending?: boolean;
   readonly answers?: {
     readonly name: string | null;
     readonly captain: string | null;
@@ -133,6 +135,7 @@ export interface SetupInfo {
     readonly inRepository: boolean;
     readonly oneDrive: boolean;
     readonly hasWorkspace: boolean;
+    readonly reviewers: readonly string[];
   };
   readonly xora?: { readonly state: "not_installed" };
 }

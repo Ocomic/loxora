@@ -24,6 +24,7 @@ import { openSqliteReadOnlyStore, openSqliteWritableStore } from "@loxora/sqlite
 import {
   createOrOpenWorkspace,
   loadSettings,
+  markIntroduced,
   type SetupEnvironment,
   SetupRejected,
   setupState,
@@ -346,6 +347,7 @@ function setupInfo(context: ApiContext) {
     ...(context.mode === "setup" && context.environment && context.settings
       ? setupState(context.environment, context.settings)
       : {}),
+    ...(context.mode === "ready" ? { introPending: !context.settings?.setup?.introducedAt } : {}),
   };
 }
 
@@ -461,6 +463,7 @@ async function api(
 const SETUP_ROUTES = [
   "/api/setup/answers",
   "/api/setup/workspace",
+  "/api/setup/intro",
   "/api/settings/language",
 ] as const;
 
@@ -474,6 +477,13 @@ async function setupWrite(
     storeLanguage(settingsPath, body);
     return { language: loadSettings(settingsPath).language ?? null };
   }
+  if (route === "/api/setup/intro") {
+    if (context.mode !== "ready") {
+      throw new RequestRejected(409, "NotReady", "The logbook does not exist yet");
+    }
+    markIntroduced(settingsPath);
+    return { mode: "ready", introPending: false };
+  }
   const environment = context.environment;
   if (context.mode !== "setup" || !environment) {
     throw new RequestRejected(409, "NotInSetup", "Loxora is already set up");
@@ -484,7 +494,9 @@ async function setupWrite(
   const ready =
     settings.workspacePath !== undefined &&
     existsSync(join(settings.workspacePath, WORKSPACE_CONFIG_FILE));
-  return ready ? { mode: "ready" } : { mode: "setup", ...setupState(environment, settings) };
+  return ready
+    ? { mode: "ready", introPending: true }
+    : { mode: "setup", ...setupState(environment, settings) };
 }
 
 /**

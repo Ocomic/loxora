@@ -38,7 +38,7 @@ A per-user JSON file (RFC-011 section 3). It holds no secrets and no project kno
 | `workspacePath` | absolute path of the logbook; the CLI reads it as resolution step 3 (`CLI.md`) |
 | `language` | `de` or `en`; absent means the browser's language |
 | `xora` | `{ "state": "not_installed" }` |
-| `setup` | the answers of part B until the workspace exists; `completedAt` once the first steps (parts D and E) are done or skipped |
+| `setup` | the answers of part B until the workspace exists; `introducedAt` once the orientation (C2, C3) was shown to the end; `completedAt` once the first steps (parts D and E) are done or skipped |
 
 - Writes are atomic (a temporary file, then a rename).
 - An invalid file or an unknown `configVersion` is never overwritten. The app then shows that the file needs attention and acts on nothing.
@@ -54,7 +54,7 @@ The setup follows the dialog script of RFC-011 in script mode: every text is fix
 | B1 | Name. If it gives no usable id, the person is asked for a short name. |
 | B2 | Ship name: "Nova", "Aurora", or own text. It becomes `workspace.json` `name`. |
 | B3 | Logbook folder: `Documents › Loxora` by default (on Windows the real Documents folder, which may be redirected), or a typed full path. Warnings for a folder in a Git working tree (refused), a OneDrive folder, and a folder that already holds a logbook (offered for opening). Then the workspace is created like `loxora workspace init`, with a new store. |
-| C2, C3 | The three orientation sentences, then the note that Xora is not on board in this version yet. "To the bridge" opens Mission Control. |
+| C2, C3 | The three orientation sentences, then the note that Xora is not on board in this version yet. "To the bridge" opens Mission Control. A reload before that returns to the orientation instead of skipping it. |
 
 Parts D and E (first project and first Mission) follow in the second part of Milestone 13. Until then they stay pending and Mission Control is fully usable.
 
@@ -64,9 +64,10 @@ All `POST` routes need the same request protection as the write API below. The s
 
 | Route | Body | Effect |
 |---|---|---|
-| `GET /api/setup` | | `{ mode }` with `fixed`, `ready`, `setup`, or `settingsError`; in setup mode also `answers`, `existing`, `logbook` (path, `documentsPath`, `inRepository`, `oneDrive`, `hasWorkspace`), and `xora` |
+| `GET /api/setup` | | `{ mode }` with `fixed`, `ready`, `setup`, or `settingsError`; in setup mode also `answers`, `existing`, `logbook` (path, `documentsPath`, `inRepository`, `oneDrive`, `hasWorkspace`, and the human `reviewers` of a logbook found there), and `xora`; in ready mode `introPending` |
 | `POST /api/setup/answers` | `{ name?, captain?, shipName?, logbookPath? }` | stores answers; 400 `CaptainNeeded` when no id can be derived |
 | `POST /api/setup/workspace` | `{ action: "create" }` or `{ action: "open", path, captain? }` | creates the workspace in the chosen folder (400 `InRepository`, 409 `WorkspaceExists` or `FolderInUse`) or opens an existing one without migrating it |
+| `POST /api/setup/intro` | `{}` | records that the orientation was shown to the end; 409 `NotReady` before the workspace exists |
 | `GET /api/settings` | | `{ available, language }` |
 | `POST /api/settings/language` | `{ language: "de" \| "en" \| null }` | stores the language |
 

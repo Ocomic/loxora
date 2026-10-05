@@ -102,6 +102,7 @@ test("without a workspace the app runs the setup, then Mission Control with the 
     inRepository: false,
     oneDrive: false,
     hasWorkspace: false,
+    reviewers: [],
   });
   assert.deepEqual(first.body.xora, { state: "not_installed" });
   assert.equal((await get(`${server.url}/api/workspace`)).status, 503);
@@ -114,13 +115,15 @@ test("without a workspace the app runs the setup, then Mission Control with the 
   const named = await post(server.url, "/api/setup/answers", { name: "Alex Müller" });
   assert.equal(named.status, 200);
   assert.deepEqual((named.body.answers as Record<string, unknown>).captain, "alex-mueller");
+  const notReady = await post(server.url, "/api/setup/intro", {});
+  assert.equal(notReady.body.error, "NotReady");
   const early = await post(server.url, "/api/setup/workspace", { action: "create" });
   assert.equal(early.body.error, "Incomplete");
   await post(server.url, "/api/setup/answers", { shipName: "Nova" });
 
   const created = await post(server.url, "/api/setup/workspace", { action: "create" });
   assert.equal(created.status, 200);
-  assert.deepEqual(created.body, { mode: "ready" });
+  assert.deepEqual(created.body, { mode: "ready", introPending: true });
   const logbook = join(place.documents, "Loxora");
   assert.deepEqual(JSON.parse(readFileSync(join(logbook, "workspace.json"), "utf8")), {
     configVersion: 1,
@@ -137,7 +140,20 @@ test("without a workspace the app runs the setup, then Mission Control with the 
     setup: {},
   });
 
-  assert.equal((await get(`${server.url}/api/setup`)).body.mode, "ready");
+  assert.deepEqual((await get(`${server.url}/api/setup`)).body, {
+    mode: "ready",
+    introPending: true,
+  });
+  const intro = await post(server.url, "/api/setup/intro", {});
+  assert.deepEqual(intro.body, { mode: "ready", introPending: false });
+  assert.deepEqual((await get(`${server.url}/api/setup`)).body, {
+    mode: "ready",
+    introPending: false,
+  });
+  assert.match(
+    String((settingsOf(place).setup as { introducedAt?: string }).introducedAt),
+    /^\d{4}-\d\d-\d\dT/,
+  );
   assert.deepEqual((await get(`${server.url}/api/workspace`)).body, {
     name: "Nova",
     reviewers: ["alex-mueller"],
@@ -175,6 +191,7 @@ test("the setup refuses a logbook inside a code project or an existing logbook",
   await post(server.url, "/api/setup/answers", { logbookPath: taken });
   const hint = await get(`${server.url}/api/setup`);
   assert.equal((hint.body.logbook as { hasWorkspace: boolean }).hasWorkspace, true);
+  assert.deepEqual((hint.body.logbook as { reviewers: string[] }).reviewers, ["alex"]);
   const exists = await post(server.url, "/api/setup/workspace", { action: "create" });
   assert.equal(exists.status, 409);
   assert.equal(exists.body.error, "WorkspaceExists");
@@ -219,7 +236,7 @@ test("an existing workspace is offered and opened in place, never migrated", asy
     path: place.defaultWorkspace,
     captain: "Ocomic",
   });
-  assert.deepEqual(opened.body, { mode: "ready" });
+  assert.deepEqual(opened.body, { mode: "ready", introPending: true });
   assert.deepEqual(settingsOf(place), {
     configVersion: 1,
     displayName: "Ocomic",
@@ -243,7 +260,7 @@ test("an outdated workspace opened by the setup still answers 503 and stays unto
   new DatabaseSync(join(outdated, "workspace.sqlite")).close();
   const server = await serve(t, place);
   const opened = await post(server.url, "/api/setup/workspace", { action: "open", path: outdated });
-  assert.deepEqual(opened.body, { mode: "ready" });
+  assert.deepEqual(opened.body, { mode: "ready", introPending: true });
   const missions = await get(`${server.url}/api/missions`);
   assert.equal(missions.status, 503);
   assert.match(String(missions.body.message), /never migrates/);

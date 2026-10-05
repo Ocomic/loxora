@@ -121,6 +121,27 @@ function hasWorkspace(directory: string): boolean {
   return existsSync(join(directory, WORKSPACE_CONFIG_FILE));
 }
 
+/** The human reviewers of a workspace in that folder, to pick the captain from; else []. */
+function humanReviewers(directory: string): readonly string[] {
+  if (!hasWorkspace(directory)) return [];
+  try {
+    return loadWorkspaceConfig(directory).reviewers.filter((id) => !isAgentActor(id));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * `POST /api/setup/intro`: the orientation (scenes C2 and C3) was shown to the end. Until
+ * then a reload after creating the workspace returns to it instead of skipping it.
+ */
+export function markIntroduced(settingsPath: string, now = new Date()): void {
+  updateSettings(settingsPath, (settings) => ({
+    ...settings,
+    setup: { ...settings.setup, introducedAt: now.toISOString() },
+  }));
+}
+
 /** The state of the setup for `GET /api/setup`. */
 export function setupState(environment: SetupEnvironment, settings: AppSettings) {
   const documents = environment.documents();
@@ -158,6 +179,7 @@ export function setupState(environment: SetupEnvironment, settings: AppSettings)
       inRepository: enclosingGitRoot(path) !== null,
       oneDrive: isOneDrivePath(path, environment.env),
       hasWorkspace: hasWorkspace(path),
+      reviewers: humanReviewers(path),
     },
     xora: { state: "not_installed" as const },
   };

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { api } from "./api.js";
+import { api, post } from "./api.js";
 import { MissionOverview } from "./components/MissionOverview.js";
 import { Setup } from "./components/Setup.js";
 import { Shell } from "./components/Shell.js";
@@ -50,8 +50,9 @@ export function App() {
     );
   }
   const inSetup = location.pathname === "/setup";
-  if (setup.mode !== "setup" && inSetup) return <Navigate to="/missions" replace />;
-  if (setup.mode === "setup") {
+  const showSetup = setup.mode === "setup" || (setup.mode === "ready" && setup.introPending);
+  if (!showSetup && inSetup) return <Navigate to="/missions" replace />;
+  if (showSetup) {
     // The setup state is loaded once, so the flow continues through part C after the
     // workspace exists; `onDone` reloads it and Mission Control takes over.
     if (!inSetup) return <Navigate to="/setup" replace />;
@@ -60,6 +61,7 @@ export function App() {
         <Setup
           initial={setup}
           onDone={async () => {
+            await post("/api/setup/intro", {}).catch(() => undefined);
             await load();
             navigate("/missions", { replace: true });
           }}

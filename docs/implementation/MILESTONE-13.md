@@ -149,6 +149,7 @@ All routes keep the Milestone 12 request protection (127.0.0.1, `Origin`, `Host`
 | `GET /api/setup` | mode, current step, existing workspace if found, default logbook location (display text and full path), OneDrive and Git hints, Xora state, answers so far |
 | `POST /api/setup/answers` | store `name`, `shipName`, `logbookPath` (validated; Back can change them) |
 | `POST /api/setup/workspace` | `{ "action": "create" }` or `{ "action": "open", "captain"? }` |
+| `POST /api/setup/intro` | records that scenes C2 and C3 were shown to the end, so a reload after creating the workspace returns to them (added in review of the implementation) |
 | `POST /api/setup/finish` | `{ "skipped"?: true }` sets `setup.completedAt` after part E or when D and E are skipped (normal mode) |
 | `POST /api/assistant/message` | `{ "text" }` or `{ "choice" }` with the setup context; returns the reply, choices, and a proposed action if any |
 | `POST /api/assistant/confirm` | `{ "actionId", "confirm": true \| false }` |

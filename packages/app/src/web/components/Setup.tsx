@@ -31,6 +31,7 @@ const PROGRESS: Partial<Record<Step, number>> = {
 const SHIP_NAMES = ["Nova", "Aurora"] as const;
 
 function firstStep(info: SetupInfo): Step {
+  if (info.mode === "ready") return "orientation";
   if (info.existing && !info.answers?.name) return "existing";
   if (!info.answers?.name) return "name";
   if (!info.answers.shipName) return "ship";
@@ -45,7 +46,7 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => v
   const [orientation, setOrientation] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [logbookCreated, setLogbookCreated] = useState(false);
+  const [logbookCreated, setLogbookCreated] = useState(initial.mode === "ready");
   /** The typed name, kept while the person gives a short name for it (scene B1). */
   const [pendingName, setPendingName] = useState("");
 
@@ -159,21 +160,19 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => v
           {logbook.hasWorkspace ? <p className="setup-warning">{t.setup.hasWorkspace}</p> : null}
           <div className="action-row">
             {logbook.hasWorkspace ? (
-              <button
-                type="button"
-                className="button"
-                disabled={busy}
-                onClick={async () => {
+              <OpenLogbook
+                reviewers={logbook.reviewers}
+                captain={answers?.captain ?? null}
+                busy={busy}
+                onOpen={async (captain) => {
                   const result = await toWorkspace({
                     action: "open",
                     path: logbook.path,
-                    ...(answers?.captain ? { captain: answers.captain } : {}),
+                    ...(captain ? { captain } : {}),
                   });
                   if (!result.ok && result.kind === "CaptainNeeded") setError(t.setup.notOnShip);
                 }}
-              >
-                {t.setup.openLogbook}
-              </button>
+              />
             ) : (
               <button
                 type="button"
@@ -468,5 +467,50 @@ function ExistingShip({
         </button>
       </div>
     </Question>
+  );
+}
+
+/**
+ * Opens a logbook found in the chosen folder. The derived captain is used when it is one of
+ * its reviewers; with a single reviewer the server picks it; otherwise the person chooses.
+ */
+function OpenLogbook({
+  reviewers,
+  captain,
+  busy,
+  onOpen,
+}: {
+  reviewers: readonly string[];
+  captain: string | null;
+  busy: boolean;
+  onOpen: (captain: string | null) => Promise<void>;
+}) {
+  const t = useLabels();
+  if (reviewers.length > 1 && !(captain && reviewers.includes(captain))) {
+    return (
+      <>
+        <p>{t.setup.whoAreYou}</p>
+        <fieldset className="action-row">
+          <legend className="visually-hidden">{t.setup.whoAreYou}</legend>
+          {reviewers.map((reviewer) => (
+            <button
+              key={reviewer}
+              type="button"
+              className="button"
+              disabled={busy}
+              onClick={() => onOpen(reviewer)}
+            >
+              {reviewer}
+            </button>
+          ))}
+        </fieldset>
+      </>
+    );
+  }
+  const chosen = captain && reviewers.includes(captain) ? captain : null;
+  return (
+    <button type="button" className="button" disabled={busy} onClick={() => onOpen(chosen)}>
+      {t.setup.openLogbook}
+    </button>
   );
 }
