@@ -167,7 +167,9 @@ export type ProposedAction = { readonly id: string } & (
   | {
       readonly kind: "startFirstMission";
       readonly title: string;
+      readonly goal: string;
       readonly question: string;
+      readonly rationale: string;
       readonly options: readonly { option: string; consequence: string }[];
     }
   | { readonly kind: "recordGoal"; readonly title: string; readonly content: string }

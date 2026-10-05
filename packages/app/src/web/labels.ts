@@ -210,7 +210,9 @@ export interface Labels {
     readonly change: string;
     readonly missionIntro: string;
     readonly startMission: (title: string) => string;
+    readonly missionGoal: (goal: string) => string;
     readonly missionQuestion: (question: string) => string;
+    readonly missionRationale: (rationale: string) => string;
     readonly start: string;
     readonly waiting: string;
     readonly openMission: string;
@@ -498,7 +500,9 @@ const de: Labels = {
       "Zeit für deine erste Mission. Eine Mission ist eine Aufgabe, die an Bord erledigt wird, Schritt für Schritt und für dich sichtbar.",
     startMission: (title) =>
       `Ich starte die Mission „${title}“. Dafür brauche ich eine Entscheidung von dir.`,
+    missionGoal: (goal) => `Ziel der Mission: ${goal}`,
     missionQuestion: (question) => `Meine Frage wird sein: ${question}`,
+    missionRationale: (rationale) => `Warum ich frage: ${rationale}`,
     start: "Starten",
     waiting:
       "Die Mission wartet jetzt auf dich. Öffne sie, beantworte die Frage, und komm dann über den Hinweis oben hierher zurück.",
@@ -793,7 +797,9 @@ const en: Labels = {
     missionIntro:
       "Time for your first mission. A mission is a task done on board, step by step and visible to you.",
     startMission: (title) => `I start the mission “${title}”. For it I need a decision from you.`,
+    missionGoal: (goal) => `Mission goal: ${goal}`,
     missionQuestion: (question) => `My question will be: ${question}`,
+    missionRationale: (rationale) => `Why I ask: ${rationale}`,
     start: "Start",
     waiting:
       "The mission is now waiting for you. Open it, answer the question, then come back here through the notice at the top.",

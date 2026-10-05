@@ -119,12 +119,13 @@ export async function startAppServer(options: AppServerOptions): Promise<AppServ
   let origins: readonly string[] = [];
   const assistant = new ScriptedAssistant();
   const pending = new PendingActions();
+  const serial = serialQueue();
   const server = createServer(async (request, response) => {
     const requestId = crypto.randomUUID();
     try {
       if (request.url?.startsWith("/api/")) {
         await api(
-          { ...resolveRequest(options, flagActor), origins, assistant, pending },
+          { ...resolveRequest(options, flagActor), origins, assistant, pending, serial },
           request,
           response,
         );
@@ -180,6 +181,16 @@ export async function startAppServer(options: AppServerOptions): Promise<AppServ
         server.close((error) => (error ? reject(error) : done()));
         server.closeAllConnections();
       }),
+  };
+}
+
+/** A queue that runs each piece of work after the previous one has settled. */
+function serialQueue() {
+  let tail: Promise<unknown> = Promise.resolve();
+  return <T>(work: () => Promise<T>): Promise<T> => {
+    const run = tail.then(work, work);
+    tail = run.catch(() => undefined);
+    return run;
   };
 }
 
@@ -258,6 +269,8 @@ interface ApiContext extends RequestState {
   readonly origins: readonly string[];
   readonly assistant: ScriptedAssistant;
   readonly pending: PendingActions;
+  /** Runs confirmed actions one at a time, so two confirmations never pass the same step. */
+  readonly serial: <T>(work: () => Promise<T>) => Promise<T>;
 }
 
 /**
@@ -753,8 +766,10 @@ async function assistantWrite(
     throw new RequestRejected(404, "UnknownAction", "This proposal is unknown or has expired");
   }
   if (body.confirm) {
-    await openStore(workspaceDirectory, openSqliteWritableStore, (store) =>
-      executeAction(store, settingsPath, action, captain),
+    await context.serial(() =>
+      openStore(workspaceDirectory, openSqliteWritableStore, (store) =>
+        executeAction(store, settingsPath, action, captain),
+      ),
     );
   }
   const settings = loadSettings(settingsPath);

@@ -440,6 +440,8 @@ test("the first steps write the project, the Mission, and accepted knowledge aft
 
   const mission = await propose(server.url, { choice: "firstMission" });
   assert.equal(mission.question, "Who is the project for?");
+  assert.equal(mission.goal, "Record the goal of the project in a few sentences.");
+  assert.equal(mission.rationale, "Scope and style depend on it.");
   const started = await confirm(server.url, mission.id);
   const steps = started.body.firstSteps as Record<string, unknown>;
   assert.equal(steps.stage, "answer");
@@ -562,6 +564,21 @@ test("a repeated first step continues from the ids it already wrote", async (t) 
     ((await records(logbook, "projects"))[0] as Record<string, unknown>).purpose,
     "Plan a garden.",
   );
+});
+
+test("two confirmations of the same step at once write the project only once", async (t) => {
+  const { server, logbook } = await setUp(t);
+  const goal = { choice: "goal", goal: "writing", projectName: "Book" };
+  const first = await propose(server.url, goal);
+  const second = await propose(server.url, goal);
+  const results = await Promise.all([
+    confirm(server.url, first.id),
+    confirm(server.url, second.id),
+  ]);
+  assert.deepEqual(results.map((result) => result.status).sort(), [200, 409]);
+  assert.equal((await records(logbook, "projects")).length, 1);
+  assert.equal((await records(logbook, "knowledgeSpaces")).length, 3);
+  assert.equal((await records(logbook, "knowledgeCollections")).length, 1);
 });
 
 test("the first steps need a human captain, a set-up logbook, and valid choices", async (t) => {

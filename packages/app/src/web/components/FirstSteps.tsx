@@ -205,7 +205,9 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
             onChange={null}
           >
             <p>{t.firstSteps.startMission(action.title)}</p>
+            <p>{t.firstSteps.missionGoal(action.goal)}</p>
             <p>{t.firstSteps.missionQuestion(action.question)}</p>
+            <p className="muted">{t.firstSteps.missionRationale(action.rationale)}</p>
             <ul className="plain options">
               {action.options.map((option) => (
                 <li key={option.option}>

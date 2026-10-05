@@ -237,7 +237,9 @@ export function describeAction(action: ActionPayload) {
       return {
         kind: action.kind,
         title: action.title,
+        goal: action.goal,
         question: action.question,
+        rationale: action.rationale,
         options: action.options,
       };
     case "recordGoal":
