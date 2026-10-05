@@ -50,7 +50,7 @@ export async function openSqliteReadOnlyContextStore(path: string): Promise<Cont
 export async function openSqliteWritableStore(
   path: string,
   requiredMigrationId: string,
-): Promise<LifecycleStore & MissionStore & WorkspaceExportStore> {
+): Promise<LifecycleStore & NavigationStore & MissionStore & WorkspaceExportStore> {
   return new SqliteLifecycleStore(path, {}, { runMigrations: false, requiredMigrationId });
 }
 

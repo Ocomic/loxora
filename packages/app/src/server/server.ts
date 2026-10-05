@@ -22,6 +22,15 @@ import {
 } from "@loxora/core";
 import { openSqliteReadOnlyStore, openSqliteWritableStore } from "@loxora/sqlite";
 import {
+  type AssistantInput,
+  describeAction,
+  GOALS,
+  type Language,
+  PendingActions,
+  ScriptedAssistant,
+} from "./assistant.js";
+import { executeAction, finishFirstSteps, firstStepsState } from "./first-steps.js";
+import {
   createOrOpenWorkspace,
   loadSettings,
   markIntroduced,
@@ -108,11 +117,17 @@ export async function startAppServer(options: AppServerOptions): Promise<AppServ
   }
   const flagActor = options.actor === undefined ? null : checkActor(options);
   let origins: readonly string[] = [];
+  const assistant = new ScriptedAssistant();
+  const pending = new PendingActions();
   const server = createServer(async (request, response) => {
     const requestId = crypto.randomUUID();
     try {
       if (request.url?.startsWith("/api/")) {
-        await api({ ...resolveRequest(options, flagActor), origins }, request, response);
+        await api(
+          { ...resolveRequest(options, flagActor), origins, assistant, pending },
+          request,
+          response,
+        );
       } else staticFile(webRoot, request, response);
     } catch (error) {
       if (error instanceof RequestRejected || error instanceof SetupRejected) {
@@ -241,6 +256,8 @@ interface RequestState {
 
 interface ApiContext extends RequestState {
   readonly origins: readonly string[];
+  readonly assistant: ScriptedAssistant;
+  readonly pending: PendingActions;
 }
 
 /**
@@ -340,7 +357,12 @@ function requireSettings(context: ApiContext): string {
   return context.environment.settingsPath;
 }
 
-function setupInfo(context: ApiContext) {
+async function setupInfo(context: ApiContext) {
+  const { settings, workspaceDirectory } = context;
+  const firstSteps =
+    context.mode === "ready" && workspaceDirectory && settings
+      ? await withStore(workspaceDirectory, (store) => firstStepsState(store, settings))
+      : null;
   return {
     mode: context.mode,
     ...(context.settingsError ? { settingsError: context.settingsError.message } : {}),
@@ -348,6 +370,7 @@ function setupInfo(context: ApiContext) {
       ? setupState(context.environment, context.settings)
       : {}),
     ...(context.mode === "ready" ? { introPending: !context.settings?.setup?.introducedAt } : {}),
+    ...(firstSteps ? { firstSteps } : {}),
   };
 }
 
@@ -362,14 +385,18 @@ async function api(
     const write = url.pathname.match(/^\/api\/missions\/([^/]+)\/([a-z]+)$/);
     const action = MISSION_ACTIONS.find((name) => name === write?.[2]);
     const setupRoute = SETUP_ROUTES.find((route) => route === url.pathname);
-    if (request.method !== "POST" || (!(write && action) && !setupRoute)) {
+    const assistantRoute = ASSISTANT_ROUTES.find((route) => route === url.pathname);
+    if (request.method !== "POST" || (!(write && action) && !setupRoute && !assistantRoute)) {
       return json(response, 405, {
         error: "MethodNotAllowed",
-        message: "Only the Mission, setup, and settings write routes accept POST.",
+        message: "Only the Mission, setup, assistant, and settings write routes accept POST.",
       });
     }
     const body = await readWriteRequest(request, context);
     if (setupRoute) return json(response, 200, await setupWrite(context, setupRoute, body));
+    if (assistantRoute) {
+      return json(response, 200, await assistantWrite(context, assistantRoute, body));
+    }
     if (!actor) {
       throw new RequestRejected(
         403,
@@ -386,7 +413,7 @@ async function api(
       ),
     );
   }
-  if (url.pathname === "/api/setup") return json(response, 200, setupInfo(context));
+  if (url.pathname === "/api/setup") return json(response, 200, await setupInfo(context));
   if (url.pathname === "/api/settings") {
     return json(response, 200, {
       available: context.environment !== null && context.settingsError === null,
@@ -464,8 +491,11 @@ const SETUP_ROUTES = [
   "/api/setup/answers",
   "/api/setup/workspace",
   "/api/setup/intro",
+  "/api/setup/finish",
   "/api/settings/language",
 ] as const;
+
+const ASSISTANT_ROUTES = ["/api/assistant/message", "/api/assistant/confirm"] as const;
 
 async function setupWrite(
   context: ApiContext,
@@ -483,6 +513,13 @@ async function setupWrite(
     }
     markIntroduced(settingsPath);
     return { mode: "ready", introPending: false };
+  }
+  if (route === "/api/setup/finish") {
+    if (context.mode !== "ready") {
+      throw new RequestRejected(409, "NotReady", "The logbook does not exist yet");
+    }
+    finishFirstSteps(settingsPath, body);
+    return { mode: "ready", setupComplete: true };
   }
   const environment = context.environment;
   if (context.mode !== "setup" || !environment) {
@@ -636,4 +673,109 @@ function staticFile(root: string, request: IncomingMessage, response: ServerResp
   };
   response.writeHead(200, { "content-type": types[extname(path)] ?? "application/octet-stream" });
   response.end(readFileSync(path));
+}
+
+const MAX_PROJECT_NAME = 80;
+const MAX_PURPOSE = 500;
+const MAX_GOAL_TEXT = 4000;
+
+/** Reads a required text field of an assistant request. */
+function field(body: Record<string, unknown>, key: string, max: number): string {
+  const value = body[key];
+  if (typeof value !== "string" || !value.trim()) {
+    throw new RequestRejected(400, "Invalid", `${key} must not be empty`);
+  }
+  if (value.trim().length > max) throw new RequestRejected(400, "Invalid", `${key} is too long`);
+  return value.trim();
+}
+
+/** The setup input of an assistant message: a `choice` of the setup, or free `text`. */
+function assistantInput(body: Record<string, unknown>): AssistantInput {
+  switch (body.choice) {
+    case undefined: {
+      const topic = typeof body.topic === "string" ? body.topic : undefined;
+      return {
+        kind: "message",
+        text: field(body, "text", MAX_GOAL_TEXT),
+        ...(topic ? { topic } : {}),
+      };
+    }
+    case "goal": {
+      const goal = GOALS.find((name) => name === body.goal);
+      if (!goal) throw new RequestRejected(400, "Invalid", `goal must be ${GOALS.join(", ")}`);
+      return {
+        kind: "goal",
+        goal,
+        projectName: field(body, "projectName", MAX_PROJECT_NAME),
+        ...(goal === "other" ? { purpose: field(body, "purpose", MAX_PURPOSE) } : {}),
+      };
+    }
+    case "firstMission":
+      return { kind: "firstMission" };
+    case "goalText":
+      return { kind: "goalText", text: field(body, "text", MAX_GOAL_TEXT) };
+    default:
+      throw new RequestRejected(400, "Invalid", "choice must be goal, firstMission, or goalText");
+  }
+}
+
+/**
+ * The assistant routes (Milestone 13 section 8). A message never writes; it may propose one
+ * action, which stays pending until the person confirms it. Messages are not stored.
+ */
+async function assistantWrite(
+  context: ApiContext,
+  route: (typeof ASSISTANT_ROUTES)[number],
+  body: Record<string, unknown>,
+) {
+  if (route === "/api/assistant/message") {
+    const input = assistantInput(body);
+    const language: Language =
+      body.language === "de" || body.language === "en"
+        ? body.language
+        : (context.settings?.language ?? "en");
+    if (input.kind !== "message") await requireFirstSteps(context);
+    const turn = await context.assistant.respond(input, language);
+    return {
+      ...(turn.text ? { text: turn.text } : {}),
+      ...(turn.reply ? { reply: turn.reply } : {}),
+      ...(turn.action
+        ? { action: { id: context.pending.add(turn.action), ...describeAction(turn.action) } }
+        : {}),
+    };
+  }
+  if (typeof body.actionId !== "string" || typeof body.confirm !== "boolean") {
+    throw new RequestRejected(400, "Invalid", "Send actionId and confirm: true or false");
+  }
+  const { settingsPath, workspaceDirectory, captain } = await requireFirstSteps(context);
+  const action = context.pending.take(body.actionId);
+  if (!action) {
+    throw new RequestRejected(404, "UnknownAction", "This proposal is unknown or has expired");
+  }
+  if (body.confirm) {
+    await openStore(workspaceDirectory, openSqliteWritableStore, (store) =>
+      executeAction(store, settingsPath, action, captain),
+    );
+  }
+  const settings = loadSettings(settingsPath);
+  return {
+    confirmed: body.confirm,
+    firstSteps: await withStore(workspaceDirectory, (store) => firstStepsState(store, settings)),
+  };
+}
+
+/** The first steps run in normal mode, from the settings file, with a human captain. */
+async function requireFirstSteps(context: ApiContext) {
+  const settingsPath = requireSettings(context);
+  if (context.mode !== "ready" || !context.workspaceDirectory) {
+    throw new RequestRejected(409, "NotReady", "The first steps need a set-up logbook");
+  }
+  if (!context.actor) {
+    throw new RequestRejected(
+      403,
+      "ReadOnly",
+      "The app runs read-only; the captain in the settings file is not a reviewer of this logbook.",
+    );
+  }
+  return { settingsPath, workspaceDirectory: context.workspaceDirectory, captain: context.actor };
 }

@@ -2,7 +2,7 @@
  * All UI text in one place (RFC-010, section 3 and Amendment 1): one entry per language.
  * German is the language of the designs; English carries the same keys.
  */
-import type { MissionFilter, MissionState } from "./types.js";
+import type { FirstStepsStage, Goal, MissionFilter, MissionState } from "./types.js";
 
 export type Language = "de" | "en";
 
@@ -187,6 +187,51 @@ export interface Labels {
     readonly settingsError: string;
     readonly failed: (message: string) => string;
   };
+  readonly firstSteps: {
+    readonly title: string;
+    readonly banner: Record<FirstStepsStage, string>;
+    readonly continue: string;
+    readonly skip: string;
+    readonly goalQuestion: string;
+    readonly goals: Record<Goal, string>;
+    readonly stations: Record<Goal, string>;
+    readonly stationExplained: string;
+    readonly purposeQuestion: string;
+    readonly purposeLabel: string;
+    readonly projectQuestion: string;
+    readonly projectSuggestions: Record<Goal, string>;
+    readonly ownName: string;
+    readonly projectLabel: string;
+    readonly confirmation: string;
+    readonly createProject: (name: string, purpose: string) => string;
+    readonly spaces: (spaces: readonly string[], collection: string) => string;
+    readonly rule: string;
+    readonly create: string;
+    readonly change: string;
+    readonly missionIntro: string;
+    readonly startMission: (title: string) => string;
+    readonly missionQuestion: (question: string) => string;
+    readonly start: string;
+    readonly waiting: string;
+    readonly openMission: string;
+    readonly recordQuestion: string;
+    readonly goalLabel: string;
+    readonly template: (purpose: string, answer: string) => string;
+    readonly recordCard: (title: string) => string;
+    readonly accept: string;
+    readonly hints: readonly string[];
+    readonly closing: string;
+    readonly finish: string;
+  };
+  readonly xora: {
+    readonly bar: string;
+    readonly placeholder: string;
+    readonly send: string;
+    readonly close: string;
+    readonly notStored: string;
+    readonly replies: Record<"notOnBoard" | "missions", string>;
+    readonly askMissions: string;
+  };
 }
 
 const de: Labels = {
@@ -268,7 +313,7 @@ const de: Labels = {
     recent: "Letzte Missionen",
     loading: "Lade Missionen …",
     sortedBy: "Sortiert nach Bedarf an Aufmerksamkeit",
-    empty: "Keine Missionen. Agenten erfassen ihre Arbeit mit",
+    empty: "Hier ist noch keine Mission.",
     needsYou: "Braucht dich:",
     unavailable: "Workspace nicht verfügbar",
   },
@@ -399,11 +444,93 @@ const de: Labels = {
     scriptMode:
       "In dieser Version bin ich noch nicht ganz an Bord und kann noch nicht frei antworten. Wir kommen trotzdem ans Ziel: Bis dahin gebe ich dir feste Auswahlmöglichkeiten.",
     bridgeReady:
-      "Dein Logbuch ist angelegt. Auf der Brücke siehst du deine Missionen, also Aufgaben, an denen die Crew arbeitet. Rot heißt: Ich brauche dich.",
-    toBridge: "Zur Brücke",
+      "Dein Logbuch ist angelegt. Als Nächstes legen wir dein erstes Projekt und deine erste Mission an.",
+    toBridge: "Weiter",
     settingsError:
       "Deine Einstellungsdatei lässt sich nicht lesen. Loxora ändert sie nicht. Korrigiere oder entferne sie und lade die Seite dann neu.",
     failed: (message) => `Das hat nicht geklappt: ${message}`,
+  },
+  firstSteps: {
+    title: "Erste Schritte",
+    banner: {
+      goal: "Deine ersten Schritte sind noch offen: dein erstes Projekt und deine erste Mission.",
+      mission: "Deine ersten Schritte sind noch offen: deine erste Mission.",
+      answer: "Deine erste Mission wartet auf deine Entscheidung.",
+      record: "Deine erste Mission hat eine Antwort. Jetzt halten wir das Projektziel fest.",
+      hints: "Fast geschafft: noch zwei kurze Hinweise zur Brücke.",
+    },
+    continue: "Weiter einrichten",
+    skip: "Erste Schritte überspringen",
+    goalQuestion: "Was möchtest du mit Loxora machen?",
+    goals: {
+      game: "Ein Spiel entwickeln",
+      website: "Eine Website bauen",
+      writing: "Texte oder ein Buch schreiben",
+      other: "Etwas anderes",
+    },
+    stations: {
+      game: "Dafür helfen später Stationen für Programmieren, Grafik und Tests.",
+      website: "Dafür helfen später Stationen für Gestaltung, Texte und Technik.",
+      writing: "Dafür helfen später Stationen für Schreiben, Lektorat und Recherche.",
+      other: "Welche Stationen dafür helfen, schauen wir uns später zusammen an.",
+    },
+    stationExplained:
+      "Eine Station ist ein Arbeitsplatz auf der Brücke, an dem später ein KI-Helfer der Crew arbeitet.",
+    purposeQuestion: "Erzähl mir in ein, zwei Sätzen, was du vorhast.",
+    purposeLabel: "Dein Vorhaben",
+    projectQuestion: "Wie soll das Projekt heißen?",
+    projectSuggestions: {
+      game: "Mein Spiel",
+      website: "Meine Website",
+      writing: "Mein Buch",
+      other: "Mein Projekt",
+    },
+    ownName: "Selbst eingeben",
+    projectLabel: "Name des Projekts",
+    confirmation: "Das schreibe ich ins Logbuch",
+    createProject: (name, purpose) => `Ich lege an: Projekt „${name}“. Zweck: ${purpose}`,
+    spaces: (spaces, collection) =>
+      `Dazu drei Bereiche, also Abschnitte im Logbuch: ${spaces.join(", ")}. Im Bereich „${spaces[0] ?? ""}“ lege ich die Sammlung „${collection}“ an.`,
+    rule: "So läuft das an Bord immer: Ich schlage vor, du entscheidest.",
+    create: "Anlegen",
+    change: "Ändern",
+    missionIntro:
+      "Zeit für deine erste Mission. Eine Mission ist eine Aufgabe, die an Bord erledigt wird, Schritt für Schritt und für dich sichtbar.",
+    startMission: (title) =>
+      `Ich starte die Mission „${title}“. Dafür brauche ich eine Entscheidung von dir.`,
+    missionQuestion: (question) => `Meine Frage wird sein: ${question}`,
+    start: "Starten",
+    waiting:
+      "Die Mission wartet jetzt auf dich. Öffne sie, beantworte die Frage, und komm dann über den Hinweis oben hierher zurück.",
+    openMission: "Mission öffnen",
+    recordQuestion:
+      "Danke. Schreib das Ziel deines Projekts in ein paar Sätzen auf. Eine Vorlage habe ich dir schon eingetragen.",
+    goalLabel: "Projektziel",
+    template: (purpose, answer) => `${purpose}\nFür wen: ${answer}.`,
+    recordCard: (title) =>
+      `Ich halte das als „${title}“ im Logbuch fest und schließe die Mission ab. Mit „Übernehmen“ gibst du es als Kapitän frei; dann gilt es als festes Wissen.`,
+    accept: "Übernehmen",
+    hints: [
+      "Hier unten sprichst du mit mir.",
+      "Links siehst du deine Missionen. Rot heißt: Ich brauche dich.",
+    ],
+    closing:
+      "Heute kannst du Missionen verfolgen, Fragen beantworten und Missionen anhalten. Sobald ich ganz an Bord bin, schlage ich dir die nächsten Schritte vor. Sag mir einfach, wenn du etwas anders willst.",
+    finish: "Zur Brücke",
+  },
+  xora: {
+    bar: "Nachricht an Xora",
+    placeholder: "Schreib Xora eine Nachricht …",
+    send: "Senden",
+    close: "Schließen",
+    notStored: "Nachrichten werden nicht gespeichert.",
+    replies: {
+      notOnBoard:
+        "Ich bin in dieser Version noch nicht an Bord und kann noch nicht frei antworten. Heute kannst du deine Missionen verfolgen, Fragen beantworten und Missionen anhalten oder stoppen.",
+      missions:
+        "Missionen legen heute Agenten über die Kommandozeile an, mit „loxora mission create“. Sobald ich an Bord bin, kannst du mich direkt darum bitten.",
+    },
+    askMissions: "Wie bekomme ich Missionen?",
   },
 };
 
@@ -486,7 +613,7 @@ const en: Labels = {
     recent: "Recent missions",
     loading: "Loading missions …",
     sortedBy: "Sorted by need for attention",
-    empty: "No missions. Agents record their work with",
+    empty: "There is no mission here yet.",
     needsYou: "Needs you:",
     unavailable: "Workspace unavailable",
   },
@@ -613,11 +740,92 @@ const en: Labels = {
     scriptMode:
       "In this version I'm not fully on board yet and can't answer freely. We'll still get there: until then, I'll give you fixed choices.",
     bridgeReady:
-      "Your logbook is ready. On the bridge you see your missions, the tasks the crew works on. Red means: I need you.",
-    toBridge: "To the bridge",
+      "Your logbook is ready. Next, we set up your first project and your first mission.",
+    toBridge: "Continue",
     settingsError:
       "Your settings file cannot be read. Loxora does not change it. Fix or remove it, then reload the page.",
     failed: (message) => `That didn't work: ${message}`,
+  },
+  firstSteps: {
+    title: "First steps",
+    banner: {
+      goal: "Your first steps are still open: your first project and your first mission.",
+      mission: "Your first steps are still open: your first mission.",
+      answer: "Your first mission is waiting for your decision.",
+      record: "Your first mission has an answer. Now let's record the project goal.",
+      hints: "Almost done: two short hints about the bridge.",
+    },
+    continue: "Continue setup",
+    skip: "Skip the first steps",
+    goalQuestion: "What do you want to do with Loxora?",
+    goals: {
+      game: "Develop a game",
+      website: "Build a website",
+      writing: "Write texts or a book",
+      other: "Something else",
+    },
+    stations: {
+      game: "Later, stations for programming, graphics, and testing will help with that.",
+      website: "Later, stations for design, writing, and technology will help with that.",
+      writing: "Later, stations for writing, editing, and research will help with that.",
+      other: "We'll look at which stations help with that together later.",
+    },
+    stationExplained:
+      "A station is a workplace on the bridge where an AI helper of the crew will work later.",
+    purposeQuestion: "Tell me in one or two sentences what you have in mind.",
+    purposeLabel: "Your plan",
+    projectQuestion: "What should the project be called?",
+    projectSuggestions: {
+      game: "My game",
+      website: "My website",
+      writing: "My book",
+      other: "My project",
+    },
+    ownName: "Enter my own",
+    projectLabel: "Project name",
+    confirmation: "This is what I write into the logbook",
+    createProject: (name, purpose) => `I create: project “${name}”. Purpose: ${purpose}`,
+    spaces: (spaces, collection) =>
+      `Plus three areas, that is, sections of the logbook: ${spaces.join(", ")}. In the area “${spaces[0] ?? ""}” I create the collection “${collection}”.`,
+    rule: "That's how it always works on board: I propose, you decide.",
+    create: "Create",
+    change: "Change",
+    missionIntro:
+      "Time for your first mission. A mission is a task done on board, step by step and visible to you.",
+    startMission: (title) => `I start the mission “${title}”. For it I need a decision from you.`,
+    missionQuestion: (question) => `My question will be: ${question}`,
+    start: "Start",
+    waiting:
+      "The mission is now waiting for you. Open it, answer the question, then come back here through the notice at the top.",
+    openMission: "Open the mission",
+    recordQuestion:
+      "Thanks. Write down the goal of your project in a few sentences. I've already filled in a template.",
+    goalLabel: "Project goal",
+    template: (purpose, answer) => `${purpose}\nFor whom: ${answer}.`,
+    recordCard: (title) =>
+      `I record this as “${title}” in the logbook and complete the mission. With “Accept” you approve it as captain; then it counts as established knowledge.`,
+    accept: "Accept",
+    hints: [
+      "Down here you talk to me.",
+      "On the left you see your missions. Red means: I need you.",
+    ],
+    closing:
+      "Today you can follow missions, answer questions, and pause missions. Once I'm fully on board, I'll suggest the next steps. Just tell me if you want something different.",
+    finish: "To the bridge",
+  },
+  xora: {
+    bar: "Message to Xora",
+    placeholder: "Write Xora a message …",
+    send: "Send",
+    close: "Close",
+    notStored: "Messages are not stored.",
+    replies: {
+      notOnBoard:
+        "In this version I'm not on board yet and can't answer freely. Today you can follow your missions, answer questions, and pause or stop missions.",
+      missions:
+        "Today agents create missions on the command line, with “loxora mission create”. Once I'm on board, you can simply ask me.",
+    },
+    askMissions: "How do I get missions?",
   },
 };
 

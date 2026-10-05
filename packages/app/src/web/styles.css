@@ -835,3 +835,140 @@ code {
     margin: 16px auto;
   }
 }
+
+/* First steps (Milestone 13, parts D and E): confirmation cards and the banner. */
+.first-steps {
+  max-width: 760px;
+  margin: 32px auto;
+}
+
+a.button {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.setup-form textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  padding: 10px 12px;
+  max-width: 640px;
+  resize: vertical;
+}
+
+.confirm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-small);
+  background: var(--surface-2);
+}
+
+.confirm-card h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.confirm-card p {
+  margin: 0;
+}
+
+.confirm-card .options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.goal-text {
+  margin: 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--accent);
+  white-space: pre-wrap;
+}
+
+.setup-skip {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+.first-steps-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 24px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-small);
+  background: #2563eb22;
+}
+
+/* The Xora input bar (Milestone 13 section 8), fixed at the bottom in normal mode. */
+.content {
+  padding-bottom: 96px;
+}
+
+.xora-bar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 24px 8px;
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.xora-exchange {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 900px;
+}
+
+.xora-exchange .button {
+  align-self: flex-start;
+}
+
+.xora-question {
+  margin: 0;
+  color: var(--muted);
+}
+
+.xora-exchange .xora-line {
+  font-size: 1rem;
+}
+
+.xora-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.xora-mark {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.xora-form input {
+  flex: 1;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  padding: 8px 12px;
+}
+
+.xora-note {
+  font-size: 0.8rem;
+}

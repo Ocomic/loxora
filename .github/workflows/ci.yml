@@ -51,6 +51,28 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  app-e2e:
+    name: App end-to-end (Playwright)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:app:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-playwright-results
+          path: packages/app/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
   dco:
     name: DCO sign-off
     if: github.event_name == 'pull_request'
