@@ -1354,5 +1354,14 @@ a.button {
 
 .xora-note {
   font-family: var(--lx-mono);
-  color: var(--lx-dim);
+  color: var(--lx-muted);
+}
+
+/* Cut corners clip anything drawn outside the box, so focus rings on clipped controls sit inside. */
+.console .button:focus-visible,
+.section:focus-visible,
+.xora-form .button:focus-visible,
+.xora-exchange .button:focus-visible {
+  outline: 2px solid var(--lx-ice);
+  outline-offset: -4px;
 }

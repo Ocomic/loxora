@@ -45,7 +45,7 @@ A per-user JSON file (RFC-011 section 3). It holds no secrets and no project kno
 
 ## Setup (Milestones 13 and 14)
 
-The setup is one conversation with Xora in script mode (RFC-011 Amendment 1, Milestone 14). Every text is fixed, in German and English. Every answer can be typed into the input bar below the conversation, and every answer except the name can also be tapped. Beside the conversation: Xora's picture (a placeholder until the provenance of the real picture is recorded), her status, and the ship terms ("Bordbegriffe") the conversation has used so far.
+The setup is one conversation with Xora in script mode (RFC-011 Amendment 1, Milestone 14). Every text is fixed, in German and English. Every answer can be typed into the input bar below the conversation, and every answer except the name can also be tapped. Beside the conversation: Xora's picture (its provenance is recorded in `packages/app/src/web/public/xora/PROVENANCE.md`), her status, and the ship terms ("Bordbegriffe") the conversation has used so far.
 
 | Part | What happens |
 |---|---|
