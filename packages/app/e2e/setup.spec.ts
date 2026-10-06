@@ -123,6 +123,12 @@ test.describe("German, by tapping", () => {
     await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort());
     await start(page, text.answer);
     await expect(page.getByText("Verbindung zum Kommandozentrum wird hergestellt")).toBeVisible();
+    // Xora's picture is served with the app.
+    const portrait = page.getByRole("img", { name: "Xora" });
+    await expect(portrait).toBeVisible();
+    await expect
+      .poll(() => portrait.evaluate((image: HTMLImageElement) => image.naturalWidth))
+      .toBeGreaterThan(0);
     await say(page, text.answer, "Alex");
     await expect(page.getByRole("heading", { name: text.terms })).toBeVisible();
     await tap(page, "Nova");
