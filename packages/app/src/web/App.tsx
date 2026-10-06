@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { api, post, usePolling } from "./api.js";
+import { api } from "./api.js";
+import { FirstMissionProvider, useFirstMission } from "./components/FirstMission.js";
 import { FirstSteps } from "./components/FirstSteps.js";
 import { MissionOverview } from "./components/MissionOverview.js";
 import { Setup } from "./components/Setup.js";
@@ -10,9 +11,9 @@ import { useLabels } from "./i18n.js";
 import type { SetupInfo } from "./types.js";
 
 /**
- * Without a workspace the app shows the first-launch setup at /setup (Milestone 13);
- * otherwise Mission Control with the Xora input bar, and the first steps at /first-steps
- * while they are pending.
+ * Without a finished setup the app shows the setup conversation at /setup (Milestone 14);
+ * otherwise Mission Control with the Xora input bar. While the first Mission is offered it
+ * is reachable at /first-steps, from a banner and from the empty Mission list.
  */
 export function App() {
   const t = useLabels();
@@ -35,9 +36,13 @@ export function App() {
   if (failed) {
     return (
       <Shell setup>
-        <p className="action-error" role="alert">
-          {t.setup.failed(failed)}
-        </p>
+        <section className="panel setup-main" role="alert">
+          <p className="setup-warning">{t.setup.unreachable}</p>
+          <p className="muted">{t.setup.failed(failed)}</p>
+          <button type="button" className="button" onClick={() => void load()}>
+            {t.setup.retry}
+          </button>
+        </section>
       </Shell>
     );
   }
@@ -53,70 +58,67 @@ export function App() {
     );
   }
   const inSetup = location.pathname === "/setup";
-  const showSetup = setup.mode === "setup" || (setup.mode === "ready" && setup.introPending);
-  const firstStepsOpen = setup.mode === "ready" && setup.firstSteps?.pending === true;
-  // After part C the setup continues with the first steps while they are pending.
-  if (!showSetup && inSetup) {
-    return <Navigate to={firstStepsOpen ? "/first-steps" : "/missions"} replace />;
-  }
+  const showSetup = setup.mode === "setup" || (setup.mode === "ready" && Boolean(setup.step));
+  if (!showSetup && inSetup) return <Navigate to="/missions" replace />;
   if (showSetup) {
-    // The setup state is loaded once, so the flow continues through part C after the
-    // workspace exists; `onDone` reloads it and Mission Control takes over.
+    // The setup state is loaded once, so the conversation continues after the logbook
+    // exists; `onDone` reloads it and Mission Control takes over.
     if (!inSetup) return <Navigate to="/setup" replace />;
     return (
       <Shell setup>
-        <Setup
-          initial={setup}
-          onDone={async () => {
-            await post("/api/setup/intro", {}).catch(() => undefined);
-            await load();
-          }}
-        />
+        <Setup initial={setup} onDone={load} />
       </Shell>
     );
   }
+  const firstStepsOpen = setup.mode === "ready" && setup.firstSteps?.pending === true;
   return (
     <Shell>
       <XoraProvider>
-        {firstStepsOpen && location.pathname !== "/first-steps" ? <FirstStepsBanner /> : null}
-        <Routes>
-          <Route path="/" element={<Navigate to="/missions" replace />} />
-          <Route path="/missions" element={<MissionOverview />} />
-          <Route path="/missions/:id" element={<MissionOverview />} />
-          <Route
-            path="/first-steps"
-            element={
-              firstStepsOpen ? (
-                <FirstSteps
-                  onFinished={async () => {
-                    await load();
-                    navigate("/missions", { replace: true });
-                  }}
-                />
-              ) : (
-                <Navigate to="/missions" replace />
-              )
-            }
-          />
-          <Route path="*" element={<Navigate to="/missions" replace />} />
-        </Routes>
+        <FirstMissionProvider initial={setup.firstSteps ?? null} onDismissed={load}>
+          {location.pathname !== "/first-steps" ? <FirstMissionBanner /> : null}
+          <Routes>
+            <Route path="/" element={<Navigate to="/missions" replace />} />
+            <Route path="/missions" element={<MissionOverview />} />
+            <Route path="/missions/:id" element={<MissionOverview />} />
+            <Route
+              path="/first-steps"
+              element={
+                firstStepsOpen ? (
+                  <FirstSteps
+                    onFinished={async () => {
+                      await load();
+                      navigate("/missions", { replace: true });
+                    }}
+                  />
+                ) : (
+                  <Navigate to="/missions" replace />
+                )
+              }
+            />
+            <Route path="*" element={<Navigate to="/missions" replace />} />
+          </Routes>
+        </FirstMissionProvider>
       </XoraProvider>
     </Shell>
   );
 }
 
-/** Leads back into the first steps while they are pending (Milestone 13 section 3). */
-function FirstStepsBanner() {
+/** Offers the first Mission on the bridge while it is open (Milestone 14 section 4). */
+function FirstMissionBanner() {
   const t = useLabels();
-  const setup = usePolling<SetupInfo>("/api/setup", 5000);
-  const steps = setup.data?.firstSteps;
-  if (!steps?.pending) return null;
+  const offer = useFirstMission();
+  if (!offer.steps?.pending) return null;
   return (
     <aside className="first-steps-banner" aria-label={t.firstSteps.title}>
-      <span>{t.firstSteps.banner[steps.stage]}</span>
-      <Link className="button" to="/first-steps">
-        {t.firstSteps.continue}
-      </Link>
+      <span>{t.firstSteps.banner[offer.steps.stage]}</span>
+      <span className="action-row">
+        <Link className="button" to="/first-steps">
+          {t.firstSteps.continue}
+        </Link>
+        <button type="button" className="button button-quiet" onClick={offer.dismiss}>
+          {t.firstSteps.dismiss}
+        </button>
+      </span>
     </aside>
   );
 }

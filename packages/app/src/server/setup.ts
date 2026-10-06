@@ -17,10 +17,11 @@ import {
 import { openSqliteStore } from "@loxora/sqlite";
 
 /**
- * First-launch setup in script mode (RFC-011, Milestone 13), parts A to C: the answers of
- * part B, creating or opening the workspace, and the app settings file. Everything Xora
- * would say is a fixed text in the web client; the server only stores answers and writes
- * the workspace.
+ * First-launch setup in script mode (RFC-011, Milestones 13 and 14): the answers of the
+ * conversation (name, ship, logbook), creating or opening the workspace, and the app settings
+ * file. Everything Xora says is a fixed text in the web client; typed answers are placed by
+ * the keyword list in `shared/conversation.ts`. The server only stores answers and writes the
+ * workspace.
  */
 
 /** A setup request the person can correct; `status` is the HTTP status to answer. */
@@ -131,17 +132,6 @@ function humanReviewers(directory: string): readonly string[] {
   }
 }
 
-/**
- * `POST /api/setup/intro`: the orientation (scenes C2 and C3) was shown to the end. Until
- * then a reload after creating the workspace returns to it instead of skipping it.
- */
-export function markIntroduced(settingsPath: string, now = new Date()): void {
-  updateSettings(settingsPath, (settings) => ({
-    ...settings,
-    setup: { ...settings.setup, introducedAt: now.toISOString() },
-  }));
-}
-
 /** The state of the setup for `GET /api/setup`. */
 export function setupState(environment: SetupEnvironment, settings: AppSettings) {
   const documents = environment.documents();
@@ -164,7 +154,11 @@ export function setupState(environment: SetupEnvironment, settings: AppSettings)
       }
     })
     .find((candidate) => candidate !== null);
+  let step: "name" | "ship" | "logbook" = "logbook";
+  if (!settings.captain) step = "name";
+  else if (!settings.setup?.shipName) step = "ship";
   return {
+    step,
     answers: {
       name: settings.displayName ?? null,
       captain: settings.captain ?? null,

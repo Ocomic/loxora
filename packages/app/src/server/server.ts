@@ -29,11 +29,16 @@ import {
   PendingActions,
   ScriptedAssistant,
 } from "./assistant.js";
-import { executeAction, finishFirstSteps, firstStepsState } from "./first-steps.js";
+import { PROMPT_KEYS, PROMPTS, type PromptKey } from "../shared/conversation.js";
+import {
+  conversationStep,
+  executeAction,
+  finishFirstSteps,
+  firstStepsState,
+} from "./first-steps.js";
 import {
   createOrOpenWorkspace,
   loadSettings,
-  markIntroduced,
   type SetupEnvironment,
   SetupRejected,
   setupState,
@@ -380,10 +385,47 @@ async function setupInfo(context: ApiContext) {
     mode: context.mode,
     ...(context.settingsError ? { settingsError: context.settingsError.message } : {}),
     ...(context.mode === "setup" && context.environment && context.settings
-      ? setupState(context.environment, context.settings)
+      ? withBoot(setupState(context.environment, context.settings))
       : {}),
-    ...(context.mode === "ready" ? { introPending: !context.settings?.setup?.introducedAt } : {}),
+    ...(context.mode === "ready" && workspaceDirectory && settings
+      ? readyConversation(workspaceDirectory, settings)
+      : {}),
     ...(firstSteps ? { firstSteps } : {}),
+  };
+}
+
+/** The start screen states (Milestone 14 section 2); each one is what the server knows. */
+function boot(logbookFound: boolean) {
+  return {
+    shipComputer: "ready" as const,
+    logbook: logbookFound ? ("found" as const) : ("notCreated" as const),
+    xora: "scriptMode" as const,
+  };
+}
+
+function withBoot<T extends ReturnType<typeof setupState>>(state: T) {
+  return { ...state, boot: boot(state.existing !== null || state.logbook.hasWorkspace) };
+}
+
+/** The conversation after the logbook exists: its step and the answers to rebuild it from. */
+function readyConversation(workspaceDirectory: string, settings: AppSettings) {
+  const step = conversationStep(settings);
+  if (!step) return { step: null };
+  let shipName: string | null = null;
+  try {
+    shipName = loadWorkspaceConfig(workspaceDirectory).name;
+  } catch {
+    // The workspace routes report an unreadable workspace; the conversation goes on without it.
+  }
+  return {
+    step,
+    answers: {
+      name: settings.displayName ?? null,
+      captain: settings.captain ?? null,
+      shipName,
+      logbookPath: workspaceDirectory,
+    },
+    boot: boot(true),
   };
 }
 
@@ -503,7 +545,6 @@ async function api(
 const SETUP_ROUTES = [
   "/api/setup/answers",
   "/api/setup/workspace",
-  "/api/setup/intro",
   "/api/setup/finish",
   "/api/settings/language",
 ] as const;
@@ -519,13 +560,6 @@ async function setupWrite(
   if (route === "/api/settings/language") {
     storeLanguage(settingsPath, body);
     return { language: loadSettings(settingsPath).language ?? null };
-  }
-  if (route === "/api/setup/intro") {
-    if (context.mode !== "ready") {
-      throw new RequestRejected(409, "NotReady", "The logbook does not exist yet");
-    }
-    markIntroduced(settingsPath);
-    return { mode: "ready", introPending: false };
   }
   if (route === "/api/setup/finish") {
     if (context.mode !== "ready") {
@@ -545,7 +579,7 @@ async function setupWrite(
     settings.workspacePath !== undefined &&
     existsSync(join(settings.workspacePath, WORKSPACE_CONFIG_FILE));
   return ready
-    ? { mode: "ready", introPending: true }
+    ? { mode: "ready", step: conversationStep(settings) }
     : { mode: "setup", ...setupState(environment, settings) };
 }
 
@@ -683,6 +717,10 @@ function staticFile(root: string, request: IncomingMessage, response: ServerResp
     ".css": "text/css; charset=utf-8",
     ".svg": "image/svg+xml",
     ".png": "image/png",
+    ".woff2": "font/woff2",
+    ".woff": "font/woff",
+    ".txt": "text/plain; charset=utf-8",
+    ".md": "text/markdown; charset=utf-8",
   };
   response.writeHead(200, { "content-type": types[extname(path)] ?? "application/octet-stream" });
   response.end(readFileSync(path));
@@ -702,8 +740,25 @@ function field(body: Record<string, unknown>, key: string, max: number): string 
   return value.trim();
 }
 
-/** The setup input of an assistant message: a `choice` of the setup, or free `text`. */
+/**
+ * The input of an assistant message: an answer in the setup conversation (`prompt` with a
+ * `choice` or `text`), a `choice` of the first steps, or free `text` from the input bar.
+ */
 function assistantInput(body: Record<string, unknown>): AssistantInput {
+  if (body.prompt !== undefined) {
+    const prompt = PROMPT_KEYS.find((key) => key === body.prompt) as PromptKey | undefined;
+    if (!prompt) throw new RequestRejected(400, "Invalid", "prompt is not a setup prompt");
+    if (typeof body.choice === "string" && body.text === undefined) {
+      if (!PROMPTS[prompt].choices.some((choice) => choice === body.choice)) {
+        throw new RequestRejected(400, "Invalid", `choice is not an answer to ${prompt}`);
+      }
+      return { kind: "setup", prompt, choice: body.choice };
+    }
+    if (body.choice !== undefined) {
+      throw new RequestRejected(400, "Invalid", "Send either choice or text");
+    }
+    return { kind: "setup", prompt, text: field(body, "text", MAX_GOAL_TEXT) };
+  }
   switch (body.choice) {
     case undefined: {
       const topic = typeof body.topic === "string" ? body.topic : undefined;
@@ -720,7 +775,9 @@ function assistantInput(body: Record<string, unknown>): AssistantInput {
         kind: "goal",
         goal,
         projectName: field(body, "projectName", MAX_PROJECT_NAME),
-        ...(goal === "other" ? { purpose: field(body, "purpose", MAX_PURPOSE) } : {}),
+        ...(goal === "other" || body.purpose !== undefined
+          ? { purpose: field(body, "purpose", MAX_PURPOSE) }
+          : {}),
       };
     }
     case "firstMission":
@@ -747,11 +804,19 @@ async function assistantWrite(
       body.language === "de" || body.language === "en"
         ? body.language
         : (context.settings?.language ?? "en");
-    if (input.kind !== "message") await requireFirstSteps(context);
+    if (input.kind !== "message" && input.kind !== "setup") await requireFirstSteps(context);
     const turn = await context.assistant.respond(input, language);
     return {
       ...(turn.text ? { text: turn.text } : {}),
       ...(turn.reply ? { reply: turn.reply } : {}),
+      ...(input.kind === "setup"
+        ? {
+            prompt: input.prompt,
+            ...turn.answer,
+            choices: PROMPTS[input.prompt].choices,
+            terms: PROMPTS[input.prompt].terms,
+          }
+        : {}),
       ...(turn.action
         ? { action: { id: context.pending.add(turn.action), ...describeAction(turn.action) } }
         : {}),

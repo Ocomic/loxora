@@ -1,6 +1,6 @@
 # Loxora App (Mission Control)
 
-`@loxora/app` is the product UI (RFC-010). Milestone 11 delivers a **read-only Mission Control** on the real local workspace. Milestone 12 adds the **write path**: with a configured human actor, Missions can be answered, paused, stopped, and resumed in the UI. Milestone 13 (RFC-011) adds the **first-launch setup** in script mode: scenes A4 to C3 (name, ship, logbook folder, orientation) and the first steps D1 to E4 (first project, first Mission, first accepted knowledge), the Xora input bar, and empty states. The Hackathon demo inspector (`WEB-UI.md`) stays frozen.
+`@loxora/app` is the product UI (RFC-010). Milestone 11 delivers a **read-only Mission Control** on the real local workspace. Milestone 12 adds the **write path**: with a configured human actor, Missions can be answered, paused, stopped, and resumed in the UI. Milestone 13 (RFC-011) adds the **first-launch setup** in script mode: scenes A4 to C3 (name, ship, logbook folder, orientation) and the first steps D1 to E4 (first project, first Mission, first accepted knowledge), the Xora input bar, and empty states. Milestone 14 (RFC-011 Amendment 1) turns the setup into **one conversation with Xora**: name, ship, logbook, project, and bridge, typed or tapped, and moves the first Mission to the bridge. The Hackathon demo inspector (`WEB-UI.md`) stays frozen.
 
 ## Running it
 
@@ -38,30 +38,29 @@ A per-user JSON file (RFC-011 section 3). It holds no secrets and no project kno
 | `workspacePath` | absolute path of the logbook; the CLI reads it as resolution step 3 (`CLI.md`) |
 | `language` | `de` or `en`; absent means the browser's language |
 | `xora` | `{ "state": "not_installed" }` |
-| `setup` | the answers of part B until the workspace exists; `introducedAt` once the orientation (C2, C3) was shown to the end; during the first steps the ids they wrote (`purpose`, `projectId`, `spaceIds`, `collectionId`, `missionId`, `sourceId`, `evidenceId`, `proposalId`), so a repeated step continues instead of duplicating; `completedAt` once the first steps (parts D and E) are done or skipped |
+| `setup` | the answers (`shipName`, `logbookPath`) until the workspace exists; the ids the project and the first Mission wrote (`purpose`, `projectId`, `spaceIds`, `collectionId`, `missionId`, `sourceId`, `evidenceId`, `proposalId`), so a repeated step continues instead of duplicating; `completedAt` once the setup conversation ended on the bridge; `firstMissionDismissedAt` once the first Mission offer was dismissed. `introducedAt` (Milestone 13) is no longer written but still read. |
 
 - Writes are atomic (a temporary file, then a rename).
 - An invalid file or an unknown `configVersion` is never overwritten. The app then shows that the file needs attention and acts on nothing.
 
-## Setup (Milestone 13)
+## Setup (Milestones 13 and 14)
 
-The setup follows the dialog script of RFC-011 in script mode: every text is fixed, in German and English, and every question can be answered by clicking.
+The setup is one conversation with Xora in script mode (RFC-011 Amendment 1, Milestone 14). Every text is fixed, in German and English. Every answer can be typed into the input bar below the conversation, and every answer except the name can also be tapped. Beside the conversation: Xora's picture (a placeholder until the provenance of the real picture is recorded), her status, and the ship terms ("Bordbegriffe") the conversation has used so far.
 
-| Scene | What happens |
+| Part | What happens |
 |---|---|
-| A4 | "Ship systems" beside every screen: ship computer ready, logbook found or not yet created, Xora not on board in this version. |
-| B0 | If the CLI default workspace exists, it is offered and opened in place. With several reviewers the person picks themselves. |
-| B1 | Name. If it gives no usable id, the person is asked for a short name. |
-| B2 | Ship name: "Nova", "Aurora", or own text. It becomes `workspace.json` `name`. |
-| B3 | Logbook folder: `Documents › Loxora` by default (on Windows the real Documents folder, which may be redirected), or a typed full path. Warnings for a folder in a Git working tree (refused), a OneDrive folder, and a folder that already holds a logbook (offered for opening). Then the workspace is created like `loxora workspace init`, with a new store. |
-| C2, C3 | The three orientation sentences, then the note that Xora is not on board in this version yet. "Continue" leads to the first steps. A reload before that returns to the orientation instead of skipping it. |
-| D1, D2 | At `/first-steps`: the goal (game, website, texts or a book, or something else with a typed purpose) and the project name (a suggestion or own text). A confirmation card shows the project with its purpose, three spaces, and the collection "Project goal" in the first space. |
-| E1 | A confirmation card starts the Mission "Record the project goal", which then waits for the answer to "Who is the project for?" with three options and their consequences. |
-| E2 | The person answers in Mission Detail with the Milestone 12 answer form. A banner leads back. |
-| E3 | A text field with a template from the purpose and the answer. A confirmation card records it; "Accept" makes it Current knowledge, accepted by the captain. |
-| E4 | Two hints (the input bar, the Mission list) and a closing sentence; "To the bridge" ends the setup. |
+| Start screen | "Establishing connection to the command center" with one line per state the server reported: ship computer ready, logbook found or not created yet, Xora online in script mode. Xora's picture is dimmed until the conversation starts. If the server cannot be reached, the app says so and offers to connect again. |
+| Name | Xora introduces herself and explains "captain". If the name gives no usable id, she asks for a short name. |
+| Existing ship | If the CLI default workspace or the settings file has one, Xora offers to open it in place. The captain must be one of its reviewers; with several, the person picks themselves. |
+| Ship | "Nova", "Aurora", "Kepler", or any typed name. It becomes `workspace.json` `name`. |
+| Logbook | `Documents › Loxora` by default (on Windows the real Documents folder, which may be redirected), the full path under "Details". "That's fine", "Choose another folder", or a typed full path. Warnings for a folder in a Git working tree (refused), a OneDrive folder, and a folder that already holds a logbook (offered for opening). After "That's fine" the workspace is created like `loxora workspace init`, with a new store. |
+| Project | "Start a new project", "Add an existing project" (shown, not active: Xora says it comes later and reads no folder), or "Look around first". A new project: one or two typed sentences, which become the purpose unchanged, or "A game", "A website", "Texts or a book" (the Milestone 13 templates), or "Something else" with a typed purpose. Xora suggests a name and the spaces and shows a confirmation card with "Create" and "Change name". |
+| Bridge | Xora explains bridge, Mission, and crew. "To the bridge" ends the setup (`completedAt`) and opens Mission Control. |
 
-- **First steps are optional.** Every screen of D and E has "Skip the first steps". Mission Control stays usable at every point; while the first steps are pending, a banner in Mission Control continues them where they stopped.
+- **Not understood.** A typed answer the keyword list cannot place, or that fits more than one button, gets "I don't understand that yet, I'm still in script mode. Just tap one of the answers." and the same buttons again. Name, ship name, folder path, plan description, and project name accept any text.
+- **Keyword list** (`packages/app/src/shared/conversation.ts`): fixed per language; answers are compared in lower case, with umlauts as ae, oe, ue, ss, without accents and punctuation; keywords match whole words or word stems. A plan description is placed under the game, website, or writing template by keyword, otherwise "other". Buttons send their key, never their text.
+- **Resume.** A reload continues at the current step; the conversation is rebuilt from the stored answers. The transcript is not stored. Earlier messages keep the language they were shown in.
+- **First Mission on the bridge.** While a project created by the setup exists and its first Mission is not finished, Mission Control offers it in a banner and in the empty Mission list. "First mission" opens `/first-steps` with the Milestone 13 steps E1 to E4 (start the Mission "Record the project goal", answer it in Mission Detail, accept the project goal, two hints). "Not now" dismisses the offer for good.
 - **Writes** (Milestone 13 section 7): the project, spaces, collection, Mission, source, evidence, and proposal are written as `agent:xora`; the answer and the review are the captain's. Each write runs only after the person confirmed the card that shows it.
 - **Xora input bar:** at the bottom of every Mission Control screen. In script mode every message gets one fixed answer: Xora is not on board in this version yet, and what works today. Messages are not stored or logged.
 - **Empty states:** a section without content shows one sentence and one button; the button opens the input bar with the fixed answer for that topic (for the Mission list: how Missions are created today).
@@ -72,13 +71,12 @@ All `POST` routes need the same request protection as the write API below. The s
 
 | Route | Body | Effect |
 |---|---|---|
-| `GET /api/setup` | | `{ mode }` with `fixed`, `ready`, `setup`, or `settingsError`; in setup mode also `answers`, `existing`, `logbook` (path, `documentsPath`, `inRepository`, `oneDrive`, `hasWorkspace`, and the human `reviewers` of a logbook found there), and `xora`; in ready mode `introPending` and `firstSteps` (`pending`, `stage`: `goal`, `mission`, `answer`, `record`, or `hints`, and `projectId`, `purpose`, `missionId`, `answer`) |
+| `GET /api/setup` | | `{ mode }` with `fixed`, `ready`, `setup`, or `settingsError`. In setup mode also `step` (`name`, `ship`, or `logbook`), `boot` (`shipComputer`: `ready`, `logbook`: `found` or `notCreated`, `xora`: `scriptMode`), `answers`, `existing`, `logbook` (path, `documentsPath`, `inRepository`, `oneDrive`, `hasWorkspace`, and the human `reviewers` of a logbook found there), and `xora`. In ready mode `step` (`project`, `bridge`, or `null` once the setup ended), while not null also `answers` and `boot`, and `firstSteps` (`pending`: the first Mission is offered; `stage`: `goal`, `mission`, `answer`, `record`, or `hints`; `projectId`, `purpose`, `missionId`, `answer`) |
 | `POST /api/setup/answers` | `{ name?, captain?, shipName?, logbookPath? }` | stores answers; 400 `CaptainNeeded` when no id can be derived |
 | `POST /api/setup/workspace` | `{ action: "create" }` or `{ action: "open", path, captain? }` | creates the workspace in the chosen folder (400 `InRepository`, 409 `WorkspaceExists` or `FolderInUse`) or opens an existing one without migrating it |
-| `POST /api/setup/intro` | `{}` | records that the orientation was shown to the end; 409 `NotReady` before the workspace exists |
-| `POST /api/setup/finish` | `{ skipped?: boolean }` | sets `setup.completedAt` (first steps done or skipped); 409 `NotReady` before the workspace exists |
-| `POST /api/assistant/message` | `{ text, topic?, language? }` or `{ choice, …, language? }` | asks the assistant; never writes. `text` (the input bar) returns `{ reply }`, a fixed reply key. `choice` is `goal` (`goal`: `game`, `website`, `writing`, or `other` with `purpose`; `projectName`), `firstMission`, or `goalText` (`text`) and returns `{ action }`: the proposed action with its `id` and exactly what will be written. Choices need ready mode (409 `NotReady`) and a human actor (403 `ReadOnly`) |
-| `POST /api/assistant/confirm` | `{ actionId, confirm }` | `confirm: true` executes the pending action, `false` discards it; returns `{ confirmed, firstSteps }`. 404 `UnknownAction` for an unknown, used, or expired id (pending actions live 30 minutes, in memory); 409 `WrongStep` when the action is not due, `SetupFinished` after the first steps |
+| `POST /api/setup/finish` | `{ skipped?: boolean }` | ends the setup conversation (`setup.completedAt`, kept if already set); `skipped: true` also dismisses the first Mission offer (`setup.firstMissionDismissedAt`); 409 `NotReady` before the workspace exists. `POST /api/setup/intro` (Milestone 13) is removed. |
+| `POST /api/assistant/message` | `{ prompt, choice }` or `{ prompt, text }`, `{ text, topic? }`, or `{ choice, … }`, each with `language?` | asks the assistant; never writes. A setup answer (`prompt`: a prompt key of `shared/conversation.ts`) returns `{ prompt, choice?, value?, goal?, choices, terms }`, or `reply: "notUnderstood"` when the keyword list cannot place the text; an unknown prompt or a choice that is not one of the prompt's buttons is 400. `text` alone (the input bar) returns `{ reply }`, a fixed reply key. `choice` is `goal` (`goal`: `game`, `website`, `writing`, or `other`; `projectName`; `purpose`, required for `other`, otherwise replacing the template's purpose), `firstMission`, or `goalText` (`text`) and returns `{ action }`: the proposed action with its `id` and exactly what will be written. These choices need ready mode (409 `NotReady`) and a human actor (403 `ReadOnly`) |
+| `POST /api/assistant/confirm` | `{ actionId, confirm }` | `confirm: true` executes the pending action, `false` discards it; returns `{ confirmed, firstSteps }`. 404 `UnknownAction` for an unknown, used, or expired id (pending actions live 30 minutes, in memory); 409 `WrongStep` when the action is not due; `SetupFinished` for the project after the setup ended, and for the first Mission after its offer was dismissed |
 | `GET /api/settings` | | `{ available, language }` |
 | `POST /api/settings/language` | `{ language: "de" \| "en" \| null }` | stores the language |
 
@@ -153,13 +151,15 @@ The UI is available in German and English (RFC-010, Amendment 1). All UI text li
 
 - Server-authoritative state: the browser derives no states, permissions, or transitions.
 - Boundary test: the web client imports no Core, SQLite, CLI, MCP, Node, or server code.
+- The setup conversation's prompts and keyword list live in `src/shared/conversation.ts`, which imports nothing; the server and the web client both use it.
+- Typefaces: Orbitron (headings, buttons), Exo 2 (text), and Share Tech Mono (labels), all under the SIL Open Font License 1.1, are bundled from their Fontsource packages and never loaded from the internet. The license texts are served with the web client under `fonts/` (`packages/app/src/web/public/fonts/`).
 - Accessibility:
   - skip link and visible keyboard focus;
   - status as text and color;
-  - semantic regions and labels;
-  - no animations.
+  - semantic regions and labels; new messages of the setup conversation are announced politely;
+  - the only animation, the start screen of the setup, is off with reduced motion.
 
 ## Tests
 
-- `packages/app/test/app.test.ts` and `setup.test.ts` (in `npm test`): read and write API, setup, first steps, assistant routes, request protection, label parity.
-- `packages/app/e2e/setup.spec.ts` (Playwright, `npm run test:app:e2e`): the full setup in German and in English, opening an existing workspace, skipping the first steps, and continuing an interrupted step. Each test starts its own server with a temporary `LOXORA_HOME`; the real user folders are never touched. CI runs it as "App end-to-end (Playwright)".
+- `packages/app/test/app.test.ts` and `setup.test.ts` (in `npm test`): read and write API, setup, the keyword list, first steps and the first Mission offer, assistant routes, request protection, label parity.
+- `packages/app/e2e/setup.spec.ts` (Playwright, `npm run test:app:e2e`): the setup in German by tapping (apart from the name) through the first Mission from the bridge, with requests to other hosts blocked to show the typefaces are bundled; in English by typing, with "Change name", a not-understood reply, and dismissing the offer; "Look around first" with the inactive "Add an existing project"; a not-understood reply and a resumed setup; and opening an existing workspace. Each test starts its own server with a temporary `LOXORA_HOME`; the real user folders are never touched. CI runs it as "App end-to-end (Playwright)".

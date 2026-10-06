@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { type Interpretation, interpret, PROMPTS, type PromptKey } from "../shared/conversation.js";
 
 /**
  * Xora as a capability (RFC-011 section 5, Milestone 13). The flow depends only on the
@@ -14,7 +15,20 @@ export const GOALS = ["game", "website", "writing", "other"] as const;
 export type Goal = (typeof GOALS)[number];
 
 export type AssistantInput =
-  /** Scene D1 and D2: the chosen goal, the purpose for "other", and the project name. */
+  /**
+   * An answer in the setup conversation (Milestone 14): the key of an answer button, or a
+   * typed text the keyword list places.
+   */
+  | {
+      readonly kind: "setup";
+      readonly prompt: PromptKey;
+      readonly choice?: string;
+      readonly text?: string;
+    }
+  /**
+   * The new project: the goal template, the project name, and the purpose. A typed plan
+   * description is the purpose for any goal; "other" needs one.
+   */
   | {
       readonly kind: "goal";
       readonly goal: Goal;
@@ -65,6 +79,8 @@ export interface AssistantTurn {
   /** A fixed reply the web client renders from its labels. */
   readonly reply?: string;
   readonly action?: ActionPayload;
+  /** For a setup answer: what it was understood as; absent when it was not understood. */
+  readonly answer?: Interpretation;
 }
 
 export interface Assistant {
@@ -172,7 +188,7 @@ export class ScriptedAssistant implements Assistant {
           action: {
             kind: "createProject",
             name: input.projectName,
-            purpose: fixed?.purpose ?? input.purpose ?? "",
+            purpose: input.purpose ?? fixed?.purpose ?? "",
             spaces: fixed?.spaces ?? content.otherSpaces,
             collection: content.collection,
           },
@@ -194,6 +210,15 @@ export class ScriptedAssistant implements Assistant {
         };
       case "message":
         return { reply: input.topic === "missions" ? "missions" : "notOnBoard" };
+      case "setup": {
+        if (input.choice !== undefined) {
+          return PROMPTS[input.prompt].choices.some((choice) => choice === input.choice)
+            ? { answer: { choice: input.choice } }
+            : { reply: "notUnderstood" };
+        }
+        const answer = interpret(input.prompt, input.text ?? "", language);
+        return answer ? { answer } : { reply: "notUnderstood" };
+      }
     }
   }
 }

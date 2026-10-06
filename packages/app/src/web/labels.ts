@@ -2,6 +2,7 @@
  * All UI text in one place (RFC-010, section 3 and Amendment 1): one entry per language.
  * German is the language of the designs; English carries the same keys.
  */
+import type { PromptKey, SetupStep, Term } from "../shared/conversation.js";
 import type { FirstStepsStage, Goal, MissionFilter, MissionState } from "./types.js";
 
 export type Language = "de" | "en";
@@ -144,70 +145,88 @@ export interface Labels {
   };
   readonly setup: {
     readonly title: string;
-    readonly progress: (step: number, total: number) => string;
-    readonly back: string;
-    readonly next: string;
-    readonly systems: string;
-    readonly shipComputer: string;
-    readonly ready: string;
-    readonly logbook: string;
-    readonly logbookPending: string;
-    readonly logbookFound: string;
-    readonly xoraNotOnBoard: string;
+    readonly connecting: string;
+    readonly boot: {
+      readonly shipComputer: string;
+      readonly ready: string;
+      readonly logbook: string;
+      readonly found: string;
+      readonly notCreated: string;
+      readonly xora: string;
+      readonly scriptMode: string;
+    };
+    readonly unreachable: string;
+    readonly retry: string;
+    readonly progress: string;
+    readonly steps: Record<SetupStep, string>;
+    readonly stepDone: string;
+    readonly stepCurrent: string;
+    readonly xoraRole: string;
+    readonly statusConnecting: string;
+    readonly statusOnline: string;
+    readonly scriptNote: string;
+    readonly conversation: string;
+    readonly captain: string;
+    readonly termsTitle: string;
+    readonly terms: Record<Term, { readonly name: string; readonly text: string }>;
+    readonly answer: string;
+    readonly placeholder: string;
+    readonly placeholders: Partial<Record<PromptKey, string>>;
+    readonly send: string;
+    readonly later: string;
+    readonly choices: {
+      readonly existing: Record<"open" | "new", string>;
+      readonly ship: Record<"nova" | "aurora" | "kepler", string>;
+      readonly logbook: Record<"fits" | "other" | "open", string>;
+      readonly project: Record<"new" | "existing" | "look", string>;
+      readonly existingProject: Record<"new" | "look", string>;
+      readonly describe: Record<Goal, string>;
+      readonly confirm: Record<"create" | "rename", string>;
+      readonly bridge: Record<"toBridge", string>;
+    };
+    readonly intro: string;
+    readonly shortName: string;
     readonly existing: (ship: string) => string;
-    readonly openShip: string;
-    readonly newShip: string;
     readonly whoAreYou: string;
-    readonly nameQuestion: string;
-    readonly nameLabel: string;
-    readonly nameEmpty: string;
-    readonly shortNameQuestion: string;
-    readonly shortNameLabel: string;
-    readonly shipQuestion: (name: string) => string;
-    readonly shipLabel: string;
-    readonly ownName: string;
-    readonly logbookQuestion: (ship: string) => string;
+    readonly notReviewer: string;
+    readonly shipOpened: (ship: string) => string;
+    readonly ship: (name: string) => string;
+    readonly logbook: (ship: string) => string;
     readonly documents: string;
     readonly details: string;
-    readonly fits: string;
-    readonly otherFolder: string;
-    readonly folderLabel: string;
-    readonly folderHint: string;
-    readonly useFolder: string;
     readonly inRepository: string;
     readonly oneDrive: string;
     readonly hasWorkspace: string;
-    readonly openLogbook: string;
     readonly notOnShip: string;
+    readonly folder: string;
+    readonly notFullPath: string;
+    readonly logbookCreated: (ship: string) => string;
+    readonly project: string;
+    readonly existingProject: string;
+    readonly describe: string;
+    readonly purpose: string;
+    readonly projectNames: Record<Goal, string>;
+    readonly proposal: string;
+    readonly confirmation: string;
+    readonly createProject: (name: string, purpose: string) => string;
+    readonly spaces: (spaces: readonly string[], collection: string) => string;
+    readonly rule: string;
+    readonly rename: string;
+    readonly projectCreated: (name: string) => string;
+    readonly bridgeWithProject: string;
+    readonly bridgeWithoutProject: string;
     readonly working: string;
-    readonly orientation: readonly string[];
-    readonly scriptMode: string;
-    readonly bridgeReady: string;
-    readonly toBridge: string;
     readonly settingsError: string;
     readonly failed: (message: string) => string;
   };
   readonly firstSteps: {
     readonly title: string;
+    readonly progress: (step: number, total: number) => string;
     readonly banner: Record<FirstStepsStage, string>;
     readonly continue: string;
-    readonly skip: string;
-    readonly goalQuestion: string;
-    readonly goals: Record<Goal, string>;
-    readonly stations: Record<Goal, string>;
-    readonly stationExplained: string;
-    readonly purposeQuestion: string;
-    readonly purposeLabel: string;
-    readonly projectQuestion: string;
-    readonly projectSuggestions: Record<Goal, string>;
-    readonly ownName: string;
-    readonly projectLabel: string;
+    readonly dismiss: string;
+    readonly offer: string;
     readonly confirmation: string;
-    readonly createProject: (name: string, purpose: string) => string;
-    readonly spaces: (spaces: readonly string[], collection: string) => string;
-    readonly rule: string;
-    readonly create: string;
-    readonly change: string;
     readonly missionIntro: string;
     readonly startMission: (title: string) => string;
     readonly missionGoal: (goal: string) => string;
@@ -221,6 +240,8 @@ export interface Labels {
     readonly template: (purpose: string, answer: string) => string;
     readonly recordCard: (title: string) => string;
     readonly accept: string;
+    readonly change: string;
+    readonly next: string;
     readonly hints: readonly string[];
     readonly closing: string;
     readonly finish: string;
@@ -231,7 +252,7 @@ export interface Labels {
     readonly send: string;
     readonly close: string;
     readonly notStored: string;
-    readonly replies: Record<"notOnBoard" | "missions", string>;
+    readonly replies: Record<"notOnBoard" | "missions" | "notUnderstood", string>;
     readonly askMissions: string;
   };
 }
@@ -393,109 +414,170 @@ const de: Labels = {
   },
   setup: {
     title: "Erster Start",
-    progress: (step, total) => `Schritt ${step} von ${total}`,
-    back: "Zurück",
-    next: "Weiter",
-    systems: "Schiffssysteme",
-    shipComputer: "Bordcomputer",
-    ready: "bereit",
-    logbook: "Logbuch",
-    logbookPending: "wird gleich angelegt",
-    logbookFound: "gefunden",
-    xoraNotOnBoard: "in dieser Version noch nicht an Bord",
+    connecting: "Verbindung zum Kommandozentrum wird hergestellt",
+    boot: {
+      shipComputer: "Bordcomputer",
+      ready: "bereit",
+      logbook: "Logbuch",
+      found: "gefunden",
+      notCreated: "noch nicht angelegt",
+      xora: "Xora",
+      scriptMode: "online im Skriptmodus",
+    },
+    unreachable: "Der Bordcomputer antwortet nicht. Läuft Loxora noch?",
+    retry: "Erneut verbinden",
+    progress: "Fortschritt der Einrichtung",
+    steps: {
+      name: "Name",
+      ship: "Schiff",
+      logbook: "Logbuch",
+      project: "Projekt",
+      bridge: "Brücke",
+    },
+    stepDone: "erledigt",
+    stepCurrent: "aktuell",
+    xoraRole: "Erste Offizierin",
+    statusConnecting: "Verbinde …",
+    statusOnline: "Online · Skriptmodus",
+    scriptNote:
+      "Skriptmodus: Ich antworte noch mit festen Texten. Tipp eine Antwort an oder schreib sie unten.",
+    conversation: "Gespräch mit Xora",
+    captain: "Du",
+    termsTitle: "Bordbegriffe",
+    terms: {
+      captain: {
+        name: "Kapitän",
+        text: "Das bist du. Du entscheidest an Bord; nichts wird ohne dich festgeschrieben.",
+      },
+      firstOfficer: {
+        name: "Erste Offizierin",
+        text: "Das bin ich, Xora. Ich kenne die Systeme des Schiffs, schlage vor und koordiniere die Crew.",
+      },
+      ship: { name: "Schiff", text: "Dein Arbeitsbereich für alle deine Projekte." },
+      logbook: {
+        name: "Logbuch",
+        text: "Alles, was wir über deine Projekte festhalten. Es liegt als Ordner auf deinem Rechner.",
+      },
+      project: {
+        name: "Projekt",
+        text: "Ein Vorhaben, etwa ein Spiel oder ein Buch, mit eigenen Bereichen im Logbuch.",
+      },
+      bridge: {
+        name: "Brücke",
+        text: "Deine Kommandozentrale. Hier siehst du deine Missionen und triffst Entscheidungen.",
+      },
+      mission: {
+        name: "Mission",
+        text: "Eine Aufgabe, die an Bord Schritt für Schritt erledigt wird, für dich sichtbar.",
+      },
+      crew: {
+        name: "Crew",
+        text: "KI-Helfer, die später an Bord mitarbeiten. In dieser Version bin nur ich an Bord.",
+      },
+    },
+    answer: "Antwort an Xora",
+    placeholder: "Antworte Xora oder tipp oben eine Antwort an …",
+    placeholders: {
+      name: "Dein Name",
+      shortName: "Kurzer Name, etwa „alex“",
+      reviewer: "Dein Name auf diesem Schiff",
+      ship: "Name deines Schiffs",
+      folder: "Voller Pfad, etwa C:\\Users\\alex\\Documents\\Loxora",
+      describe: "Was hast du vor?",
+      purpose: "Worum geht es?",
+      rename: "Name des Projekts",
+    },
+    send: "Senden",
+    later: "kommt später",
+    choices: {
+      existing: { open: "Dieses Schiff öffnen", new: "Neues Schiff anlegen" },
+      ship: { nova: "Nova", aurora: "Aurora", kepler: "Kepler" },
+      logbook: { fits: "Passt so", other: "Anderen Ordner wählen", open: "Dieses Logbuch öffnen" },
+      project: {
+        new: "Neues Projekt starten",
+        existing: "Bestehendes Projekt hinzufügen",
+        look: "Erst umsehen",
+      },
+      existingProject: { new: "Stattdessen neues Projekt starten", look: "Erst umsehen" },
+      describe: {
+        game: "Ein Spiel",
+        website: "Eine Website",
+        writing: "Texte oder ein Buch",
+        other: "Etwas anderes",
+      },
+      confirm: { create: "Anlegen", rename: "Namen ändern" },
+      bridge: { toBridge: "Zur Brücke" },
+    },
+    intro:
+      "Willkommen an Bord. Ich bin Xora, deine Erste Offizierin: Ich kenne die Systeme dieses Schiffs und helfe dir. Du bist der Kapitän, also die Person, die an Bord entscheidet. Wie soll ich dich nennen?",
+    shortName:
+      "Aus diesem Namen kann ich keine Kennung für deine Freigaben machen. Gib mir bitte einen kurzen Namen aus Buchstaben oder Ziffern, etwa „alex“.",
     existing: (ship) =>
       `Auf diesem Rechner gibt es schon ein Schiff: „${ship}“. Willst du damit weiterfliegen?`,
-    openShip: "Dieses Schiff öffnen",
-    newShip: "Neues Schiff anlegen",
-    whoAreYou: "Wer von euch bist du?",
-    nameQuestion:
-      "Willkommen an Bord. Ich bin Xora, deine Erste Offizierin. Ein paar Dinge klären wir gleich zu Beginn. Wie soll ich dich nennen?",
-    nameLabel: "Dein Name",
-    nameEmpty:
-      "Ich brauche einen Namen, damit ich weiß, wer an Bord entscheidet. Ein Spitzname reicht.",
-    shortNameQuestion:
-      "Aus diesem Namen kann ich keine Kennung für deine Freigaben machen. Gib mir bitte einen kurzen Namen aus Buchstaben oder Ziffern, etwa „alex“.",
-    shortNameLabel: "Kurzer Name",
-    shipQuestion: (name) =>
+    whoAreYou: "Auf diesem Schiff gibt es mehrere Namen. Wer von ihnen bist du?",
+    notReviewer: "Dieser Name steht nicht auf der Liste des Schiffs. Tipp einen der Namen an.",
+    shipOpened: (ship) => `Willkommen zurück auf der ${ship}. Dein Logbuch habe ich gefunden.`,
+    ship: (name) =>
       `Schön, dich kennenzulernen, ${name}. Dein Schiff ist dein Arbeitsbereich für alle deine Projekte, und es braucht einen Namen. Wie soll deins heißen?`,
-    shipLabel: "Schiffsname",
-    ownName: "Selbst eingeben",
-    logbookQuestion: (ship) =>
+    logbook: (ship) =>
       `Wo soll ich das Logbuch der ${ship} aufbewahren, also alles, was wir über deine Projekte festhalten? Ich schlage diesen Ordner vor. Alles bleibt auf diesem Rechner.`,
     documents: "Dokumente",
     details: "Details",
-    fits: "Passt so",
-    otherFolder: "Anderen Ordner wählen",
-    folderLabel: "Voller Pfad des Ordners",
-    folderHint: "Zum Beispiel C:\\Users\\alex\\Documents\\Loxora. Fehlende Ordner lege ich an.",
-    useFolder: "Diesen Ordner nehmen",
     inRepository:
-      "Dieser Ordner gehört zu einem Code-Projekt. Das Logbuch sollte getrennt davon liegen.",
+      "Dieser Ordner gehört zu einem Code-Projekt. Das Logbuch sollte getrennt davon liegen; wähle bitte einen anderen Ordner.",
     oneDrive:
       "Dieser Ordner wird mit OneDrive synchronisiert. Dann läge dein Logbuch auch in der Cloud. Wenn du das nicht willst, wähle einen anderen Ordner.",
     hasWorkspace: "In diesem Ordner liegt schon ein Logbuch.",
-    openLogbook: "Dieses Logbuch öffnen",
     notOnShip:
-      "Dein Name steht nicht auf der Liste dieses Schiffs. Wähle einen anderen Ordner für dein Logbuch.",
-    working: "Einen Moment …",
-    orientation: [
-      "Kurz zur Orientierung: Das hier ist die Brücke. Von hier aus steuerst du deine Projekte.",
-      "Später arbeiten hier weitere KI-Helfer als deine Crew. Ich koordiniere sie und hole dich, wenn etwas entschieden werden muss.",
-      "Das Wichtigste an Bord: Ich schlage vor, du entscheidest. Nichts wird ohne dich festgeschrieben.",
-    ],
-    scriptMode:
-      "In dieser Version bin ich noch nicht ganz an Bord und kann noch nicht frei antworten. Wir kommen trotzdem ans Ziel: Bis dahin gebe ich dir feste Auswahlmöglichkeiten.",
-    bridgeReady:
-      "Dein Logbuch ist angelegt. Als Nächstes legen wir dein erstes Projekt und deine erste Mission an.",
-    toBridge: "Weiter",
-    settingsError:
-      "Deine Einstellungsdatei lässt sich nicht lesen. Loxora ändert sie nicht. Korrigiere oder entferne sie und lade die Seite dann neu.",
-    failed: (message) => `Das hat nicht geklappt: ${message}`,
-  },
-  firstSteps: {
-    title: "Erste Schritte",
-    banner: {
-      goal: "Deine ersten Schritte sind noch offen: dein erstes Projekt und deine erste Mission.",
-      mission: "Deine ersten Schritte sind noch offen: deine erste Mission.",
-      answer: "Deine erste Mission wartet auf deine Entscheidung.",
-      record: "Deine erste Mission hat eine Antwort. Jetzt halten wir das Projektziel fest.",
-      hints: "Fast geschafft: noch zwei kurze Hinweise zur Brücke.",
-    },
-    continue: "Weiter einrichten",
-    skip: "Erste Schritte überspringen",
-    goalQuestion: "Was möchtest du mit Loxora machen?",
-    goals: {
-      game: "Ein Spiel entwickeln",
-      website: "Eine Website bauen",
-      writing: "Texte oder ein Buch schreiben",
-      other: "Etwas anderes",
-    },
-    stations: {
-      game: "Dafür helfen später Stationen für Programmieren, Grafik und Tests.",
-      website: "Dafür helfen später Stationen für Gestaltung, Texte und Technik.",
-      writing: "Dafür helfen später Stationen für Schreiben, Lektorat und Recherche.",
-      other: "Welche Stationen dafür helfen, schauen wir uns später zusammen an.",
-    },
-    stationExplained:
-      "Eine Station ist ein Arbeitsplatz auf der Brücke, an dem später ein KI-Helfer der Crew arbeitet.",
-    purposeQuestion: "Erzähl mir in ein, zwei Sätzen, was du vorhast.",
-    purposeLabel: "Dein Vorhaben",
-    projectQuestion: "Wie soll das Projekt heißen?",
-    projectSuggestions: {
+      "Dein Name steht nicht auf der Liste dieses Logbuchs. Wähle bitte einen anderen Ordner.",
+    folder:
+      "Gib mir den vollen Pfad des Ordners, zum Beispiel C:\\Users\\alex\\Documents\\Loxora. Fehlende Ordner lege ich an.",
+    notFullPath: "Das ist kein voller Pfad. Er beginnt zum Beispiel mit C:\\ oder mit /.",
+    logbookCreated: (ship) => `Das Logbuch der ${ship} ist angelegt.`,
+    project:
+      "Jetzt zu deinem ersten Projekt. Ein Projekt ist ein Vorhaben, etwa ein Spiel oder ein Buch, und bekommt eigene Bereiche im Logbuch. Was möchtest du tun?",
+    existingProject:
+      "Ein bestehendes Projekt einzubinden kommt in einer späteren Version. Bis dahin kann ich ein neues anlegen, oder du siehst dich erst um.",
+    describe: "Erzähl mir in ein, zwei Sätzen, was du vorhast. Oder tipp an, was am ehesten passt.",
+    purpose: "Erzähl mir in ein, zwei Sätzen, worum es geht.",
+    projectNames: {
       game: "Mein Spiel",
       website: "Meine Website",
       writing: "Mein Buch",
       other: "Mein Projekt",
     },
-    ownName: "Selbst eingeben",
-    projectLabel: "Name des Projekts",
+    proposal: "Dann schlage ich dir das vor:",
     confirmation: "Das schreibe ich ins Logbuch",
     createProject: (name, purpose) => `Ich lege an: Projekt „${name}“. Zweck: ${purpose}`,
     spaces: (spaces, collection) =>
       `Dazu drei Bereiche, also Abschnitte im Logbuch: ${spaces.join(", ")}. Im Bereich „${spaces[0] ?? ""}“ lege ich die Sammlung „${collection}“ an.`,
     rule: "So läuft das an Bord immer: Ich schlage vor, du entscheidest.",
-    create: "Anlegen",
-    change: "Ändern",
+    rename: "Wie soll das Projekt heißen?",
+    projectCreated: (name) => `Das Projekt „${name}“ ist angelegt.`,
+    bridgeWithProject:
+      "Alles bereit. Jetzt geht es auf die Brücke, deine Kommandozentrale. Dort wartet deine erste Mission, also eine Aufgabe, die an Bord Schritt für Schritt erledigt wird. Später arbeiten dort auch KI-Helfer als deine Crew.",
+    bridgeWithoutProject:
+      "Alles bereit. Jetzt geht es auf die Brücke, deine Kommandozentrale. Dort siehst du deine Missionen, also Aufgaben, die an Bord Schritt für Schritt erledigt werden. Später arbeiten dort auch KI-Helfer als deine Crew. Sieh dich in Ruhe um.",
+    working: "Einen Moment …",
+    settingsError:
+      "Deine Einstellungsdatei lässt sich nicht lesen. Loxora ändert sie nicht. Korrigiere oder entferne sie und lade die Seite dann neu.",
+    failed: (message) => `Das hat nicht geklappt: ${message}`,
+  },
+  firstSteps: {
+    title: "Erste Mission",
+    progress: (step, total) => `Schritt ${step} von ${total}`,
+    banner: {
+      goal: "Dein erstes Projekt fehlt noch.",
+      mission: "Deine erste Mission wartet: Halte das Ziel deines Projekts fest.",
+      answer: "Deine erste Mission wartet auf deine Entscheidung.",
+      record: "Deine erste Mission hat eine Antwort. Jetzt halten wir das Projektziel fest.",
+      hints: "Fast geschafft: noch zwei kurze Hinweise zur Brücke.",
+    },
+    continue: "Erste Mission",
+    dismiss: "Nicht jetzt",
+    offer:
+      "Noch keine Missionen. Deine erste Mission ist bereit: Gemeinsam halten wir das Ziel deines Projekts fest.",
+    confirmation: "Das schreibe ich ins Logbuch",
     missionIntro:
       "Zeit für deine erste Mission. Eine Mission ist eine Aufgabe, die an Bord erledigt wird, Schritt für Schritt und für dich sichtbar.",
     startMission: (title) =>
@@ -514,6 +596,8 @@ const de: Labels = {
     recordCard: (title) =>
       `Ich halte das als „${title}“ im Logbuch fest und schließe die Mission ab. Mit „Übernehmen“ gibst du es als Kapitän frei; dann gilt es als festes Wissen.`,
     accept: "Übernehmen",
+    change: "Ändern",
+    next: "Weiter",
     hints: [
       "Hier unten sprichst du mit mir.",
       "Links siehst du deine Missionen. Rot heißt: Ich brauche dich.",
@@ -533,6 +617,8 @@ const de: Labels = {
         "Ich bin in dieser Version noch nicht an Bord und kann noch nicht frei antworten. Heute kannst du deine Missionen verfolgen, Fragen beantworten und Missionen anhalten oder stoppen.",
       missions:
         "Missionen legen heute Agenten über die Kommandozeile an, mit „loxora mission create“. Sobald ich an Bord bin, kannst du mich direkt darum bitten.",
+      notUnderstood:
+        "Das verstehe ich noch nicht, ich bin noch im Skriptmodus. Tipp einfach eine der Antworten an.",
     },
     askMissions: "Wie bekomme ich Missionen?",
   },
@@ -693,107 +779,168 @@ const en: Labels = {
   },
   setup: {
     title: "First launch",
-    progress: (step, total) => `Step ${step} of ${total}`,
-    back: "Back",
-    next: "Continue",
-    systems: "Ship systems",
-    shipComputer: "Ship computer",
-    ready: "ready",
-    logbook: "Logbook",
-    logbookPending: "created in a moment",
-    logbookFound: "found",
-    xoraNotOnBoard: "not on board in this version yet",
+    connecting: "Establishing connection to the command center",
+    boot: {
+      shipComputer: "Ship computer",
+      ready: "ready",
+      logbook: "Logbook",
+      found: "found",
+      notCreated: "not created yet",
+      xora: "Xora",
+      scriptMode: "online in script mode",
+    },
+    unreachable: "The ship computer does not answer. Is Loxora still running?",
+    retry: "Connect again",
+    progress: "Setup progress",
+    steps: {
+      name: "Name",
+      ship: "Ship",
+      logbook: "Logbook",
+      project: "Project",
+      bridge: "Bridge",
+    },
+    stepDone: "done",
+    stepCurrent: "current",
+    xoraRole: "First officer",
+    statusConnecting: "Connecting …",
+    statusOnline: "Online · script mode",
+    scriptNote: "Script mode: I still answer with fixed texts. Tap an answer or type it below.",
+    conversation: "Conversation with Xora",
+    captain: "You",
+    termsTitle: "Ship terms",
+    terms: {
+      captain: {
+        name: "Captain",
+        text: "That's you. You decide on board; nothing is recorded without you.",
+      },
+      firstOfficer: {
+        name: "First officer",
+        text: "That's me, Xora. I know the ship's systems, make proposals, and coordinate the crew.",
+      },
+      ship: { name: "Ship", text: "Your workspace for all your projects." },
+      logbook: {
+        name: "Logbook",
+        text: "Everything we record about your projects. It is a folder on your computer.",
+      },
+      project: {
+        name: "Project",
+        text: "An undertaking, such as a game or a book, with its own areas in the logbook.",
+      },
+      bridge: {
+        name: "Bridge",
+        text: "Your command center. Here you see your missions and make decisions.",
+      },
+      mission: {
+        name: "Mission",
+        text: "A task done on board, step by step and visible to you.",
+      },
+      crew: {
+        name: "Crew",
+        text: "AI helpers that will work on board later. In this version only I am on board.",
+      },
+    },
+    answer: "Answer to Xora",
+    placeholder: "Answer Xora or tap an answer above …",
+    placeholders: {
+      name: "Your name",
+      shortName: "A short name, such as “alex”",
+      reviewer: "Your name on this ship",
+      ship: "Your ship's name",
+      folder: "Full path, such as C:\\Users\\alex\\Documents\\Loxora",
+      describe: "What do you have in mind?",
+      purpose: "What is it about?",
+      rename: "Project name",
+    },
+    send: "Send",
+    later: "coming later",
+    choices: {
+      existing: { open: "Open this ship", new: "Create a new ship" },
+      ship: { nova: "Nova", aurora: "Aurora", kepler: "Kepler" },
+      logbook: { fits: "That's fine", other: "Choose another folder", open: "Open this logbook" },
+      project: {
+        new: "Start a new project",
+        existing: "Add an existing project",
+        look: "Look around first",
+      },
+      existingProject: { new: "Start a new project instead", look: "Look around first" },
+      describe: {
+        game: "A game",
+        website: "A website",
+        writing: "Texts or a book",
+        other: "Something else",
+      },
+      confirm: { create: "Create", rename: "Change name" },
+      bridge: { toBridge: "To the bridge" },
+    },
+    intro:
+      "Welcome aboard. I'm Xora, your first officer: I know this ship's systems and help you. You are the captain, the person who decides on board. What should I call you?",
+    shortName:
+      "I can't make an id for your approvals from this name. Please give me a short name with letters or digits, such as “alex”.",
     existing: (ship) =>
       `There is already a ship on this computer: “${ship}”. Do you want to keep flying it?`,
-    openShip: "Open this ship",
-    newShip: "Create a new ship",
-    whoAreYou: "Which of these are you?",
-    nameQuestion:
-      "Welcome aboard. I'm Xora, your first officer. Let's settle a few things first. What should I call you?",
-    nameLabel: "Your name",
-    nameEmpty: "I need a name so I know who decides on board. A nickname is fine.",
-    shortNameQuestion:
-      "I can't make an id for your approvals from this name. Please give me a short name with letters or digits, such as “alex”.",
-    shortNameLabel: "Short name",
-    shipQuestion: (name) =>
+    whoAreYou: "This ship has several names on its list. Which of them are you?",
+    notReviewer: "That name is not on the ship's list. Tap one of the names.",
+    shipOpened: (ship) => `Welcome back on the ${ship}. I found your logbook.`,
+    ship: (name) =>
       `Nice to meet you, ${name}. Your ship is your workspace for all your projects, and it needs a name. What should yours be called?`,
-    shipLabel: "Ship name",
-    ownName: "Enter my own",
-    logbookQuestion: (ship) =>
+    logbook: (ship) =>
       `Where should I keep the logbook of the ${ship}, that is, everything we record about your projects? I suggest this folder. Everything stays on this computer.`,
     documents: "Documents",
     details: "Details",
-    fits: "Looks good",
-    otherFolder: "Choose another folder",
-    folderLabel: "Full path of the folder",
-    folderHint: "For example C:\\Users\\alex\\Documents\\Loxora. I create missing folders.",
-    useFolder: "Use this folder",
     inRepository:
-      "This folder belongs to a code project. The logbook should be kept separate from it.",
+      "This folder belongs to a code project. The logbook should be kept separate from it; please choose another folder.",
     oneDrive:
       "OneDrive synchronizes this folder. Your logbook would then also be in the cloud. If you don't want that, choose another folder.",
     hasWorkspace: "This folder already holds a logbook.",
-    openLogbook: "Open this logbook",
-    notOnShip: "Your name is not on this ship's list. Choose another folder for your logbook.",
-    working: "One moment …",
-    orientation: [
-      "A quick orientation: this is the bridge. From here you steer your projects.",
-      "Later, more AI helpers will work here as your crew. I coordinate them and fetch you when something needs a decision.",
-      "The most important rule on board: I propose, you decide. Nothing is recorded without you.",
-    ],
-    scriptMode:
-      "In this version I'm not fully on board yet and can't answer freely. We'll still get there: until then, I'll give you fixed choices.",
-    bridgeReady:
-      "Your logbook is ready. Next, we set up your first project and your first mission.",
-    toBridge: "Continue",
-    settingsError:
-      "Your settings file cannot be read. Loxora does not change it. Fix or remove it, then reload the page.",
-    failed: (message) => `That didn't work: ${message}`,
-  },
-  firstSteps: {
-    title: "First steps",
-    banner: {
-      goal: "Your first steps are still open: your first project and your first mission.",
-      mission: "Your first steps are still open: your first mission.",
-      answer: "Your first mission is waiting for your decision.",
-      record: "Your first mission has an answer. Now let's record the project goal.",
-      hints: "Almost done: two short hints about the bridge.",
-    },
-    continue: "Continue setup",
-    skip: "Skip the first steps",
-    goalQuestion: "What do you want to do with Loxora?",
-    goals: {
-      game: "Develop a game",
-      website: "Build a website",
-      writing: "Write texts or a book",
-      other: "Something else",
-    },
-    stations: {
-      game: "Later, stations for programming, graphics, and testing will help with that.",
-      website: "Later, stations for design, writing, and technology will help with that.",
-      writing: "Later, stations for writing, editing, and research will help with that.",
-      other: "We'll look at which stations help with that together later.",
-    },
-    stationExplained:
-      "A station is a workplace on the bridge where an AI helper of the crew will work later.",
-    purposeQuestion: "Tell me in one or two sentences what you have in mind.",
-    purposeLabel: "Your plan",
-    projectQuestion: "What should the project be called?",
-    projectSuggestions: {
+    notOnShip: "Your name is not on this logbook's list. Please choose another folder.",
+    folder:
+      "Give me the full path of the folder, for example C:\\Users\\alex\\Documents\\Loxora. I create missing folders.",
+    notFullPath: "That is not a full path. It starts with C:\\ or with /, for example.",
+    logbookCreated: (ship) => `The logbook of the ${ship} is ready.`,
+    project:
+      "Now to your first project. A project is an undertaking, such as a game or a book, and gets its own areas in the logbook. What would you like to do?",
+    existingProject:
+      "Adding an existing project comes in a later version. Until then I can create a new one, or you look around first.",
+    describe: "Tell me in one or two sentences what you have in mind. Or tap what fits best.",
+    purpose: "Tell me in one or two sentences what it is about.",
+    projectNames: {
       game: "My game",
       website: "My website",
       writing: "My book",
       other: "My project",
     },
-    ownName: "Enter my own",
-    projectLabel: "Project name",
+    proposal: "Then I propose this:",
     confirmation: "This is what I write into the logbook",
     createProject: (name, purpose) => `I create: project “${name}”. Purpose: ${purpose}`,
     spaces: (spaces, collection) =>
       `Plus three areas, that is, sections of the logbook: ${spaces.join(", ")}. In the area “${spaces[0] ?? ""}” I create the collection “${collection}”.`,
     rule: "That's how it always works on board: I propose, you decide.",
-    create: "Create",
-    change: "Change",
+    rename: "What should the project be called?",
+    projectCreated: (name) => `The project “${name}” is created.`,
+    bridgeWithProject:
+      "All set. Now we go to the bridge, your command center. Your first mission waits there: a task done on board, step by step. Later, AI helpers will work there too, as your crew.",
+    bridgeWithoutProject:
+      "All set. Now we go to the bridge, your command center. There you see your missions, tasks done on board step by step. Later, AI helpers will work there too, as your crew. Take your time to look around.",
+    working: "One moment …",
+    settingsError:
+      "Your settings file cannot be read. Loxora does not change it. Fix or remove it, then reload the page.",
+    failed: (message) => `That didn't work: ${message}`,
+  },
+  firstSteps: {
+    title: "First mission",
+    progress: (step, total) => `Step ${step} of ${total}`,
+    banner: {
+      goal: "Your first project is still missing.",
+      mission: "Your first mission is waiting: record the goal of your project.",
+      answer: "Your first mission is waiting for your decision.",
+      record: "Your first mission has an answer. Now let's record the project goal.",
+      hints: "Almost done: two short hints about the bridge.",
+    },
+    continue: "First mission",
+    dismiss: "Not now",
+    offer:
+      "No missions yet. Your first mission is ready: together we record the goal of your project.",
+    confirmation: "This is what I write into the logbook",
     missionIntro:
       "Time for your first mission. A mission is a task done on board, step by step and visible to you.",
     startMission: (title) => `I start the mission “${title}”. For it I need a decision from you.`,
@@ -811,6 +958,8 @@ const en: Labels = {
     recordCard: (title) =>
       `I record this as “${title}” in the logbook and complete the mission. With “Accept” you approve it as captain; then it counts as established knowledge.`,
     accept: "Accept",
+    change: "Change",
+    next: "Continue",
     hints: [
       "Down here you talk to me.",
       "On the left you see your missions. Red means: I need you.",
@@ -830,6 +979,8 @@ const en: Labels = {
         "In this version I'm not on board yet and can't answer freely. Today you can follow your missions, answer questions, and pause or stop missions.",
       missions:
         "Today agents create missions on the command line, with “loxora mission create”. Once I'm on board, you can simply ask me.",
+      notUnderstood:
+        "I don't understand that yet, I'm still in script mode. Just tap one of the answers.",
     },
     askMissions: "How do I get missions?",
   },

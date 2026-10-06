@@ -1,4 +1,6 @@
 /** Response shapes of the read API; kept here so the browser never imports server code. */
+import type { Interpretation, PromptKey, SetupStep, Term } from "../shared/conversation.js";
+
 export type MissionState =
   | "queued"
   | "running"
@@ -111,12 +113,21 @@ export interface WorkspaceInfo {
   readonly setupComplete: boolean;
 }
 
-/** `GET /api/setup` (Milestone 13); the setup fields are present only in setup mode. */
+/**
+ * `GET /api/setup` (Milestones 13 and 14). In setup mode, and in ready mode while the setup
+ * conversation is not finished, it carries the conversation step, the stored answers, and the
+ * start screen states.
+ */
 export interface SetupInfo {
   readonly mode: "fixed" | "ready" | "setup" | "settingsError";
   readonly settingsError?: string;
-  /** Ready, but the orientation after creating the logbook was not shown to the end. */
-  readonly introPending?: boolean;
+  /** The conversation step; null (ready mode) once the setup has ended. */
+  readonly step?: SetupStep | null;
+  readonly boot?: {
+    readonly shipComputer: "ready";
+    readonly logbook: "found" | "notCreated";
+    readonly xora: "scriptMode";
+  };
   readonly answers?: {
     readonly name: string | null;
     readonly captain: string | null;
@@ -138,7 +149,7 @@ export interface SetupInfo {
     readonly reviewers: readonly string[];
   };
   readonly xora?: { readonly state: "not_installed" };
-  /** Ready mode: the first steps (parts D and E). */
+  /** Ready mode: the first Mission and its offer on the bridge. */
   readonly firstSteps?: FirstSteps;
 }
 
@@ -175,9 +186,13 @@ export type ProposedAction = { readonly id: string } & (
   | { readonly kind: "recordGoal"; readonly title: string; readonly content: string }
 );
 
-export interface AssistantReply {
+export interface AssistantReply extends Interpretation {
   readonly text?: string;
   /** A fixed reply key; the text is in the labels. */
-  readonly reply?: "notOnBoard" | "missions";
+  readonly reply?: "notOnBoard" | "missions" | "notUnderstood";
   readonly action?: ProposedAction;
+  /** For a setup answer: the prompt, its answer buttons, and the terms it introduces. */
+  readonly prompt?: PromptKey;
+  readonly choices?: readonly string[];
+  readonly terms?: readonly Term[];
 }
