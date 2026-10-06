@@ -68,10 +68,20 @@ The decision owner extends the metaphor to a starship. The user should feel like
 | Bridge | The main screen (Mission Control) |
 
 - **Terms are explained.** Every term is explained to the user in plain words where it first appears, for example during first-run setup. The plain meaning stays reachable in the UI, for example in help.
-- **Bridge visualizer.** An optional 2D or 3D scene shows the bridge with agents at their stations and speech bubbles while they work. It is an additional layer: the text-driven UI must work completely without it. The user can hide it, and later detach it. The first slice is a simple 2D scene.
+- **Bridge visualizer** (superseded on October 6, 2026, see below)**.** An optional 2D or 3D scene shows the bridge with agents at their stations and speech bubbles while they work. It is an additional layer: the text-driven UI must work completely without it. The user can hide it, and later detach it. The first slice is a simple 2D scene.
 - **Usability first.** The visualizer must not hide information that the text UI does not also show. Accessibility rules apply as in the rest of the UI, including reduced motion.
 
 This direction relaxes the "no game-like gimmick" rule above only for the optional visualizer. It does not authorize implementation. First-run setup, the bundled local model, and the visualizer need their own RFC and milestone (RFC-008, C2; licensing of a bundled model is C3). [RFC-011](../rfcs/RFC-011-first-launch-setup-and-xora.md) (accepted October 4, 2026) defines them.
+
+### The bridge as the ship's chat (decision owner, October 6, 2026)
+
+The decision owner replaced the bridge visualizer with a chat. The bridge is organized like a team messenger: a ship channel where the ship computer reports what happens on board, one channel per project in which its Missions run as cards, and a direct chat with Xora and later with each crew member. Xora and the crew appear with their pictures next to their messages. There is no scene with moving figures, so the relaxation of the "no game-like gimmick" rule above no longer applies.
+
+- **Attention first.** What needs the user is always visible outside the message history, in the side list of Missions.
+- **Chat is not knowledge.** Results enter the logbook only through proposals the user reviews.
+- **Gated parts.** Storing chat history needs an ADR; group chats with several agents need a multi-agent RFC.
+
+[RFC-011](../rfcs/RFC-011-first-launch-setup-and-xora.md) Amendment 2 records the decision and its limits. It does not authorize implementation.
 
 ## 3. Core near-term screen: Mission Detail
 

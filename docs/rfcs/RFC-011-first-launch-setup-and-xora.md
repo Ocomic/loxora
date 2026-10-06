@@ -1,8 +1,8 @@
 # RFC-011 — First Launch, Setup, and Xora
 
 **Status:** Accepted
-**Version:** 1.1 (Amendment 1)
-**Last Updated:** October 5, 2026
+**Version:** 1.2 (Amendments 1 and 2)
+**Last Updated:** October 6, 2026
 **Decision Date:** October 4, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (new UI surfaces, new HTTP routes, workspace discovery, an assistant capability), with C3 parts that only the decision owner decides (section 11)
@@ -275,6 +275,8 @@ Accepted by Ocomic on October 4, 2026, after the proposal was merged in pull req
 
 Amendment 1 (October 5, 2026) changes the shape of the setup to a conversation with Xora and authorizes a third milestone document for it, [Milestone 14](../implementation/MILESTONE-14.md). It does not change sections 2 to 7 or 9 to 11.
 
+Amendment 2 (October 6, 2026) replaces the 2D bridge visualizer (section 8 and milestone 4 in section 12) with the bridge as the ship's chat. It authorizes no code by itself: the chat needs an ADR for storing chat history and its own milestone document.
+
 ## Amendments
 
 ### Amendment 1 — Setup as a conversation with Xora (October 5, 2026)
@@ -307,3 +309,41 @@ Decided by Ocomic after reviewing a clickable design prototype (validation stage
 
 8. **Bridge tutorial.** How the bridge introduces the first Mission (part E): as an empty-state offer, as a guided tour, or by Xora on her first live start. Milestone 14 keeps the existing first-Mission steps reachable from the bridge; their final shape follows with the bridge design.
 9. **Ship terms after setup.** Where the ship terms stay reachable after the setup (for example a help panel or a question to Xora).
+
+### Amendment 2 — The bridge as the ship's chat (October 6, 2026)
+
+Decided by Ocomic on October 6, 2026, after comparing two clickable prototypes outside the repository: a bridge scene with Xora and empty crew stations, and the bridge as a chat in the style of a team messenger. The decision owner chose the chat, because the whole product is meant to be steered by text and later by voice, a chat is familiar to people who are not developers, and a scene in which figures move would add little use.
+
+**What changes**
+
+- **The 2D bridge visualizer is dropped.** The bullet "2D bridge visualizer" in section 8 and milestone 4 in section 12 no longer apply. The decision of October 4, 2026, "The MVP includes a simple 2D bridge", recorded under Context, is superseded by this amendment.
+- **Milestone 4 becomes "Bridge as the ship's chat".** The bridge (Mission Control) is organized like a team messenger:
+  - **Ship channel** ("#bridge", German "#brücke"): one per ship. The ship computer reports what happens on board, for example a project created, a Mission started or finished, knowledge accepted.
+  - **Project channel:** one per project. Its Missions run there as cards, and questions to the captain appear as cards that are answered in place.
+  - **Direct chats:** one per assistant or agent. In this RFC only Xora has one. Places for the crew are shown as empty stations.
+  - **A side list** shows the Missions with their state, the channels, the direct chats, and the logbook. A details panel shows the open chat's context (Xora's profile, the project with its goal and Missions, or who is on board).
+  - **Links:** a message can link to another chat, a Mission, or a logbook entry.
+  - The Xora input bar of section 8 becomes the input of the open chat. Xora can be addressed in the ship and project channels by mentioning her.
+- **Avatars instead of a scene.** Xora and later crew members appear with their picture next to their messages and in the side list. The picture rules of Amendment 1 apply.
+
+**Limits**
+
+- **Attention stays outside the chat flow.** What needs the captain must never be visible only inside a message history. The side list shows every Mission that needs the person, in red, with a counter, as Mission Control does today (UI-VISION.md, product principle).
+- **The chat is not the logbook.** Messages are conversation and execution history, not project knowledge. Knowledge still enters the logbook only through a proposal and a human review (section 7, RFC-003). A message can be referenced as a source or as evidence, but never becomes Current knowledge by itself.
+- **Only real events in the ship channel.** The ship computer posts only events that happened in the workspace. It never posts invented activity.
+- **No group chats with several agents yet.** In this RFC only the captain, Xora, and the ship computer write in channels. Several agents working together in one chat is multi-agent orchestration and needs its own RFC (AGENTS.md, "Always gated").
+- **Chat history stays on the machine.** Milestones 13 and 14 do not store messages. Storing chat history is new persistent data: before the milestone document for the chat, an ADR decides where it lives (workspace or app data), how it relates to Missions and the export format, how long it is kept, and how the person deletes it. Nothing is sent off the machine (section 11 is unchanged).
+- **Voice input is not part of this amendment.** Steering by voice is a later capability decision. If it would send audio off the machine, it is a C3 decision.
+
+**What stays**
+
+- Sections 1 to 7 and 9 to 11, Amendment 1, and Milestone 14. Milestone 14 still offers the first Mission on the existing Mission Control; with the chat milestone, the offer moves to Xora's direct chat and the Mission runs in the project channel.
+- Milestones 3 (Xora with a local model) and 5 (Windows installer) are unchanged.
+
+**Open questions**
+
+- Open question 8 (bridge tutorial) gets a direction: with the chat, Xora offers the first Mission in her direct chat and runs it in the project channel. The shape before the chat milestone stays as in Milestone 14.
+- Added:
+  10. **Chat history storage.** Where messages are stored, whether they are part of the workspace export, how long they are kept, and how they are deleted. Decided in an ADR before the chat milestone.
+  11. **Group chats.** When and how several agents take part in one chat. Needs a multi-agent RFC.
+  12. **Voice.** Whether and how the captain steers by voice, and on which runtime.
