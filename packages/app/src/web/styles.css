@@ -975,6 +975,7 @@ a.button {
 
 .xora-portrait {
   width: 100%;
+  height: auto;
   max-width: 220px;
   align-self: center;
   transition:
@@ -1252,4 +1253,115 @@ a.button {
     animation: none;
     transition: none;
   }
+}
+
+/*
+ * Console style for the header and the Xora input bar on every screen (Milestone 14
+ * section 8, delivery 2). Mission overview and detail layouts keep their style until the
+ * bridge design.
+ */
+.topbar {
+  background: #050a16e6;
+  border-bottom: 1px solid var(--lx-line);
+  box-shadow: 0 1px 18px #38d9ff1a;
+}
+
+.brand strong {
+  font-family: var(--lx-heading);
+  color: var(--lx-cyan);
+}
+
+.brand small {
+  font-family: var(--lx-mono);
+  color: var(--lx-label);
+}
+
+.brand-mark {
+  border-radius: 0;
+  clip-path: var(--lx-cut-small);
+  background: radial-gradient(circle at 35% 35%, var(--lx-ice), var(--lx-cyan) 45%, #0b2a44);
+  box-shadow: none;
+}
+
+.section {
+  font-family: var(--lx-heading);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-color: var(--lx-line);
+  border-radius: 0;
+  clip-path: var(--lx-cut-small);
+  background: var(--lx-panel);
+}
+
+.section.active {
+  border-color: var(--lx-cyan);
+  background: linear-gradient(180deg, #0f3550, #0a1e33);
+  color: var(--lx-cyan);
+  box-shadow: none;
+}
+
+.workspace-name {
+  font-family: var(--lx-heading);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  color: var(--lx-label);
+}
+
+.language-switch {
+  border-color: var(--lx-line);
+  border-radius: 0;
+}
+
+.language-switch button {
+  border-radius: 0;
+  font-family: var(--lx-mono);
+}
+
+.language-switch button[aria-pressed="true"] {
+  background: #38d9ff26;
+  color: var(--lx-cyan);
+}
+
+.xora-bar {
+  background: var(--lx-grid), #050a16f2;
+  border-top: 1px solid var(--lx-line);
+  box-shadow: 0 -1px 18px #38d9ff1a;
+  font-family: var(--lx-text);
+}
+
+.xora-mark {
+  font-family: var(--lx-heading);
+  letter-spacing: 0.1em;
+  color: var(--lx-cyan);
+}
+
+.xora-form input {
+  color: var(--lx-ice);
+  background: var(--lx-deep);
+  border-color: var(--lx-line);
+  border-radius: 0;
+}
+
+.xora-form .button,
+.xora-exchange .button {
+  font-family: var(--lx-heading);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  border-radius: 0;
+  clip-path: var(--lx-cut-small);
+}
+
+.xora-note {
+  font-family: var(--lx-mono);
+  color: var(--lx-muted);
+}
+
+/* Cut corners clip anything drawn outside the box, so focus rings on clipped controls sit inside. */
+.console .button:focus-visible,
+.section:focus-visible,
+.xora-form .button:focus-visible,
+.xora-exchange .button:focus-visible {
+  outline: 2px solid var(--lx-ice);
+  outline-offset: -4px;
 }

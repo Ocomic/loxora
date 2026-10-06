@@ -1,6 +1,6 @@
 # Milestone 14: Setup as a conversation with Xora (script mode)
 
-**Status:** Proposed; authorized once this document is merged
+**Status:** Authorized (this document merged in pull request #33, October 5, 2026); both deliveries (section 11) implemented: delivery 1 in pull requests #35 and #36, delivery 2 in the pull request that adds this line. The manual Windows check (section 10) is still open.
 **Decision Owner:** Ocomic
 **Change class:** C2 (RFC-008): a changed UI surface, changed setup routes and assistant inputs, bundled typefaces
 **Implements:** RFC-011 Amendment 1 (setup as a conversation), on top of [Milestone 13](./MILESTONE-13.md)

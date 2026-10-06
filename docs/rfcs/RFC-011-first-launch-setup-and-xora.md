@@ -273,7 +273,7 @@ Rejected. The system language is almost always right, and the switch is always v
 
 Accepted by Ocomic on October 4, 2026, after the proposal was merged in pull request #27. The acceptance authorizes milestone documents for the milestones in section 12, one at a time; each milestone starts only when its document is merged. It does not authorize the C3 items in section 11, and the open questions above remain open. The first milestone document is [Milestone 12](../implementation/MILESTONE-12.md) (UI write path). The second is [Milestone 13](../implementation/MILESTONE-13.md) (setup in script mode), implemented in two parts; the manual Windows check by the decision owner is still open.
 
-Amendment 1 (October 5, 2026) changes the shape of the setup to a conversation with Xora and authorizes a third milestone document for it, [Milestone 14](../implementation/MILESTONE-14.md). It does not change sections 2 to 7 or 9 to 11.
+Amendment 1 (October 5, 2026) changes the shape of the setup to a conversation with Xora and authorizes a third milestone document for it, [Milestone 14](../implementation/MILESTONE-14.md), implemented in two deliveries (pull requests #35 and #36, then the style and documentation delivery); the manual Windows check is still open. It does not change sections 2 to 7 or 9 to 11.
 
 Amendment 2 (October 6, 2026) replaces the 2D bridge visualizer (section 8 and milestone 4 in section 12) with the bridge as the ship's chat. It authorizes no code by itself: the chat needs an ADR for storing chat history and its own milestone document.
 
