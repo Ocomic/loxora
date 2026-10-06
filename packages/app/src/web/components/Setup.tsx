@@ -299,8 +299,20 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
           await post("/api/assistant/confirm", { actionId: proposed.id, confirm: false });
           return ask("rename", info);
         }
-        await post("/api/assistant/confirm", { actionId: proposed.id, confirm: true });
-        if (proposed.kind === "createProject") say(t.setup.projectCreated(proposed.name));
+        if (proposed.kind !== "createProject") return ask("describe", info);
+        try {
+          await post("/api/assistant/confirm", { actionId: proposed.id, confirm: true });
+        } catch (error) {
+          // The project may exist even when the answer was lost: the server decides.
+          const next = await reload().catch(() => null);
+          if (next?.step === "bridge") return ask("bridge", next);
+          failed(error);
+          return propose(
+            draft.current ?? { goal: "other", purpose: proposed.purpose },
+            proposed.name,
+          );
+        }
+        say(t.setup.projectCreated(proposed.name));
         return ask("bridge", update({ ...info, step: "bridge" }));
       }
       case "rename":

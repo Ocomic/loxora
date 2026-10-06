@@ -63,7 +63,11 @@ export function MissionOverview() {
         {id ? (
           <MissionDetailView id={id} />
         ) : (
-          <MissionTable title={t.filters[filter] ?? t.filters.all} list={filtered.data} />
+          <MissionTable
+            title={t.filters[filter] ?? t.filters.all}
+            list={filtered.data}
+            unfiltered={filter === "all"}
+          />
         )}
       </main>
     </div>
@@ -105,7 +109,16 @@ function MissionGroup({
   );
 }
 
-function MissionTable({ title, list }: { title: string; list: MissionList | null }) {
+function MissionTable({
+  title,
+  list,
+  unfiltered,
+}: {
+  title: string;
+  list: MissionList | null;
+  /** The first Mission is offered only when there are no Missions at all. */
+  unfiltered: boolean;
+}) {
   const t = useLabels();
   const xora = useXora();
   const firstMission = useFirstMission();
@@ -116,7 +129,7 @@ function MissionTable({ title, list }: { title: string; list: MissionList | null
         <h2>{title}</h2>
         <span className="muted">{t.overview.sortedBy}</span>
       </header>
-      {list.missions.length === 0 && firstMission.steps?.pending ? (
+      {list.missions.length === 0 && unfiltered && firstMission.steps?.pending ? (
         <div className="empty first-mission-offer">
           <p>{t.firstSteps.offer}</p>
           <div className="action-row">
