@@ -5,18 +5,17 @@ import { useLabels, useLanguage } from "../i18n.js";
 import type {
   AssistantReply,
   FirstSteps as FirstStepsState,
-  Goal,
   ProposedAction,
   SetupInfo,
 } from "../types.js";
 
 /**
- * The first steps of the setup in script mode (RFC-011 parts D and E, Milestone 13): goal,
- * project, first Mission, project goal, and the bridge hints. Xora proposes each write as an
- * action; the server writes only after the person confirms the card that shows it.
+ * The first Mission, offered on the bridge after the setup (RFC-011 part E, Milestone 13
+ * scenes E1 to E4, moved to the bridge by Milestone 14 section 4): start the Mission, answer
+ * it, accept the project goal, and the bridge hints. Xora proposes each write as an action;
+ * the server writes only after the person confirms the card that shows it.
  */
-const GOALS: readonly Goal[] = ["game", "website", "writing", "other"];
-const TOTAL = 6;
+const TOTAL = 4;
 
 export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) {
   const t = useLabels();
@@ -25,9 +24,6 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
   const [state, setState] = useState<FirstStepsState | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [goal, setGoal] = useState<Goal | null>(null);
-  const [purpose, setPurpose] = useState<string | null>(null);
-  const [naming, setNaming] = useState<"choose" | "own">("choose");
   const [action, setAction] = useState<ProposedAction | null>(null);
   const [goalText, setGoalText] = useState<string | null>(null);
   const [hint, setHint] = useState(0);
@@ -71,9 +67,10 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
       setAction(null);
       setState(result.firstSteps);
     });
+  // The setup has already ended; the last hint only leads back. Skipping dismisses the offer.
   const finish = (skipped: boolean) =>
     run(async () => {
-      await post("/api/setup/finish", skipped ? { skipped } : {});
+      if (skipped) await post("/api/setup/finish", { skipped });
       await onFinished();
     });
 
@@ -97,106 +94,13 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
 
   let step = 1;
   let screen: ReactNode = null;
-  if (state.stage === "goal" && action?.kind === "createProject") {
-    step = 2;
-    screen = (
-      <ConfirmCard
-        busy={busy}
-        confirm={t.firstSteps.create}
-        onConfirm={() => answer(true)}
-        onChange={() => answer(false)}
-      >
-        <p>{t.firstSteps.createProject(action.name, action.purpose)}</p>
-        <p>{t.firstSteps.spaces(action.spaces, action.collection)}</p>
-        <p className="muted">{t.firstSteps.rule}</p>
-      </ConfirmCard>
-    );
-  } else if (state.stage === "goal" && goal === "other" && purpose === null) {
-    screen = (
-      <TextStep
-        question={t.firstSteps.purposeQuestion}
-        label={t.firstSteps.purposeLabel}
-        initial=""
-        maxLength={500}
-        busy={busy}
-        onBack={() => setGoal(null)}
-        onSubmit={(value) => setPurpose(value)}
-      />
-    );
-  } else if (state.stage === "goal" && goal) {
-    step = 2;
-    const send = (projectName: string) =>
-      propose({
-        choice: "goal",
-        goal,
-        projectName,
-        ...(goal === "other" ? { purpose } : {}),
-      });
-    const back = () => {
-      setNaming("choose");
-      if (goal === "other") setPurpose(null);
-      else setGoal(null);
-    };
-    screen =
-      naming === "own" ? (
-        <TextStep
-          question={t.firstSteps.projectQuestion}
-          label={t.firstSteps.projectLabel}
-          initial=""
-          maxLength={80}
-          busy={busy}
-          onBack={() => setNaming("choose")}
-          onSubmit={send}
-        />
-      ) : (
-        <Step text={t.firstSteps.projectQuestion} onBack={back}>
-          <p>{t.firstSteps.stations[goal]}</p>
-          <p className="muted">{t.firstSteps.stationExplained}</p>
-          <div className="action-row">
-            <button
-              type="button"
-              className="button"
-              disabled={busy}
-              onClick={() => send(t.firstSteps.projectSuggestions[goal])}
-            >
-              {t.firstSteps.projectSuggestions[goal]}
-            </button>
-            <button
-              type="button"
-              className="button button-quiet"
-              disabled={busy}
-              onClick={() => setNaming("own")}
-            >
-              {t.firstSteps.ownName}
-            </button>
-          </div>
-        </Step>
-      );
-  } else if (state.stage === "goal") {
-    screen = (
-      <Step text={t.firstSteps.goalQuestion} onBack={null}>
-        <div className="action-row">
-          {GOALS.map((name) => (
-            <button
-              key={name}
-              type="button"
-              className={name === "other" ? "button button-quiet" : "button"}
-              disabled={busy}
-              onClick={() => {
-                setGoal(name);
-                setPurpose(null);
-              }}
-            >
-              {t.firstSteps.goals[name]}
-            </button>
-          ))}
-        </div>
-      </Step>
-    );
+  if (state.stage === "goal") {
+    // The project is created in the setup conversation; without it there is nothing to offer.
+    screen = <Step text={t.firstSteps.banner.goal}>{null}</Step>;
   } else if (state.stage === "mission") {
-    step = 3;
+    step = 1;
     screen = (
-      <Step text={t.firstSteps.missionIntro} onBack={null}>
+      <Step text={t.firstSteps.missionIntro}>
         {action?.kind === "startFirstMission" ? (
           <ConfirmCard
             busy={busy}
@@ -221,9 +125,9 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
       </Step>
     );
   } else if (state.stage === "answer") {
-    step = 4;
+    step = 2;
     screen = (
-      <Step text={t.firstSteps.waiting} onBack={null}>
+      <Step text={t.firstSteps.waiting}>
         <div className="action-row">
           <Link className="button" to={`/missions/${state.missionId ?? ""}`}>
             {t.firstSteps.openMission}
@@ -232,7 +136,7 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
       </Step>
     );
   } else if (state.stage === "record" && action?.kind === "recordGoal") {
-    step = 5;
+    step = 3;
     screen = (
       <ConfirmCard
         busy={busy}
@@ -245,7 +149,7 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
       </ConfirmCard>
     );
   } else if (state.stage === "record") {
-    step = 5;
+    step = 3;
     screen = (
       <TextStep
         question={t.firstSteps.recordQuestion}
@@ -254,7 +158,6 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
         maxLength={4000}
         multiline
         busy={busy}
-        onBack={null}
         onSubmit={(text) => {
           setGoalText(text);
           void propose({ choice: "goalText", text });
@@ -262,10 +165,10 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
       />
     );
   } else {
-    step = 6;
+    step = 4;
     const last = hint >= t.firstSteps.hints.length;
     screen = (
-      <Step text={last ? t.firstSteps.closing : (t.firstSteps.hints[hint] ?? "")} onBack={null}>
+      <Step text={last ? t.firstSteps.closing : (t.firstSteps.hints[hint] ?? "")}>
         <div className="action-row">
           {last ? (
             <button type="button" className="button" disabled={busy} onClick={() => finish(false)}>
@@ -273,7 +176,7 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
             </button>
           ) : (
             <button type="button" className="button" onClick={() => setHint(hint + 1)}>
-              {t.setup.next}
+              {t.firstSteps.next}
             </button>
           )}
         </div>
@@ -285,7 +188,7 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
     <section className="panel setup-main first-steps" aria-labelledby={titleId}>
       <header className="setup-header">
         <h1 id={titleId}>{t.firstSteps.title}</h1>
-        <span className="muted">{t.setup.progress(step, TOTAL)}</span>
+        <span className="muted">{t.firstSteps.progress(step, TOTAL)}</span>
       </header>
       {screen}
       {busy ? <p className="muted">{t.setup.working}</p> : null}
@@ -301,32 +204,18 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
           disabled={busy}
           onClick={() => finish(true)}
         >
-          {t.firstSteps.skip}
+          {t.firstSteps.dismiss}
         </button>
       )}
     </section>
   );
 }
 
-function Step({
-  text,
-  onBack,
-  children,
-}: {
-  text: string;
-  onBack: (() => void) | null;
-  children: ReactNode;
-}) {
-  const t = useLabels();
+function Step({ text, children }: { text: string; children: ReactNode }) {
   return (
     <div className="setup-question">
       <p className="xora-line">{text}</p>
       {children}
-      {onBack ? (
-        <button type="button" className="button button-quiet setup-back" onClick={onBack}>
-          {t.setup.back}
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -371,7 +260,6 @@ function TextStep({
   maxLength,
   multiline = false,
   busy,
-  onBack,
   onSubmit,
 }: {
   question: string;
@@ -380,7 +268,6 @@ function TextStep({
   maxLength: number;
   multiline?: boolean;
   busy: boolean;
-  onBack: (() => void) | null;
   onSubmit: (value: string) => void;
 }) {
   const t = useLabels();
@@ -391,7 +278,7 @@ function TextStep({
     if (value.trim()) onSubmit(value.trim());
   };
   return (
-    <Step text={question} onBack={onBack}>
+    <Step text={question}>
       <form className="setup-form" onSubmit={handle}>
         <label htmlFor={id}>{label}</label>
         {multiline ? (
@@ -414,7 +301,7 @@ function TextStep({
         )}
         <div className="action-row">
           <button type="submit" className="button" disabled={busy || !value.trim()}>
-            {t.setup.next}
+            {t.firstSteps.next}
           </button>
         </div>
       </form>

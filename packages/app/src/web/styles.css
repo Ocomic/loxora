@@ -716,18 +716,9 @@ code {
   }
 }
 
-/* No animations or transitions are used, so reduced-motion needs no overrides. */
+/* The only animation is the setup start screen (Milestone 14); see its reduced-motion rule. */
 
-/* First-launch setup (Milestone 13): one question per screen, ship systems beside it. */
-.setup {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
-  gap: var(--space);
-  max-width: 980px;
-  margin: 32px auto;
-  padding: 0 var(--space);
-}
-
+/* Setup surfaces shared with the first Mission (Milestones 13 and 14). */
 .setup-main {
   display: flex;
   flex-direction: column;
@@ -775,65 +766,12 @@ code {
   max-width: 520px;
 }
 
-.setup-back {
-  align-self: flex-start;
-}
-
 .setup-warning {
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--limit);
   border-radius: var(--radius-small);
   background: #f59e0b14;
-}
-
-.folder-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-small);
-  background: var(--surface-2);
-}
-
-.folder-card summary {
-  cursor: pointer;
-  color: var(--muted);
-}
-
-.setup-systems ul {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.status-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  margin-right: 8px;
-  border-radius: 50%;
-}
-
-.status-ready {
-  background: var(--running);
-}
-
-.status-waiting {
-  background: var(--limit);
-}
-
-.status-off {
-  background: var(--neutral);
-}
-
-@media (max-width: 760px) {
-  .setup {
-    grid-template-columns: 1fr;
-    margin: 16px auto;
-  }
 }
 
 /* First steps (Milestone 13, parts D and E): confirmation cards and the banner. */
@@ -971,4 +909,347 @@ a.button {
 
 .xora-note {
   font-size: 0.8rem;
+}
+
+/*
+ * Console style (RFC-011 Amendment 1, Milestone 14 section 8): tokens for the setup surface.
+ * The header and the input bar on every screen follow in the second delivery.
+ */
+:root {
+  --lx-cyan: #38d9ff;
+  --lx-label: #7fb4d1;
+  --lx-magenta: #f05bd8;
+  --lx-coral: #ff4d6d;
+  --lx-ice: #dcebff;
+  --lx-deep: #050a16;
+  --lx-panel: #0a1428;
+  --lx-muted: #9fb3cc;
+  --lx-dim: #55708a;
+  --lx-green: #22c55e;
+  --lx-line: #38d9ff40;
+  --lx-glow: 0 0 18px #38d9ff33;
+  --lx-cut: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  --lx-cut-small: polygon(
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 8px
+  );
+  --lx-grid:
+    linear-gradient(#38d9ff0a 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, #38d9ff0a 1px, transparent 1px) 0 0 / 32px 32px;
+  --lx-heading: "Orbitron", var(--font);
+  --lx-text: "Exo 2", var(--font);
+  --lx-mono: "Share Tech Mono", var(--mono);
+}
+
+.console {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1120px;
+  margin: 24px auto;
+  padding: 0 var(--space);
+  font-family: var(--lx-text);
+  color: var(--lx-ice);
+}
+
+.console-xora,
+.console-chat {
+  position: relative;
+  padding: 18px;
+  background: var(--lx-grid), var(--lx-panel);
+  border: 1px solid var(--lx-line);
+  clip-path: var(--lx-cut);
+  box-shadow: var(--lx-glow);
+}
+
+.console-xora {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: start;
+}
+
+.xora-portrait {
+  width: 100%;
+  max-width: 220px;
+  align-self: center;
+  transition:
+    opacity 0.6s ease,
+    filter 0.6s ease;
+}
+
+.xora-portrait.dimmed {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.nameplate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.nameplate strong {
+  font-family: var(--lx-heading);
+  letter-spacing: 0.2em;
+  color: var(--lx-cyan);
+}
+
+.nameplate span,
+.console-status {
+  font-family: var(--lx-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lx-label);
+  text-align: center;
+  margin: 0;
+}
+
+.ship-terms h2,
+.boot h2 {
+  margin: 0 0 8px;
+  font-family: var(--lx-heading);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lx-cyan);
+}
+
+.ship-terms dl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.ship-terms dt {
+  font-family: var(--lx-mono);
+  color: var(--lx-magenta);
+}
+
+.ship-terms dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--lx-muted);
+}
+
+.console-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 560px;
+}
+
+.setup-progress {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress-step {
+  padding: 6px 4px 4px;
+  border-top: 3px solid var(--lx-dim);
+  font-family: var(--lx-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--lx-dim);
+}
+
+.progress-done {
+  border-color: var(--lx-green);
+  color: var(--lx-label);
+}
+
+.progress-current {
+  border-color: var(--lx-cyan);
+  color: var(--lx-cyan);
+}
+
+.chat-log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.boot ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--lx-mono);
+  font-size: 0.85rem;
+  color: var(--lx-label);
+}
+
+.boot li {
+  display: flex;
+  justify-content: space-between;
+  max-width: 420px;
+  animation: lx-line-in 0.3s ease both;
+}
+
+.boot li:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.boot li:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+.boot-state {
+  color: var(--lx-green);
+}
+
+@keyframes lx-line-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 86%;
+  padding: 10px 14px;
+  clip-path: var(--lx-cut-small);
+}
+
+.chat-message p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.chat-xora {
+  align-self: flex-start;
+  background: #38d9ff14;
+  border-left: 2px solid var(--lx-cyan);
+}
+
+.chat-captain {
+  align-self: flex-end;
+  background: #f05bd814;
+  border-right: 2px solid var(--lx-magenta);
+}
+
+.chat-alert {
+  border-left-color: var(--lx-coral);
+  background: #ff4d6d14;
+}
+
+.chat-author {
+  font-family: var(--lx-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lx-label);
+}
+
+.chat-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.console .button {
+  font-family: var(--lx-heading);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  border-radius: 0;
+  clip-path: var(--lx-cut-small);
+}
+
+.button-later {
+  opacity: 0.6;
+}
+
+.choice-later {
+  font-family: var(--lx-mono);
+  text-transform: lowercase;
+}
+
+.logbook-place {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.logbook-path {
+  font-family: var(--lx-mono);
+  color: var(--lx-cyan);
+}
+
+.logbook-place summary {
+  cursor: pointer;
+  color: var(--lx-muted);
+}
+
+.chat-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--lx-line);
+}
+
+.chat-input .xora-mark {
+  font-family: var(--lx-heading);
+  color: var(--lx-cyan);
+}
+
+.chat-input input {
+  flex: 1;
+  font: inherit;
+  color: var(--lx-ice);
+  background: var(--lx-deep);
+  border: 1px solid var(--lx-line);
+  padding: 9px 12px;
+}
+
+.script-note {
+  margin: 0;
+  font-family: var(--lx-mono);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 860px) {
+  .console {
+    grid-template-columns: 1fr;
+  }
+
+  .xora-portrait {
+    max-width: 140px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot li,
+  .xora-portrait {
+    animation: none;
+    transition: none;
+  }
 }

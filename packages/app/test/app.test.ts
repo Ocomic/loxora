@@ -14,6 +14,7 @@ import {
   statusLabel,
   systemLanguage,
 } from "../src/web/labels.js";
+import { PROMPT_KEYS, PROMPTS, TERMS } from "../src/shared/conversation.js";
 
 async function cli(workspace: string, ...argv: string[]) {
   let stdout = "";
@@ -506,6 +507,29 @@ test("labels have German and English entries for the same keys", () => {
   const now = Date.parse("2026-10-04T12:00:00Z");
   assert.equal(relativeTime(LABELS.de, "2026-10-04T11:55:00Z", now), "vor 5 Min.");
   assert.equal(relativeTime(LABELS.en, "2026-10-01T12:00:00Z", now), "3 days ago");
+});
+
+test("every setup answer button and ship term has a label in both languages", () => {
+  for (const language of ["de", "en"] as const) {
+    const setup = LABELS[language].setup;
+    const choices = setup.choices as unknown as Record<string, Record<string, string>>;
+    for (const prompt of PROMPT_KEYS) {
+      for (const choice of PROMPTS[prompt].choices) {
+        assert.ok(choices[prompt]?.[choice], `${language} ${prompt}.${choice}`);
+      }
+    }
+    for (const term of TERMS) {
+      assert.ok(setup.terms[term].name && setup.terms[term].text, `${language} ${term}`);
+    }
+  }
+});
+
+test("the shared conversation module imports nothing", () => {
+  const source = readFileSync(
+    resolve(process.cwd(), "packages", "app", "src", "shared", "conversation.ts"),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /^import /m);
 });
 
 test("the default language follows the system language", () => {

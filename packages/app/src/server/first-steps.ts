@@ -21,6 +21,8 @@ import { loadSettings, SetupRejected } from "./setup.js";
  * the first Mission, and the first accepted knowledge. Every write goes through existing Core
  * operations, after the person confirmed the action. The ids already written are kept in
  * the settings file, so a step repeated after a failure continues instead of duplicating.
+ * Since Milestone 14 the project is created in the setup conversation, and the first Mission
+ * is offered on the bridge after the setup ended (section 4).
  */
 
 /** Xora's actor id; used in script mode too, so the audit trail does not change later. */
@@ -33,6 +35,7 @@ type Setup = NonNullable<AppSettings["setup"]>;
 export type FirstStepsStage = "goal" | "mission" | "answer" | "record" | "hints";
 
 export interface FirstStepsState {
+  /** The first Mission is offered on the bridge (Milestone 14 section 4). */
   readonly pending: boolean;
   readonly stage: FirstStepsStage;
   readonly projectId: string | null;
@@ -54,6 +57,18 @@ async function latestAnswer(missions: MissionService, mission: Mission): Promise
 function projectDone(setup: Setup): boolean {
   return Boolean(setup.projectId && setup.spaceIds?.length === 3 && setup.collectionId);
 }
+
+/**
+ * The step of the setup conversation once the logbook exists (Milestone 14): the project,
+ * then the closing message on the way to the bridge; null after the setup ended.
+ */
+export function conversationStep(settings: AppSettings): "project" | "bridge" | null {
+  const setup = settings.setup ?? {};
+  if (setup.completedAt) return null;
+  return projectDone(setup) ? "bridge" : "project";
+}
+
+const OFFERED: ReadonlySet<FirstStepsStage> = new Set(["mission", "answer", "record"]);
 
 async function stage(
   store: ReadStore | WriteStore,
@@ -87,7 +102,9 @@ export async function firstStepsState(
   const setup = settings.setup ?? {};
   const current = await stage(store, setup);
   return {
-    pending: !setup.completedAt,
+    pending: Boolean(
+      setup.completedAt && !setup.firstMissionDismissedAt && OFFERED.has(current.stage),
+    ),
     stage: current.stage,
     projectId: setup.projectId ?? null,
     purpose: setup.purpose ?? null,
@@ -114,8 +131,13 @@ export async function executeAction(
   captain: string,
 ): Promise<void> {
   const settings = loadSettings(settingsPath);
-  if (settings.setup?.completedAt) {
-    throw new SetupRejected(409, "SetupFinished", "The first steps are already finished");
+  // The project belongs to the setup conversation; the first Mission to the bridge offer.
+  const closed =
+    action.kind === "createProject"
+      ? settings.setup?.completedAt
+      : settings.setup?.firstMissionDismissedAt;
+  if (closed) {
+    throw new SetupRejected(409, "SetupFinished", "This step of the setup is already closed");
   }
   const current = await stage(store, settings.setup ?? {});
   if (current.stage !== ACTION_STAGE[action.kind]) {
@@ -274,7 +296,10 @@ function rebuild(store: WriteStore, projectId: ProjectId, actorId: string) {
   return new NavigationService(store).rebuildNavigationProjection({ projectId, actorId });
 }
 
-/** `POST /api/setup/finish`: the first steps are done or skipped (Milestone 13 section 4). */
+/**
+ * `POST /api/setup/finish`: the setup conversation ends on the bridge (Milestone 14). With
+ * `skipped: true` the first Mission offer is dismissed as well; the setup stays ended.
+ */
 export function finishFirstSteps(
   settingsPath: string,
   body: Record<string, unknown>,
@@ -284,8 +309,13 @@ export function finishFirstSteps(
     throw new SetupRejected(400, "Invalid", "skipped must be true or false");
   }
   const settings = loadSettings(settingsPath);
+  const at = now.toISOString();
   writeSettings(settingsPath, {
     ...settings,
-    setup: { ...settings.setup, completedAt: now.toISOString() },
+    setup: {
+      ...settings.setup,
+      completedAt: settings.setup?.completedAt ?? at,
+      ...(body.skipped ? { firstMissionDismissedAt: at } : {}),
+    },
   });
 }

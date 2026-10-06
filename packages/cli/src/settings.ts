@@ -22,7 +22,10 @@ export interface AppSettings {
     /** Answers of part B kept until the workspace exists. */
     readonly shipName?: string;
     readonly logbookPath?: string;
-    /** When the orientation (scenes C2 and C3) was shown to the end. */
+    /**
+     * When the Milestone 13 orientation was shown to the end. No longer written since
+     * Milestone 14; kept so older settings files still load.
+     */
     readonly introducedAt?: string;
     /**
      * What the first steps (parts D and E) already wrote, so a repeated step continues
@@ -36,7 +39,10 @@ export interface AppSettings {
     readonly sourceId?: string;
     readonly evidenceId?: string;
     readonly proposalId?: string;
+    /** When the setup conversation ended (Milestone 14) or the first steps ended (13). */
     readonly completedAt?: string;
+    /** When the person dismissed the first Mission offer on the bridge (Milestone 14). */
+    readonly firstMissionDismissedAt?: string;
   };
 }
 
@@ -147,6 +153,7 @@ function validateSettings(path: string, value: unknown): AppSettings {
     ...optionalField("evidenceId", text("evidenceId", setupRecord)),
     ...optionalField("proposalId", text("proposalId", setupRecord)),
     ...optionalField("completedAt", text("completedAt", setupRecord)),
+    ...optionalField("firstMissionDismissedAt", text("firstMissionDismissedAt", setupRecord)),
   };
   return {
     configVersion: SETTINGS_CONFIG_VERSION,

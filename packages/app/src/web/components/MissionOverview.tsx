@@ -3,6 +3,7 @@ import { usePolling } from "../api.js";
 import { useLabels } from "../i18n.js";
 import { relativeTime } from "../labels.js";
 import type { MissionFilter, MissionList, MissionSummary } from "../types.js";
+import { useFirstMission } from "./FirstMission.js";
 import { MissionDetailView } from "./MissionDetailView.js";
 import { StatusBadge } from "./StatusBadge.js";
 import { useXora } from "./XoraBar.js";
@@ -107,6 +108,7 @@ function MissionGroup({
 function MissionTable({ title, list }: { title: string; list: MissionList | null }) {
   const t = useLabels();
   const xora = useXora();
+  const firstMission = useFirstMission();
   if (!list) return <p className="muted">{t.overview.loading}</p>;
   return (
     <section className="panel">
@@ -114,7 +116,19 @@ function MissionTable({ title, list }: { title: string; list: MissionList | null
         <h2>{title}</h2>
         <span className="muted">{t.overview.sortedBy}</span>
       </header>
-      {list.missions.length === 0 ? (
+      {list.missions.length === 0 && firstMission.steps?.pending ? (
+        <div className="empty first-mission-offer">
+          <p>{t.firstSteps.offer}</p>
+          <div className="action-row">
+            <Link className="button" to="/first-steps">
+              {t.firstSteps.continue}
+            </Link>
+            <button type="button" className="button button-quiet" onClick={firstMission.dismiss}>
+              {t.firstSteps.dismiss}
+            </button>
+          </div>
+        </div>
+      ) : list.missions.length === 0 ? (
         <div className="empty">
           <p>{t.overview.empty}</p>
           <button

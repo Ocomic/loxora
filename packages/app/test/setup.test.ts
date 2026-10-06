@@ -9,6 +9,13 @@ import { WORKSPACE_EXPORT_SECTIONS, workspaceExportRecords } from "@loxora/core"
 import { openSqliteReadOnlyStore } from "@loxora/sqlite";
 import { startAppServer } from "../src/index.js";
 import { captainId, isOneDrivePath } from "../src/server/setup.js";
+import {
+  goalOf,
+  interpret,
+  looksLikePath,
+  PROMPT_KEYS,
+  PROMPTS,
+} from "../src/shared/conversation.js";
 
 /** A temporary home with a settings file location, a Documents folder, and a CLI default. */
 function home(t: test.TestContext) {
@@ -107,6 +114,12 @@ test("without a workspace the app runs the setup, then Mission Control with the 
     reviewers: [],
   });
   assert.deepEqual(first.body.xora, { state: "not_installed" });
+  assert.equal(first.body.step, "name");
+  assert.deepEqual(first.body.boot, {
+    shipComputer: "ready",
+    logbook: "notCreated",
+    xora: "scriptMode",
+  });
   assert.equal((await get(`${server.url}/api/workspace`)).status, 503);
   assert.equal((await get(`${server.url}/api/missions`)).status, 503);
   assert.equal(existsSync(place.settingsPath), false, "reading never creates the settings file");
@@ -117,15 +130,16 @@ test("without a workspace the app runs the setup, then Mission Control with the 
   const named = await post(server.url, "/api/setup/answers", { name: "Alex Müller" });
   assert.equal(named.status, 200);
   assert.deepEqual((named.body.answers as Record<string, unknown>).captain, "alex-mueller");
-  const notReady = await post(server.url, "/api/setup/intro", {});
-  assert.equal(notReady.body.error, "NotReady");
+  assert.equal((named.body as { step: string }).step, "ship");
+  const removed = await post(server.url, "/api/setup/intro", {});
+  assert.equal(removed.status, 405, "the intro route of Milestone 13 is removed");
   const early = await post(server.url, "/api/setup/workspace", { action: "create" });
   assert.equal(early.body.error, "Incomplete");
   await post(server.url, "/api/setup/answers", { shipName: "Nova" });
 
   const created = await post(server.url, "/api/setup/workspace", { action: "create" });
   assert.equal(created.status, 200);
-  assert.deepEqual(created.body, { mode: "ready", introPending: true });
+  assert.deepEqual(created.body, { mode: "ready", step: "project" });
   const logbook = join(place.documents, "Loxora");
   assert.deepEqual(JSON.parse(readFileSync(join(logbook, "workspace.json"), "utf8")), {
     configVersion: 1,
@@ -144,9 +158,16 @@ test("without a workspace the app runs the setup, then Mission Control with the 
 
   assert.deepEqual((await get(`${server.url}/api/setup`)).body, {
     mode: "ready",
-    introPending: true,
+    step: "project",
+    answers: {
+      name: "Alex Müller",
+      captain: "alex-mueller",
+      shipName: "Nova",
+      logbookPath: logbook,
+    },
+    boot: { shipComputer: "ready", logbook: "found", xora: "scriptMode" },
     firstSteps: {
-      pending: true,
+      pending: false,
       stage: "goal",
       projectId: null,
       purpose: null,
@@ -154,24 +175,6 @@ test("without a workspace the app runs the setup, then Mission Control with the 
       answer: null,
     },
   });
-  const intro = await post(server.url, "/api/setup/intro", {});
-  assert.deepEqual(intro.body, { mode: "ready", introPending: false });
-  assert.deepEqual((await get(`${server.url}/api/setup`)).body, {
-    mode: "ready",
-    introPending: false,
-    firstSteps: {
-      pending: true,
-      stage: "goal",
-      projectId: null,
-      purpose: null,
-      missionId: null,
-      answer: null,
-    },
-  });
-  assert.match(
-    String((settingsOf(place).setup as { introducedAt?: string }).introducedAt),
-    /^\d{4}-\d\d-\d\dT/,
-  );
   assert.deepEqual((await get(`${server.url}/api/workspace`)).body, {
     name: "Nova",
     reviewers: ["alex-mueller"],
@@ -254,7 +257,7 @@ test("an existing workspace is offered and opened in place, never migrated", asy
     path: place.defaultWorkspace,
     captain: "Ocomic",
   });
-  assert.deepEqual(opened.body, { mode: "ready", introPending: true });
+  assert.deepEqual(opened.body, { mode: "ready", step: "project" });
   assert.deepEqual(settingsOf(place), {
     configVersion: 1,
     displayName: "Ocomic",
@@ -278,7 +281,7 @@ test("an outdated workspace opened by the setup still answers 503 and stays unto
   new DatabaseSync(join(outdated, "workspace.sqlite")).close();
   const server = await serve(t, place);
   const opened = await post(server.url, "/api/setup/workspace", { action: "open", path: outdated });
-  assert.deepEqual(opened.body, { mode: "ready", introPending: true });
+  assert.deepEqual(opened.body, { mode: "ready", step: "project" });
   const missions = await get(`${server.url}/api/missions`);
   assert.equal(missions.status, 503);
   assert.match(String(missions.body.message), /never migrates/);
@@ -379,7 +382,6 @@ async function setUp(t: test.TestContext) {
   const server = await serve(t, place);
   await post(server.url, "/api/setup/answers", { name: "Alex", shipName: "Nova" });
   await post(server.url, "/api/setup/workspace", { action: "create" });
-  await post(server.url, "/api/setup/intro", {});
   return { place, server, logbook: join(place.documents, "Loxora") };
 }
 
@@ -437,6 +439,26 @@ test("the first steps write the project, the Mission, and accepted knowledge aft
   const again = await confirm(server.url, (await propose(server.url, goal)).id);
   assert.equal(again.status, 409);
   assert.equal(again.body.error, "WrongStep");
+
+  // The conversation ends on the bridge, where the first Mission is offered.
+  const before = (await get(`${server.url}/api/setup`)).body;
+  assert.equal(before.step, "bridge");
+  assert.equal((before.firstSteps as Record<string, unknown>).pending, false);
+  const finish = await post(server.url, "/api/setup/finish", {});
+  assert.deepEqual(finish.body, { mode: "ready", setupComplete: true });
+  const bridge = (await get(`${server.url}/api/setup`)).body;
+  assert.equal(bridge.step, null);
+  assert.deepEqual(bridge.firstSteps, {
+    pending: true,
+    stage: "mission",
+    projectId: (settingsOf(place).setup as Record<string, unknown>).projectId,
+    purpose: "Develop a game of my own.",
+    missionId: null,
+    answer: null,
+  });
+  assert.equal((await get(`${server.url}/api/workspace`)).body.setupComplete, true);
+  const late = await confirm(server.url, (await propose(server.url, goal)).id);
+  assert.equal(late.body.error, "SetupFinished", "the project belongs to the conversation");
 
   const mission = await propose(server.url, { choice: "firstMission" });
   assert.equal(mission.question, "Who is the project for?");
@@ -525,15 +547,16 @@ test("the first steps write the project, the Mission, and accepted knowledge aft
     ],
   );
 
-  const finish = await post(server.url, "/api/setup/finish", {});
-  assert.deepEqual(finish.body, { mode: "ready", setupComplete: true });
-  assert.equal((await get(`${server.url}/api/workspace`)).body.setupComplete, true);
-  const late = await confirm(
+  assert.equal(
+    ((await get(`${server.url}/api/setup`)).body.firstSteps as Record<string, unknown>).pending,
+    false,
+    "the offer is gone once the first Mission is finished",
+  );
+  const twice = await confirm(
     server.url,
     (await propose(server.url, { choice: "goalText", text })).id,
   );
-  assert.equal(late.body.error, "SetupFinished");
-  assert.match(String((settingsOf(place).setup as Record<string, unknown>).completedAt), /^\d{4}-/);
+  assert.equal(twice.body.error, "WrongStep");
 });
 
 test("a repeated first step continues from the ids it already wrote", async (t) => {
@@ -630,4 +653,186 @@ test("the first steps need a human captain, a set-up logbook, and valid choices"
     "Invalid",
     "something else needs a purpose",
   );
+});
+
+test("the keyword list places typed setup answers in both languages", () => {
+  const cases: [Parameters<typeof interpret>[0], string, "de" | "en", unknown][] = [
+    ["logbook", "Ja, passt so!", "de", { choice: "fits" }],
+    ["logbook", "Lieber einen anderen Ordner", "de", { choice: "other" }],
+    ["logbook", "D:\\Logbuch", "de", { choice: "path", value: "D:\\Logbuch" }],
+    ["logbook", "/home/alex/logbook", "en", { choice: "path", value: "/home/alex/logbook" }],
+    ["logbook", "Yes, that's fine", "en", { choice: "fits" }],
+    ["logbook", "another folder please", "en", { choice: "other" }],
+    ["project", "Ein neues Projekt anlegen", "de", { choice: "new" }],
+    ["project", "Ich möchte ein bestehendes hinzufügen", "de", { choice: "existing" }],
+    ["project", "Ich schau mich erst mal um", "de", { choice: "look" }],
+    ["project", "Start a new project", "en", { choice: "new" }],
+    ["project", "Add an existing project", "en", { choice: "existing" }],
+    ["project", "I'll look around first", "en", { choice: "look" }],
+    ["existing", "Ja, öffnen", "de", { choice: "open" }],
+    ["existing", "Neues Schiff", "de", { choice: "new" }],
+    ["confirm", "Ja, anlegen", "de", { choice: "create" }],
+    ["confirm", "Namen ändern", "de", { choice: "rename" }],
+    ["confirm", "yes", "en", { choice: "create" }],
+    ["confirm", "change the name", "en", { choice: "rename" }],
+    ["bridge", "Auf zur Brücke!", "de", { choice: "toBridge" }],
+    ["bridge", "to the bridge", "en", { choice: "toBridge" }],
+    ["describe", "Etwas anderes", "de", { choice: "other" }],
+    ["describe", "Something else", "en", { choice: "other" }],
+    ["ship", "Sternenfalke", "de", { value: "Sternenfalke" }],
+  ];
+  for (const [prompt, text, language, expected] of cases) {
+    assert.deepEqual(interpret(prompt, text, language), expected, `${prompt}: ${text}`);
+  }
+  // Unplaceable answers and answers matching two buttons are not understood.
+  assert.equal(interpret("logbook", "Banane", "de"), null);
+  assert.equal(interpret("project", "banana", "en"), null);
+  assert.equal(interpret("confirm", "Ja, aber anderer Name", "de"), null);
+  assert.equal(interpret("bridge", "vielleicht", "de"), null);
+  // Free-text prompts never reject an answer.
+  for (const prompt of PROMPT_KEYS.filter((key) => PROMPTS[key].accepts === "text")) {
+    for (const text of ["?!", "Banane", "C:\\Logbuch", "x"]) {
+      assert.deepEqual(interpret(prompt, text, "de"), { value: text }, prompt);
+      assert.deepEqual(interpret(prompt, text, "en"), { value: text }, prompt);
+    }
+  }
+  assert.deepEqual(interpret("describe", "Ich will ein Jump'n'Run-Spiel bauen.", "de"), {
+    value: "Ich will ein Jump'n'Run-Spiel bauen.",
+    goal: "game",
+  });
+  assert.equal(goalOf("Eine Homepage für meinen Verein", "de"), "website");
+  assert.equal(goalOf("Einen Roman über Piraten schreiben", "de"), "writing");
+  assert.equal(goalOf("Plan my garden", "en"), "other");
+  assert.equal(goalOf("A game website", "en"), "other", "two templates fit: none is guessed");
+  assert.equal(goalOf("A novel about pirates", "en"), "writing");
+  assert.equal(looksLikePath("\\\\server\\share"), true);
+  assert.equal(looksLikePath("Loxora"), false);
+});
+
+test("setup answers go through the assistant and write nothing", async (t) => {
+  const place = home(t);
+  const server = await serve(t, place);
+  const typed = await post(server.url, "/api/assistant/message", {
+    prompt: "logbook",
+    text: "Ja, passt so",
+    language: "de",
+  });
+  assert.deepEqual(typed.body, {
+    prompt: "logbook",
+    choice: "fits",
+    choices: ["fits", "other", "open"],
+    terms: ["logbook"],
+  });
+  const unknown = await post(server.url, "/api/assistant/message", {
+    prompt: "project",
+    text: "Banane",
+    language: "de",
+  });
+  assert.deepEqual(unknown.body, {
+    reply: "notUnderstood",
+    prompt: "project",
+    choices: ["new", "existing", "look"],
+    terms: ["project"],
+  });
+  const tapped = await post(server.url, "/api/assistant/message", {
+    prompt: "ship",
+    choice: "aurora",
+  });
+  assert.equal(tapped.body.choice, "aurora");
+  for (const body of [
+    { prompt: "launch", text: "x" },
+    { prompt: "ship", choice: "enterprise" },
+    { prompt: "ship", choice: "nova", text: "Nova" },
+    { prompt: "name", text: "  " },
+  ]) {
+    const refused = await post(server.url, "/api/assistant/message", body);
+    assert.equal(refused.status, 400, JSON.stringify(body));
+  }
+  // "Add an existing project" is an answer only: no folder is read, nothing is written.
+  const existing = await post(server.url, "/api/assistant/message", {
+    prompt: "project",
+    choice: "existing",
+  });
+  assert.equal(existing.body.choice, "existing");
+  assert.equal(existsSync(place.settingsPath), false);
+  assert.equal(existsSync(join(place.documents, "Loxora")), false);
+});
+
+test("a typed plan description is the project purpose", async (t) => {
+  const { server, logbook } = await setUp(t);
+  const description = "A small platform game for my kids.";
+  const project = await propose(server.url, {
+    choice: "goal",
+    goal: "game",
+    projectName: "Jumper",
+    purpose: description,
+  });
+  assert.equal(project.purpose, description);
+  assert.deepEqual(project.spaces, ["Ideas", "Tasks", "Decisions"]);
+  assert.equal((await confirm(server.url, project.id)).status, 200);
+  assert.deepEqual(
+    (await records(logbook, "projects")).map((entry) => [entry.name, entry.purpose]),
+    [["Jumper", description]],
+  );
+});
+
+test("looking around first ends the setup without a project and without an offer", async (t) => {
+  const { server, place } = await setUp(t);
+  const finish = await post(server.url, "/api/setup/finish", {});
+  assert.equal(finish.status, 200);
+  const state = (await get(`${server.url}/api/setup`)).body;
+  assert.equal(state.step, null);
+  assert.equal((state.firstSteps as Record<string, unknown>).pending, false);
+  assert.equal((settingsOf(place).setup as Record<string, unknown>).projectId, undefined);
+});
+
+test("the first Mission offer can be dismissed; its steps are then closed", async (t) => {
+  const { server, place } = await setUp(t);
+  const goal = { choice: "goal", goal: "writing", projectName: "Book" };
+  assert.equal((await confirm(server.url, (await propose(server.url, goal)).id)).status, 200);
+  await post(server.url, "/api/setup/finish", {});
+  const completedAt = (settingsOf(place).setup as Record<string, unknown>).completedAt;
+  const offered = (await get(`${server.url}/api/setup`)).body.firstSteps as Record<string, unknown>;
+  assert.equal(offered.pending, true);
+  const mission = await propose(server.url, { choice: "firstMission" });
+  const dismissed = await post(server.url, "/api/setup/finish", { skipped: true });
+  assert.equal(dismissed.status, 200);
+  const setup = settingsOf(place).setup as Record<string, unknown>;
+  assert.match(String(setup.firstMissionDismissedAt), /^\d{4}-/);
+  assert.equal(setup.completedAt, completedAt, "the end of the setup is kept");
+  const after = (await get(`${server.url}/api/setup`)).body.firstSteps as Record<string, unknown>;
+  assert.equal(after.pending, false);
+  assert.equal((await confirm(server.url, mission.id)).body.error, "SetupFinished");
+  assert.equal((await post(server.url, "/api/setup/finish", { skipped: "yes" })).status, 400);
+});
+
+test("a settings file with the Milestone 13 intro flag still loads", async (t) => {
+  const place = home(t);
+  const workspace = join(place.root, "ws");
+  await cli(workspace, "workspace", "init", "--reviewer", "alex", "--name", "Nova");
+  mkdirSync(join(place.root, ".loxora"), { recursive: true });
+  writeFileSync(
+    place.settingsPath,
+    JSON.stringify({
+      configVersion: 1,
+      displayName: "Alex",
+      captain: "alex",
+      workspacePath: workspace,
+      setup: { introducedAt: "2026-10-05T10:00:00.000Z" },
+    }),
+  );
+  const server = await serve(t, place);
+  const state = (await get(`${server.url}/api/setup`)).body;
+  assert.equal(state.mode, "ready");
+  assert.equal(state.step, "project", "the conversation continues with the project");
+  assert.equal("introPending" in state, false);
+  assert.equal((await get(`${server.url}/api/workspace`)).body.actor, "alex");
+});
+
+test("the start screen reports a logbook found when a workspace exists", async (t) => {
+  const place = home(t);
+  await cli(place.defaultWorkspace, "workspace", "init", "--reviewer", "alex", "--name", "Old");
+  const server = await serve(t, place);
+  const state = (await get(`${server.url}/api/setup`)).body;
+  assert.deepEqual(state.boot, { shipComputer: "ready", logbook: "found", xora: "scriptMode" });
 });

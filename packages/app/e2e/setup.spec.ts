@@ -6,9 +6,10 @@ import { defaultWorkspaceDirectory, runCli, settingsPath } from "@loxora/cli";
 import { expect, type Page, test } from "@playwright/test";
 
 /**
- * Milestone 13 in script mode, clicked through as a person would: the full setup in German
- * and in English, opening an existing workspace, and skipping the first steps. Every test
- * has its own temporary LOXORA_HOME and Documents folder.
+ * The setup conversation of Milestone 14 in script mode, as a person would go through it:
+ * in German by tapping (apart from the name), in English by typing, opening an existing
+ * workspace, looking around first, the not-understood reply, a resumed setup, and the first
+ * Mission from the bridge. Every test has its own temporary LOXORA_HOME and Documents folder.
  */
 interface Ship {
   readonly url: string;
@@ -58,124 +59,151 @@ function watchErrors(page: Page): string[] {
 
 const TEXT = {
   de: {
-    name: "Dein Name",
-    next: "Weiter",
+    answer: "Antwort an Xora",
     fits: "Passt so",
-    goal: "Ein Spiel entwickeln",
-    project: "Mein Spiel",
+    newProject: "Neues Projekt starten",
+    existingProject: "Bestehendes Projekt hinzufügen",
+    later: "kommt in einer späteren Version",
+    look: "Erst umsehen",
+    game: "Ein Spiel",
     create: "Anlegen",
+    toBridge: "Zur Brücke",
+    projectCard: "Ich lege an: Projekt „Mein Spiel“.",
+    firstMission: "Erste Mission",
+    dismiss: "Nicht jetzt",
     start: "Starten",
     openMission: "Mission öffnen",
     option: "Für mich selbst",
-    continue: "Weiter einrichten",
     accept: "Übernehmen",
-    finish: "Zur Brücke",
-    skip: "Erste Schritte überspringen",
-    openShip: "Dieses Schiff öffnen",
-    projectCard: "Ich lege an: Projekt „Mein Spiel“.",
-    question: "Für wen ist das Projekt?",
+    next: "Weiter",
     template: "Ein eigenes Spiel entwickeln.\nFür wen: Für mich selbst.",
+    openShip: "Dieses Schiff öffnen",
+    notUnderstood: "Das verstehe ich noch nicht",
+    terms: "Bordbegriffe",
+    completed: "Abgeschlossen",
     bar: "Nachricht an Xora",
     send: "Senden",
     notOnBoard: "Ich bin in dieser Version noch nicht an Bord",
-    askMissions: "Wie bekomme ich Missionen?",
-    missionsReply: "loxora mission create",
-    completed: "Abgeschlossen",
   },
   en: {
-    name: "Your name",
-    next: "Continue",
-    fits: "Looks good",
-    goal: "Develop a game",
-    project: "My game",
-    create: "Create",
-    start: "Start",
-    openMission: "Open the mission",
-    option: "For myself",
-    continue: "Continue setup",
-    accept: "Accept",
-    finish: "To the bridge",
-    skip: "Skip the first steps",
-    openShip: "Open this ship",
+    answer: "Answer to Xora",
     projectCard: "I create: project “My game”.",
-    question: "Who is the project for?",
-    template: "Develop a game of my own.\nFor whom: For myself.",
-    bar: "Message to Xora",
-    send: "Send",
-    notOnBoard: "In this version I'm not on board yet",
-    askMissions: "How do I get missions?",
-    missionsReply: "loxora mission create",
-    completed: "Completed",
+    toBridge: "To the bridge",
+    firstMission: "First mission",
+    dismiss: "Not now",
+    notUnderstood: "I don't understand that yet",
   },
 } as const;
 
-/** Scenes B1 to C3: name, ship, logbook, orientation, script mode. */
-async function throughSetup(page: Page, text: (typeof TEXT)["de" | "en"]) {
+/** Opens the app and waits until Xora asks for the name. */
+async function start(page: Page, answer: string) {
   await page.goto(ship.url);
   await expect(page).toHaveURL(/\/setup$/);
-  await page.getByLabel(text.name).fill("Alex");
-  await page.getByRole("button", { name: text.next, exact: true }).click();
-  await page.getByRole("button", { name: "Nova", exact: true }).click();
-  await page.getByRole("button", { name: text.fits }).click();
-  for (let i = 0; i < 4; i++) {
-    await page.getByRole("button", { name: text.next, exact: true }).click();
-  }
-  await expect(page).toHaveURL(/\/first-steps$/);
+  await expect(page.getByLabel(answer)).toBeEnabled();
 }
 
-for (const language of ["de", "en"] as const) {
-  test.describe(`full setup (${language})`, () => {
-    test.use({ locale: language === "de" ? "de-DE" : "en-US" });
-
-    test("from the first question to accepted knowledge, by clicking", async ({ page }) => {
-      const text = TEXT[language];
-      const errors = watchErrors(page);
-      await throughSetup(page, text);
-
-      // D1 and D2: goal, project name, confirmation card.
-      await page.getByRole("button", { name: text.goal }).click();
-      await page.getByRole("button", { name: text.project, exact: true }).click();
-      await expect(page.getByText(text.projectCard)).toBeVisible();
-      await page.getByRole("button", { name: text.create, exact: true }).click();
-
-      // E1: the first Mission's card, then E2 in Mission Detail.
-      await expect(page.getByText(text.question)).toBeVisible();
-      await page.getByRole("button", { name: text.start, exact: true }).click();
-      await page.getByRole("link", { name: text.openMission }).click();
-      await expect(page).toHaveURL(/\/missions\/[^/]+$/);
-      await page.getByRole("button", { name: text.option }).click();
-
-      // The banner leads back to E3: template, confirmation card, accept.
-      await page.getByRole("link", { name: text.continue }).click();
-      await expect(page.locator("textarea")).toHaveValue(text.template);
-      await page.getByRole("button", { name: text.next, exact: true }).click();
-      await page.getByRole("button", { name: text.accept, exact: true }).click();
-
-      // E4: two hints and the closing sentence.
-      await page.getByRole("button", { name: text.next, exact: true }).click();
-      await page.getByRole("button", { name: text.next, exact: true }).click();
-      await page.getByRole("button", { name: text.finish }).click();
-      await expect(page).toHaveURL(/\/missions$/);
-      await expect(page.getByRole("link", { name: text.continue })).toHaveCount(0);
-      await expect(page.getByText(text.completed).first()).toBeVisible();
-
-      // The input bar answers with the fixed script-mode text.
-      await page.getByLabel(text.bar, { exact: true }).fill("Hello Xora");
-      await page.getByRole("button", { name: text.send }).click();
-      await expect(page.getByText(text.notOnBoard)).toBeVisible();
-
-      const setup = settings().setup as Record<string, unknown>;
-      expect(typeof setup.completedAt).toBe("string");
-      expect(typeof setup.proposalId).toBe("string");
-      expect(errors).toEqual([]);
-    });
-  });
+async function say(page: Page, answer: string, text: string) {
+  await page.getByLabel(answer).fill(text);
+  await page.getByLabel(answer).press("Enter");
 }
 
-test.describe("existing and skipped", () => {
+async function tap(page: Page, name: string) {
+  await page.getByRole("button", { name, exact: true }).click();
+}
+
+test.describe("German, by tapping", () => {
   test.use({ locale: "de-DE" });
 
-  test("an existing workspace opens in place; the first steps can be skipped", async ({ page }) => {
+  test("name typed, everything else tapped, then the first Mission from the bridge", async ({
+    page,
+  }) => {
+    const text = TEXT.de;
+    const errors = watchErrors(page);
+    // Typefaces are bundled: requests to any other host fail.
+    await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort());
+    await start(page, text.answer);
+    await expect(page.getByText("Verbindung zum Kommandozentrum wird hergestellt")).toBeVisible();
+    await say(page, text.answer, "Alex");
+    await expect(page.getByRole("heading", { name: text.terms })).toBeVisible();
+    await tap(page, "Nova");
+    await expect(page.getByText("Dokumente › Loxora")).toBeVisible();
+    await tap(page, text.fits);
+    await tap(page, text.newProject);
+    await tap(page, text.game);
+    await expect(page.getByText(text.projectCard)).toBeVisible();
+    await tap(page, text.create);
+    await tap(page, text.toBridge);
+    await expect(page).toHaveURL(/\/missions$/);
+
+    for (const family of ["Orbitron", "Exo 2", "Share Tech Mono"]) {
+      const loaded = await page.evaluate(
+        async (name) => (await document.fonts.load(`16px "${name}"`)).length,
+        family,
+      );
+      expect(loaded, family).toBeGreaterThan(0);
+    }
+
+    // The first Mission is offered in the empty Mission list and in the banner.
+    await page.getByRole("link", { name: text.firstMission }).first().click();
+    await tap(page, text.start);
+    await page.getByRole("link", { name: text.openMission }).click();
+    await expect(page).toHaveURL(/\/missions\/[^/]+$/);
+    await page.getByRole("button", { name: text.option }).click();
+    await page.getByRole("link", { name: text.firstMission }).click();
+    await expect(page.locator("textarea")).toHaveValue(text.template);
+    await tap(page, text.next);
+    await tap(page, text.accept);
+    await tap(page, text.next);
+    await tap(page, text.next);
+    await tap(page, text.toBridge);
+    await expect(page).toHaveURL(/\/missions$/);
+    await expect(page.getByRole("link", { name: text.firstMission })).toHaveCount(0);
+    await expect(page.getByText(text.completed).first()).toBeVisible();
+
+    // The input bar answers with the fixed script-mode text.
+    await page.getByLabel(text.bar, { exact: true }).fill("Hallo Xora");
+    await page.getByRole("button", { name: text.send }).click();
+    await expect(page.getByText(text.notOnBoard)).toBeVisible();
+
+    const setup = settings().setup as Record<string, unknown>;
+    expect(typeof setup.completedAt).toBe("string");
+    expect(typeof setup.proposalId).toBe("string");
+    expect(errors).toEqual([]);
+  });
+
+  test("looking around first ends the setup without a project", async ({ page }) => {
+    const text = TEXT.de;
+    await start(page, text.answer);
+    await say(page, text.answer, "Alex");
+    await tap(page, "Kepler");
+    await tap(page, text.fits);
+    // Shown, but not active: the button carries a "coming later" note.
+    await page.getByRole("button", { name: text.existingProject }).click();
+    await expect(page.getByText(text.later)).toBeVisible();
+    await tap(page, text.look);
+    await tap(page, text.toBridge);
+    await expect(page).toHaveURL(/\/missions$/);
+    await expect(page.getByRole("link", { name: text.firstMission })).toHaveCount(0);
+    const setup = settings().setup as Record<string, unknown>;
+    expect(typeof setup.completedAt).toBe("string");
+    expect(setup.projectId).toBeUndefined();
+  });
+
+  test("an unknown answer gets the not-understood reply; a reload resumes", async ({ page }) => {
+    const text = TEXT.de;
+    await start(page, text.answer);
+    await say(page, text.answer, "Alex");
+    await say(page, text.answer, "Sternenfalke");
+    await say(page, text.answer, "Banane");
+    await expect(page.getByText(text.notUnderstood)).toBeVisible();
+    await expect(page.getByRole("button", { name: text.fits })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("Sternenfalke", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: text.fits })).toBeVisible();
+    expect((settings().setup as Record<string, unknown>).shipName).toBe("Sternenfalke");
+  });
+
+  test("an existing workspace opens in place", async ({ page }) => {
     const text = TEXT.de;
     const workspace = defaultWorkspaceDirectory(ship.env);
     const code = await runCli(["workspace", "init", "--reviewer", "alex", "--name", "Kepler"], {
@@ -186,42 +214,53 @@ test.describe("existing and skipped", () => {
     });
     expect(code).toBe(0);
     const errors = watchErrors(page);
-    await page.goto(ship.url);
-    await page.getByRole("button", { name: text.openShip }).click();
-    for (let i = 0; i < 4; i++) {
-      await page.getByRole("button", { name: text.next, exact: true }).click();
-    }
-    await expect(page).toHaveURL(/\/first-steps$/);
-    await page.getByRole("button", { name: text.skip }).click();
+    await start(page, text.answer);
+    await expect(page.getByText("gefunden")).toBeVisible();
+    await say(page, text.answer, "Alex");
+    await tap(page, text.openShip);
+    await expect(page.getByText("Willkommen zurück auf der Kepler.")).toBeVisible();
+    await tap(page, text.look);
+    await tap(page, text.toBridge);
     await expect(page).toHaveURL(/\/missions$/);
-    await expect(page.getByRole("link", { name: text.continue })).toHaveCount(0);
     expect(settings().workspacePath).toBe(workspace);
-
-    // The empty state opens the input bar with the answer for its topic.
-    await page.getByRole("button", { name: text.askMissions }).click();
-    await expect(page.getByText(text.missionsReply).last()).toBeVisible();
     expect(errors).toEqual([]);
   });
+});
 
-  test("skipping keeps Mission Control usable and writes nothing", async ({ page }) => {
-    const text = TEXT.de;
-    await throughSetup(page, text);
-    await page.getByRole("button", { name: text.skip }).click();
+test.describe("English, by typing", () => {
+  test.use({ locale: "en-US" });
+
+  test("the whole setup typed; the first Mission offer can be dismissed", async ({ page }) => {
+    const text = TEXT.en;
+    const errors = watchErrors(page);
+    await start(page, text.answer);
+    await say(page, text.answer, "Alex Müller");
+    await say(page, text.answer, "Enterprise");
+    await say(page, text.answer, "Yes, that's fine");
+    await say(page, text.answer, "I'd like to start a new project");
+    await say(page, text.answer, "A small platform game for my kids.");
+    await expect(page.getByText("I create: project “My game”.")).toBeVisible();
+    await say(page, text.answer, "change the name");
+    await say(page, text.answer, "Jumper");
+    await expect(page.getByText("I create: project “Jumper”.")).toBeVisible();
+    await say(page, text.answer, "yes");
+    await say(page, text.answer, "banana");
+    await expect(page.getByText(text.notUnderstood)).toBeVisible();
+    await say(page, text.answer, "to the bridge");
     await expect(page).toHaveURL(/\/missions$/);
-    const setup = settings().setup as Record<string, unknown>;
-    expect(typeof setup.completedAt).toBe("string");
-    expect(setup.projectId).toBeUndefined();
-  });
 
-  test("an interrupted first step continues through the banner", async ({ page }) => {
-    const text = TEXT.de;
-    await throughSetup(page, text);
-    await page.getByRole("button", { name: text.goal }).click();
-    await page.getByRole("button", { name: text.project, exact: true }).click();
-    await page.getByRole("button", { name: text.create, exact: true }).click();
-    await expect(page.getByText(text.question)).toBeVisible();
-    await page.goto(`${ship.url}/missions`);
-    await page.getByRole("link", { name: text.continue }).click();
-    await expect(page.getByRole("button", { name: text.start, exact: true })).toBeVisible();
+    const setup = settings().setup as Record<string, unknown>;
+    expect(setup.purpose).toBe("A small platform game for my kids.");
+    expect(settings().captain).toBe("alex-mueller");
+    expect((settings() as { workspacePath: string }).workspacePath).toBe(
+      join(ship.home, "Documents", "Loxora"),
+    );
+
+    await page.getByRole("button", { name: text.dismiss }).first().click();
+    await expect(page.getByRole("link", { name: text.firstMission })).toHaveCount(0);
+    expect(typeof (settings().setup as Record<string, unknown>).firstMissionDismissedAt).toBe(
+      "string",
+    );
+    expect(errors).toEqual([]);
   });
 });
