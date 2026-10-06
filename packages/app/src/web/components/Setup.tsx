@@ -448,7 +448,8 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
             value={text}
             maxLength={(asking && MAX_LENGTH[asking.key]) || 2000}
             placeholder={(asking && t.setup.placeholders[asking.key]) || t.setup.placeholder}
-            disabled={!booted}
+            // Closed while Xora works on an answer, so no answer is sent into a gap.
+            disabled={!booted || busy || !asking}
             onChange={(event) => setText(event.target.value)}
           />
           <button type="submit" className="button" disabled={busy || !asking || !text.trim()}>
