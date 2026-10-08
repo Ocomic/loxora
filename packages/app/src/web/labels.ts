@@ -203,6 +203,7 @@ export interface Labels {
     readonly pickTitle: string;
     readonly notPicked: string;
     readonly pickFailed: string;
+    readonly stillPicking: string;
     readonly notFullPath: string;
     readonly logbookCreated: (ship: string) => string;
     readonly project: string;
@@ -547,6 +548,8 @@ const de: Labels = {
     pickTitle: "Loxora: Wähle den Ordner für dein Logbuch",
     notPicked: "Du hast keinen Ordner gewählt. Wo soll das Logbuch liegen?",
     pickFailed: "Das Fenster zur Ordnerauswahl ließ sich nicht öffnen.",
+    stillPicking:
+      "Das Fenster zur Ordnerauswahl ist noch offen. Du findest es in der Taskleiste; wähle dort einen Ordner oder schließe es.",
     notFullPath: "Das ist kein voller Pfad. Er beginnt zum Beispiel mit C:\\ oder mit /.",
     logbookCreated: (ship) => `Das Logbuch der ${ship} ist angelegt.`,
     project:
@@ -921,6 +924,8 @@ const en: Labels = {
     pickTitle: "Loxora: Choose the folder for your logbook",
     notPicked: "You didn't choose a folder. Where should the logbook be?",
     pickFailed: "The folder window could not be opened.",
+    stillPicking:
+      "The folder window is still open. You'll find it in the taskbar; choose a folder there or close it.",
     notFullPath: "That is not a full path. It starts with C:\\ or with /, for example.",
     logbookCreated: (ship) => `The logbook of the ${ship} is ready.`,
     project:

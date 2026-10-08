@@ -157,7 +157,13 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
       next = update(
         await post<SetupInfo>("/api/setup/folder", { place, title: t.setup.pickTitle }),
       );
-    } catch {
+    } catch (error) {
+      // A window still open (after a reload, say) is found in the taskbar; only a window
+      // that cannot open at all falls back to a typed path.
+      if (error instanceof ApiError && error.kind === "Picking") {
+        say(t.setup.stillPicking);
+        return askLogbook(info, true);
+      }
       say(t.setup.pickFailed);
       return ask("folder", info);
     }
