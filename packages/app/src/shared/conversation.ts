@@ -62,6 +62,13 @@ export const PROMPTS = {
     accepts: "choicesOrPath",
     terms: ["logbook"],
   },
+  /** With OneDrive set up, "other" asks where the folder window opens: on this PC or in OneDrive. */
+  place: {
+    step: "logbook",
+    choices: ["local", "oneDrive"],
+    accepts: "choicesOrPath",
+    terms: [],
+  },
   /** Another folder: any text is the path; the server checks that it is a full path. */
   folder: { step: "logbook", choices: [], accepts: "text", terms: [] },
   project: {
@@ -105,8 +112,12 @@ const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = 
     },
     logbook: {
       fits: ["passt", "ja", "ok", "okay", "gut", "einverstanden", "klar", "genau", "nimm"],
-      other: ["ander*", "ordner", "woanders", "nein", "aender*"],
+      other: ["ander*", "ordner", "woanders", "nein", "aender*", "auswahl"],
       open: ["oeffn*"],
+    },
+    place: {
+      local: ["lokal*", "pc", "rechner", "computer", "hier"],
+      oneDrive: ["onedrive", "drive", "cloud"],
     },
     project: {
       new: ["neu*", "anleg*", "erstell*", "start*"],
@@ -133,6 +144,10 @@ const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = 
       fits: ["fine", "yes", "ok", "okay", "good", "sure", "great", "fits", "agree"],
       other: ["other", "another", "different", "folder", "elsewhere", "no", "change"],
       open: ["open*"],
+    },
+    place: {
+      local: ["local*", "pc", "computer", "here"],
+      oneDrive: ["onedrive", "drive", "cloud"],
     },
     project: {
       new: ["new", "start*", "create"],

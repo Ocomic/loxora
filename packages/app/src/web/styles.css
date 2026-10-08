@@ -1034,6 +1034,43 @@ a.button {
   color: var(--lx-magenta);
 }
 
+.ship-terms dt button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ship-terms dt button:focus-visible {
+  outline: 2px solid var(--lx-ice);
+  outline-offset: 2px;
+  border-radius: 0;
+}
+
+.ship-terms .chevron {
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--lx-cyan);
+  border-bottom: 2px solid var(--lx-cyan);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.ship-terms .term.open .chevron {
+  transform: rotate(45deg);
+}
+
+.ship-terms dd[hidden] {
+  display: none;
+}
+
 .ship-terms dd {
   margin: 0;
   font-size: 0.9rem;
@@ -1182,6 +1219,12 @@ a.button {
   letter-spacing: 0.06em;
   border-radius: 0;
   clip-path: var(--lx-cut-small);
+}
+
+.console .button-quiet {
+  border-color: var(--lx-line);
+  background: var(--lx-panel);
+  color: var(--lx-ice);
 }
 
 .button-later {

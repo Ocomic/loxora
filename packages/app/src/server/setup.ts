@@ -1,7 +1,7 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { isAbsolute, join, relative, sep } from "node:path";
+import { basename, isAbsolute, join, relative, sep } from "node:path";
 import {
   type AppSettings,
   CliUsageError,
@@ -97,6 +97,70 @@ export function isOneDrivePath(
   return path.split(/[\\/]/).some((segment) => /^onedrive(\s*-.*)?$/i.test(segment));
 }
 
+/** The OneDrive folder of this computer, or null when OneDrive is not set up. */
+export function oneDriveRoot(
+  documents: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string | null {
+  const root = env.OneDrive || env.OneDriveConsumer || env.OneDriveCommercial;
+  if (root && isAbsolute(root)) return root;
+  return isOneDrivePath(documents, env) ? documents : null;
+}
+
+/**
+ * Asks the person for a folder in a window of the operating system, starting in `start`;
+ * resolves to the chosen folder, or null when the window was closed without a choice.
+ */
+export type FolderPicker = (start: string, title: string) => Promise<string | null>;
+
+/**
+ * The Windows folder window, opened by the local server through PowerShell. The start folder
+ * and the title travel as environment variables, so nothing is pasted into the script.
+ */
+export const windowsFolderPicker: FolderPicker = (start, title) =>
+  new Promise((resolve, reject) => {
+    const script = [
+      "Add-Type -AssemblyName System.Windows.Forms, System.Drawing",
+      "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+      // A visible, tiny, top-most owner window in the taskbar: Windows does not let a
+      // background process bring a window to the front, but a top-most owner keeps the
+      // folder window above the browser, and the taskbar entry finds it if not.
+      "$owner = New-Object System.Windows.Forms.Form",
+      "$owner.Text = $env:LOXORA_PICK_TITLE",
+      "$owner.TopMost = $true",
+      "$owner.ShowInTaskbar = $true",
+      "$owner.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None",
+      "$owner.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen",
+      "$owner.Size = New-Object System.Drawing.Size(1, 1)",
+      "$owner.Opacity = 0",
+      "$owner.Show()",
+      "$owner.Activate()",
+      "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog",
+      "$dialog.Description = $env:LOXORA_PICK_TITLE",
+      "$dialog.SelectedPath = $env:LOXORA_PICK_START",
+      "$dialog.ShowNewFolderButton = $true",
+      "if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.SelectedPath }",
+      "$owner.Dispose()",
+    ].join("; ");
+    execFile(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-STA", "-Command", script],
+      {
+        encoding: "utf8",
+        timeout: 15 * 60_000,
+        // Not hidden: the window must show. PowerShell shares the app's console, so no
+        // extra console window opens.
+        windowsHide: false,
+        env: { ...process.env, LOXORA_PICK_START: start, LOXORA_PICK_TITLE: title },
+      },
+      (error, stdout) => {
+        if (error) return reject(error);
+        const path = stdout.trim();
+        resolve(path && isAbsolute(path) ? path : null);
+      },
+    );
+  });
+
 function isInside(parent: string, path: string): boolean {
   const between = relative(parent.toLowerCase(), path.toLowerCase());
   return between === "" || (!between.startsWith("..") && !isAbsolute(between));
@@ -108,6 +172,10 @@ export interface SetupEnvironment {
   readonly defaultWorkspace: string;
   readonly documents: () => string;
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** The home folder, where "only on this computer" starts; else the system's. */
+  readonly home?: string;
+  /** The folder window of the operating system; without it, a folder is typed as a path. */
+  readonly pickFolder?: FolderPicker;
 }
 
 export function loadSettings(path: string): AppSettings {
@@ -136,6 +204,7 @@ function humanReviewers(directory: string): readonly string[] {
 export function setupState(environment: SetupEnvironment, settings: AppSettings) {
   const documents = environment.documents();
   const defaultLogbook = join(documents, "Loxora");
+  const oneDrive = oneDriveRoot(documents, environment.env);
   const path = settings.setup?.logbookPath ?? defaultLogbook;
   const inDocuments = isInside(documents, path) ? relative(documents, path) : null;
   const existing = [environment.defaultWorkspace, settings.workspacePath]
@@ -174,6 +243,9 @@ export function setupState(environment: SetupEnvironment, settings: AppSettings)
       oneDrive: isOneDrivePath(path, environment.env),
       hasWorkspace: hasWorkspace(path),
       reviewers: humanReviewers(path),
+      /** Where the folder window starts for each answer; null without OneDrive. */
+      places: oneDrive ? { local: environment.home ?? homedir(), oneDrive } : null,
+      picker: environment.pickFolder !== undefined,
     },
     xora: { state: "not_installed" as const },
   };
@@ -216,6 +288,44 @@ export function storeAnswers(environment: SetupEnvironment, body: Record<string,
       ...(logbookPath !== undefined ? { logbookPath } : {}),
     },
   }));
+}
+
+let picking = false;
+
+/**
+ * `POST /api/setup/folder`: opens the folder window in the chosen place (Milestone 14
+ * follow-up). The logbook goes into a "Loxora" folder inside the chosen folder, unless the
+ * chosen folder is already called so or already holds a logbook. Returns whether a folder was
+ * chosen; the folder is stored like a typed one and checked again by the conversation.
+ */
+export async function pickLogbookFolder(
+  environment: SetupEnvironment,
+  body: Record<string, unknown>,
+): Promise<{ readonly picked: boolean }> {
+  const pick = environment.pickFolder;
+  if (!pick) throw new SetupRejected(409, "NoPicker", "Type the full path of the folder instead");
+  const title = text(body, "title", MAX_NAME * 4) ?? "Loxora";
+  const documents = environment.documents();
+  let start: string;
+  if (body.place === "local") start = environment.home ?? homedir();
+  else if (body.place === "oneDrive") start = oneDriveRoot(documents, environment.env) ?? documents;
+  else if (body.place === "documents") start = documents;
+  else throw new SetupRejected(400, "Invalid", "place must be local, oneDrive, or documents");
+  if (picking) throw new SetupRejected(409, "Picking", "The folder window is already open");
+  picking = true;
+  let chosen: string | null;
+  try {
+    chosen = await pick(start, title);
+  } finally {
+    picking = false;
+  }
+  if (!chosen) return { picked: false };
+  const logbookPath =
+    hasWorkspace(chosen) || basename(chosen).toLowerCase() === "loxora"
+      ? chosen
+      : join(chosen, "Loxora");
+  storeAnswers(environment, { logbookPath });
+  return { picked: true };
 }
 
 /**

@@ -147,7 +147,13 @@ export interface SetupInfo {
     readonly oneDrive: boolean;
     readonly hasWorkspace: boolean;
     readonly reviewers: readonly string[];
+    /** Where the folder window starts; null when OneDrive is not set up. */
+    readonly places: { readonly local: string; readonly oneDrive: string } | null;
+    /** True when the server can open the folder window of the operating system. */
+    readonly picker: boolean;
   };
+  /** After `POST /api/setup/folder`: whether a folder was chosen in the window. */
+  readonly picked?: boolean;
   readonly xora?: { readonly state: "not_installed" };
   /** Ready mode: the first Mission and its offer on the bridge. */
   readonly firstSteps?: FirstSteps;

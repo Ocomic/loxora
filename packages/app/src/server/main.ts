@@ -2,7 +2,7 @@
 import { parseArgs } from "node:util";
 import { defaultWorkspaceDirectory, resolveWorkspaceDirectory, settingsPath } from "@loxora/cli";
 import { ActorRejected, startAppServer } from "./server.js";
-import { defaultHome, documentsDirectory } from "./setup.js";
+import { defaultHome, documentsDirectory, windowsFolderPicker } from "./setup.js";
 
 const { values } = parseArgs({
   options: {
@@ -34,6 +34,8 @@ try {
         documents ??= documentsDirectory(defaultHome(process.env));
         return documents;
       },
+      home: defaultHome(process.env),
+      ...(process.platform === "win32" ? { pickFolder: windowsFolderPicker } : {}),
     },
     port,
     ...(values.actor !== undefined ? { actor: values.actor } : {}),

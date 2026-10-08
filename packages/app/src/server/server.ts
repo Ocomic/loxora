@@ -1,8 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { extname, resolve } from "node:path";
-import { join } from "node:path";
+import { extname, join, resolve } from "node:path";
 import {
   type AppSettings,
   CliUsageError,
@@ -21,6 +20,7 @@ import {
   StaleMissionError,
 } from "@loxora/core";
 import { openSqliteReadOnlyStore, openSqliteWritableStore } from "@loxora/sqlite";
+import { PROMPT_KEYS, PROMPTS, type PromptKey } from "../shared/conversation.js";
 import {
   type AssistantInput,
   describeAction,
@@ -29,7 +29,6 @@ import {
   PendingActions,
   ScriptedAssistant,
 } from "./assistant.js";
-import { PROMPT_KEYS, PROMPTS, type PromptKey } from "../shared/conversation.js";
 import {
   conversationStep,
   executeAction,
@@ -39,6 +38,7 @@ import {
 import {
   createOrOpenWorkspace,
   loadSettings,
+  pickLogbookFolder,
   type SetupEnvironment,
   SetupRejected,
   setupState,
@@ -545,6 +545,7 @@ async function api(
 const SETUP_ROUTES = [
   "/api/setup/answers",
   "/api/setup/workspace",
+  "/api/setup/folder",
   "/api/setup/finish",
   "/api/settings/language",
 ] as const;
@@ -572,7 +573,9 @@ async function setupWrite(
   if (context.mode !== "setup" || !environment) {
     throw new RequestRejected(409, "NotInSetup", "Loxora is already set up");
   }
+  let picked: { readonly picked: boolean } | null = null;
   if (route === "/api/setup/answers") storeAnswers(environment, body);
+  else if (route === "/api/setup/folder") picked = await pickLogbookFolder(environment, body);
   else await createOrOpenWorkspace(environment, body);
   const settings = loadSettings(settingsPath);
   const ready =
@@ -580,7 +583,7 @@ async function setupWrite(
     existsSync(join(settings.workspacePath, WORKSPACE_CONFIG_FILE));
   return ready
     ? { mode: "ready", step: conversationStep(settings) }
-    : { mode: "setup", ...setupState(environment, settings) };
+    : { mode: "setup", ...setupState(environment, settings), ...picked };
 }
 
 /**
