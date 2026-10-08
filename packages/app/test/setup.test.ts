@@ -735,6 +735,8 @@ test("the keyword list places typed setup answers in both languages", () => {
     ["logbook", "Lieber in OneDrive", "de", { choice: "oneDrive" }],
     ["logbook", "Choose a folder on this PC", "en", { choice: "local" }],
     ["logbook", "in OneDrive", "en", { choice: "oneDrive" }],
+    ["logbook", "Ordner", "de", { choice: "other" }],
+    ["logbook", "folder", "en", { choice: "other" }],
     ["project", "Ein neues Projekt anlegen", "de", { choice: "new" }],
     ["project", "Ich möchte ein bestehendes hinzufügen", "de", { choice: "existing" }],
     ["project", "Ich schau mich erst mal um", "de", { choice: "look" }],

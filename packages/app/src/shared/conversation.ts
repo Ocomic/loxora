@@ -108,7 +108,7 @@ const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = 
     },
     logbook: {
       fits: ["passt", "ja", "ok", "okay", "gut", "einverstanden", "klar", "genau", "nimm"],
-      other: ["ander*", "woanders", "nein", "aender*"],
+      other: ["ander*", "ordner", "woanders", "nein", "aender*"],
       local: ["lokal*", "pc", "rechner", "computer"],
       oneDrive: ["onedrive", "drive", "cloud"],
       open: ["oeffn*"],
@@ -136,7 +136,7 @@ const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = 
     },
     logbook: {
       fits: ["fine", "yes", "ok", "okay", "good", "sure", "great", "fits", "agree"],
-      other: ["other", "another", "different", "elsewhere", "no", "change"],
+      other: ["other", "another", "different", "folder", "elsewhere", "no", "change"],
       local: ["local*", "pc", "computer"],
       oneDrive: ["onedrive", "drive", "cloud"],
       open: ["open*"],
@@ -251,9 +251,13 @@ export function interpret(
   if (accepts === "choicesOrPath" && looksLikePath(value)) return { choice: "path", value };
   const found = words(value);
   const keywords = CHOICE_KEYWORDS[language][prompt] ?? {};
-  const fitting = Object.entries(keywords)
+  let fitting = Object.entries(keywords)
     .filter(([, list]) => matches(list, found))
     .map(([choice]) => choice);
+  // "A folder on this PC" names the place, so it wins over the plain "another folder".
+  if (prompt === "logbook" && fitting.length === 2 && fitting.includes("other")) {
+    fitting = fitting.filter((choice) => choice !== "other");
+  }
   if (fitting.length === 1) return { choice: fitting[0] as string };
   if (accepts === "choicesOrText" && value) return { value };
   return null;

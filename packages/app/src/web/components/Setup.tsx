@@ -297,13 +297,17 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
           return next ? askLogbook(next) : ask("folder", info, { silent: true });
         }
         const allowed = asking?.buttons.map((button) => button.key) ?? [];
-        if (!choice || !allowed.includes(choice)) {
+        // Without OneDrive, "a folder on this PC" is just another folder.
+        const place = choice === "local" || choice === "oneDrive";
+        const chosen =
+          place && !allowed.includes(choice) && allowed.includes("other") ? "other" : choice;
+        if (!chosen || !allowed.includes(chosen)) {
           say(t.xora.replies.notUnderstood);
           return askLogbook(info, true);
         }
-        if (choice === "other") return chooseFolder("documents");
-        if (choice === "local" || choice === "oneDrive") return chooseFolder(choice);
-        if (choice === "open" && info.logbook) {
+        if (chosen === "other") return chooseFolder("documents");
+        if (chosen === "local" || chosen === "oneDrive") return chooseFolder(chosen);
+        if (chosen === "open" && info.logbook) {
           return open(info.logbook.path, info.answers?.captain ?? undefined);
         }
         try {
