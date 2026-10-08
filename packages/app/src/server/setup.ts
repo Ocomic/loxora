@@ -120,11 +120,21 @@ export type FolderPicker = (start: string, title: string) => Promise<string | nu
 export const windowsFolderPicker: FolderPicker = (start, title) =>
   new Promise((resolve, reject) => {
     const script = [
-      "Add-Type -AssemblyName System.Windows.Forms",
+      "Add-Type -AssemblyName System.Windows.Forms, System.Drawing",
       "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+      // A visible, tiny, top-most owner window in the taskbar: Windows does not let a
+      // background process bring a window to the front, but a top-most owner keeps the
+      // folder window above the browser, and the taskbar entry finds it if not.
       "$owner = New-Object System.Windows.Forms.Form",
+      "$owner.Text = $env:LOXORA_PICK_TITLE",
       "$owner.TopMost = $true",
-      "$owner.ShowInTaskbar = $false",
+      "$owner.ShowInTaskbar = $true",
+      "$owner.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None",
+      "$owner.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen",
+      "$owner.Size = New-Object System.Drawing.Size(1, 1)",
+      "$owner.Opacity = 0",
+      "$owner.Show()",
+      "$owner.Activate()",
       "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog",
       "$dialog.Description = $env:LOXORA_PICK_TITLE",
       "$dialog.SelectedPath = $env:LOXORA_PICK_START",

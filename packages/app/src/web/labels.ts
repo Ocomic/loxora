@@ -543,7 +543,7 @@ const de: Labels = {
     folder:
       "Gib mir den vollen Pfad des Ordners, zum Beispiel C:\\Users\\alex\\Documents\\Loxora. Fehlende Ordner lege ich an.",
     picking:
-      "Ich öffne das Fenster zur Ordnerauswahl. Wähle dort den Ordner, in den das Logbuch kommt; darin lege ich den Ordner „Loxora“ an.",
+      "Ich öffne das Fenster zur Ordnerauswahl. Wähle dort den Ordner, in den das Logbuch kommt; darin lege ich den Ordner „Loxora“ an. Siehst du das Fenster nicht, findest du es in der Taskleiste.",
     pickTitle: "Loxora: Wähle den Ordner für dein Logbuch",
     notPicked: "Du hast keinen Ordner gewählt. Wo soll das Logbuch liegen?",
     pickFailed: "Das Fenster zur Ordnerauswahl ließ sich nicht öffnen.",
@@ -917,7 +917,7 @@ const en: Labels = {
     folder:
       "Give me the full path of the folder, for example C:\\Users\\alex\\Documents\\Loxora. I create missing folders.",
     picking:
-      "I'm opening the folder window. Choose the folder the logbook goes into; I create the folder “Loxora” inside it.",
+      "I'm opening the folder window. Choose the folder the logbook goes into; I create the folder “Loxora” inside it. If you don't see the window, look for it in the taskbar.",
     pickTitle: "Loxora: Choose the folder for your logbook",
     notPicked: "You didn't choose a folder. Where should the logbook be?",
     pickFailed: "The folder window could not be opened.",
