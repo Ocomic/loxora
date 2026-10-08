@@ -731,10 +731,11 @@ test("the keyword list places typed setup answers in both languages", () => {
     ["logbook", "/home/alex/logbook", "en", { choice: "path", value: "/home/alex/logbook" }],
     ["logbook", "Yes, that's fine", "en", { choice: "fits" }],
     ["logbook", "another folder please", "en", { choice: "other" }],
-    ["logbook", "Ordner auf diesem PC wählen", "de", { choice: "local" }],
-    ["logbook", "Lieber in OneDrive", "de", { choice: "oneDrive" }],
-    ["logbook", "Choose a folder on this PC", "en", { choice: "local" }],
-    ["logbook", "in OneDrive", "en", { choice: "oneDrive" }],
+    ["logbook", "Auswahl ändern", "de", { choice: "other" }],
+    ["place", "Auf diesem PC", "de", { choice: "local" }],
+    ["place", "Lieber in OneDrive", "de", { choice: "oneDrive" }],
+    ["place", "On this PC", "en", { choice: "local" }],
+    ["place", "in OneDrive", "en", { choice: "oneDrive" }],
     ["logbook", "Ordner", "de", { choice: "other" }],
     ["logbook", "folder", "en", { choice: "other" }],
     ["project", "Ein neues Projekt anlegen", "de", { choice: "new" }],
@@ -794,7 +795,7 @@ test("setup answers go through the assistant and write nothing", async (t) => {
   assert.deepEqual(typed.body, {
     prompt: "logbook",
     choice: "fits",
-    choices: ["fits", "other", "local", "oneDrive", "open"],
+    choices: ["fits", "other", "open"],
     terms: ["logbook"],
   });
   const unknown = await post(server.url, "/api/assistant/message", {

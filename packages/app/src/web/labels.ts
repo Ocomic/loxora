@@ -177,7 +177,8 @@ export interface Labels {
     readonly choices: {
       readonly existing: Record<"open" | "new", string>;
       readonly ship: Record<"nova" | "aurora" | "kepler", string>;
-      readonly logbook: Record<"fits" | "other" | "local" | "oneDrive" | "open", string>;
+      readonly logbook: Record<"fits" | "other" | "open", string>;
+      readonly place: Record<"local" | "oneDrive", string>;
       readonly project: Record<"new" | "existing" | "look", string>;
       readonly existingProject: Record<"new" | "look", string>;
       readonly describe: Record<Goal, string>;
@@ -199,6 +200,7 @@ export interface Labels {
     readonly hasWorkspace: string;
     readonly notOnShip: string;
     readonly folder: string;
+    readonly place: string;
     readonly picking: string;
     readonly pickTitle: string;
     readonly notPicked: string;
@@ -497,13 +499,8 @@ const de: Labels = {
     choices: {
       existing: { open: "Dieses Schiff öffnen", new: "Neues Schiff anlegen" },
       ship: { nova: "Nova", aurora: "Aurora", kepler: "Kepler" },
-      logbook: {
-        fits: "Passt so",
-        other: "Anderen Ordner wählen",
-        local: "Ordner auf diesem PC wählen",
-        oneDrive: "Ordner in OneDrive wählen",
-        open: "Dieses Logbuch öffnen",
-      },
+      logbook: { fits: "Passt so", other: "Auswahl ändern", open: "Dieses Logbuch öffnen" },
+      place: { local: "Auf diesem PC", oneDrive: "In OneDrive" },
       project: {
         new: "Neues Projekt starten",
         existing: "Bestehendes Projekt hinzufügen",
@@ -543,6 +540,8 @@ const de: Labels = {
       "Dein Name steht nicht auf der Liste dieses Logbuchs. Wähle bitte einen anderen Ordner.",
     folder:
       "Gib mir den vollen Pfad des Ordners, zum Beispiel C:\\Users\\alex\\Documents\\Loxora. Fehlende Ordner lege ich an.",
+    place:
+      "Wo soll das Logbuch liegen? Auf diesem PC bleibt es nur hier. In OneDrive wird es mit deiner Cloud synchronisiert.",
     picking:
       "Ich öffne das Fenster zur Ordnerauswahl. Wähle dort den Ordner, in den das Logbuch kommt; darin lege ich den Ordner „Loxora“ an. Siehst du das Fenster nicht, findest du es in der Taskleiste.",
     pickTitle: "Loxora: Wähle den Ordner für dein Logbuch",
@@ -874,13 +873,8 @@ const en: Labels = {
     choices: {
       existing: { open: "Open this ship", new: "Create a new ship" },
       ship: { nova: "Nova", aurora: "Aurora", kepler: "Kepler" },
-      logbook: {
-        fits: "That's fine",
-        other: "Choose another folder",
-        local: "Choose a folder on this PC",
-        oneDrive: "Choose a folder in OneDrive",
-        open: "Open this logbook",
-      },
+      logbook: { fits: "That's fine", other: "Change", open: "Open this logbook" },
+      place: { local: "On this PC", oneDrive: "In OneDrive" },
       project: {
         new: "Start a new project",
         existing: "Add an existing project",
@@ -919,6 +913,8 @@ const en: Labels = {
     notOnShip: "Your name is not on this logbook's list. Please choose another folder.",
     folder:
       "Give me the full path of the folder, for example C:\\Users\\alex\\Documents\\Loxora. I create missing folders.",
+    place:
+      "Where should the logbook be? On this PC it stays here only. In OneDrive it is synchronized with your cloud.",
     picking:
       "I'm opening the folder window. Choose the folder the logbook goes into; I create the folder “Loxora” inside it. If you don't see the window, look for it in the taskbar.",
     pickTitle: "Loxora: Choose the folder for your logbook",

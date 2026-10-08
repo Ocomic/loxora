@@ -59,6 +59,16 @@ function bootDelay(): number {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : 900;
 }
 
+/**
+ * Prompts with a recommended answer: it is the primary button, the others are secondary.
+ * Prompts not listed offer equal choices.
+ */
+const PRIMARY: Partial<Record<PromptKey, readonly string[]>> = {
+  existing: ["open"],
+  logbook: ["fits", "open"],
+  confirm: ["create"],
+};
+
 /** The ship terms the conversation has used, and which of them are unfolded. */
 interface Glossary {
   readonly terms: readonly Term[];
@@ -129,18 +139,14 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
   const askShip = (current: SetupInfo) =>
     current.existing ? ask("existing", current) : ask("ship", current);
 
-  /**
-   * The logbook buttons follow the folder's checks (Milestone 13 section 6). With OneDrive set
-   * up, "another folder" is offered as two answers: on this PC, or in OneDrive.
-   */
+  /** The logbook buttons follow the folder's checks (Milestone 13 section 6). */
   const askLogbook = (current: SetupInfo, silent = false) => {
     const logbook = current.logbook;
-    const other = logbook?.places ? ["local", "oneDrive"] : ["other"];
-    let buttons = ["fits", ...other];
-    if (logbook?.inRepository) buttons = other;
+    let buttons = ["fits", "other"];
+    if (logbook?.inRepository) buttons = ["other"];
     else if (logbook?.hasWorkspace) {
       const member = logbook.reviewers.includes(current.answers?.captain ?? "");
-      buttons = member ? ["open", ...other] : other;
+      buttons = member ? ["open", "other"] : ["other"];
     }
     ask("logbook", current, { silent, buttons });
   };
@@ -303,17 +309,15 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
           return next ? askLogbook(next) : ask("folder", info, { silent: true });
         }
         const allowed = asking?.buttons.map((button) => button.key) ?? [];
-        // Without OneDrive, "a folder on this PC" is just another folder.
-        const place = choice === "local" || choice === "oneDrive";
-        const chosen =
-          place && !allowed.includes(choice) && allowed.includes("other") ? "other" : choice;
-        if (!chosen || !allowed.includes(chosen)) {
+        if (!choice || !allowed.includes(choice)) {
           say(t.xora.replies.notUnderstood);
           return askLogbook(info, true);
         }
-        if (chosen === "other") return chooseFolder("documents");
-        if (chosen === "local" || chosen === "oneDrive") return chooseFolder(chosen);
-        if (chosen === "open" && info.logbook) {
+        // With OneDrive set up, Xora first asks where the folder window opens.
+        if (choice === "other") {
+          return info.logbook?.places ? ask("place", info) : chooseFolder("documents");
+        }
+        if (choice === "open" && info.logbook) {
           return open(info.logbook.path, info.answers?.captain ?? undefined);
         }
         try {
@@ -325,6 +329,15 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
         const next = await reload();
         say(t.setup.logbookCreated(next.answers?.shipName ?? ""));
         return ask("project", next);
+      }
+      case "place": {
+        if (choice === "path") {
+          const next = await storeFolder(value);
+          return next ? askLogbook(next) : ask("place", info, { silent: true });
+        }
+        if (choice === "local" || choice === "oneDrive") return chooseFolder(choice);
+        say(t.xora.replies.notUnderstood);
+        return ask("place", info, { silent: true });
       }
       case "folder": {
         const next = await storeFolder(value);
@@ -495,11 +508,13 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
             <div className="chat-choices">
               {asking.buttons.map((button) => {
                 const later = asking.key === "project" && button.key === "existing";
+                const primary = PRIMARY[asking.key];
+                const secondary = primary !== undefined && !primary.includes(button.key);
                 return (
                   <button
                     key={button.key}
                     type="button"
-                    className={later ? "button button-later" : "button"}
+                    className={`button${later ? " button-later" : ""}${secondary ? " button-quiet" : ""}`}
                     onClick={() =>
                       void answer(
                         // The reviewer buttons are the reviewer ids; they are sent as text.
@@ -599,6 +614,8 @@ function promptMessage(
         t.setup.logbook(ship, !info.logbook?.oneDrive),
         <LogbookPlace key="place" t={t} info={info} />,
       ];
+    case "place":
+      return [t.setup.place];
     case "folder":
       return [t.setup.folder];
     case "project":

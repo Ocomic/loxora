@@ -1221,6 +1221,12 @@ a.button {
   clip-path: var(--lx-cut-small);
 }
 
+.console .button-quiet {
+  border-color: var(--lx-line);
+  background: var(--lx-panel);
+  color: var(--lx-ice);
+}
+
 .button-later {
   opacity: 0.6;
 }

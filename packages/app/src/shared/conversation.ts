@@ -55,15 +55,19 @@ export const PROMPTS = {
     accepts: "choicesOrText",
     terms: ["ship"],
   },
-  /**
-   * The logbook folder; "open" only when the folder already holds a logbook. When OneDrive is
-   * set up, "local" and "oneDrive" take the place of "other" and open the folder picker there.
-   */
+  /** The logbook folder; "open" only when the folder already holds a logbook. */
   logbook: {
     step: "logbook",
-    choices: ["fits", "other", "local", "oneDrive", "open"],
+    choices: ["fits", "other", "open"],
     accepts: "choicesOrPath",
     terms: ["logbook"],
+  },
+  /** With OneDrive set up, "other" asks where the folder window opens: on this PC or in OneDrive. */
+  place: {
+    step: "logbook",
+    choices: ["local", "oneDrive"],
+    accepts: "choicesOrPath",
+    terms: [],
   },
   /** Another folder: any text is the path; the server checks that it is a full path. */
   folder: { step: "logbook", choices: [], accepts: "text", terms: [] },
@@ -108,10 +112,12 @@ const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = 
     },
     logbook: {
       fits: ["passt", "ja", "ok", "okay", "gut", "einverstanden", "klar", "genau", "nimm"],
-      other: ["ander*", "ordner", "woanders", "nein", "aender*"],
-      local: ["lokal*", "pc", "rechner", "computer"],
-      oneDrive: ["onedrive", "drive", "cloud"],
+      other: ["ander*", "ordner", "woanders", "nein", "aender*", "auswahl"],
       open: ["oeffn*"],
+    },
+    place: {
+      local: ["lokal*", "pc", "rechner", "computer", "hier"],
+      oneDrive: ["onedrive", "drive", "cloud"],
     },
     project: {
       new: ["neu*", "anleg*", "erstell*", "start*"],
@@ -137,9 +143,11 @@ const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = 
     logbook: {
       fits: ["fine", "yes", "ok", "okay", "good", "sure", "great", "fits", "agree"],
       other: ["other", "another", "different", "folder", "elsewhere", "no", "change"],
-      local: ["local*", "pc", "computer"],
-      oneDrive: ["onedrive", "drive", "cloud"],
       open: ["open*"],
+    },
+    place: {
+      local: ["local*", "pc", "computer", "here"],
+      oneDrive: ["onedrive", "drive", "cloud"],
     },
     project: {
       new: ["new", "start*", "create"],
@@ -251,13 +259,9 @@ export function interpret(
   if (accepts === "choicesOrPath" && looksLikePath(value)) return { choice: "path", value };
   const found = words(value);
   const keywords = CHOICE_KEYWORDS[language][prompt] ?? {};
-  let fitting = Object.entries(keywords)
+  const fitting = Object.entries(keywords)
     .filter(([, list]) => matches(list, found))
     .map(([choice]) => choice);
-  // "A folder on this PC" names the place, so it wins over the plain "another folder".
-  if (prompt === "logbook" && fitting.length === 2 && fitting.includes("other")) {
-    fitting = fitting.filter((choice) => choice !== "other");
-  }
   if (fitting.length === 1) return { choice: fitting[0] as string };
   if (accepts === "choicesOrText" && value) return { value };
   return null;
