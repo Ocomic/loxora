@@ -177,7 +177,7 @@ export interface Labels {
     readonly choices: {
       readonly existing: Record<"open" | "new", string>;
       readonly ship: Record<"nova" | "aurora" | "kepler", string>;
-      readonly logbook: Record<"fits" | "other" | "open", string>;
+      readonly logbook: Record<"fits" | "other" | "local" | "oneDrive" | "open", string>;
       readonly project: Record<"new" | "existing" | "look", string>;
       readonly existingProject: Record<"new" | "look", string>;
       readonly describe: Record<Goal, string>;
@@ -191,7 +191,7 @@ export interface Labels {
     readonly notReviewer: string;
     readonly shipOpened: (ship: string) => string;
     readonly ship: (name: string) => string;
-    readonly logbook: (ship: string) => string;
+    readonly logbook: (ship: string, local: boolean) => string;
     readonly documents: string;
     readonly details: string;
     readonly inRepository: string;
@@ -199,6 +199,10 @@ export interface Labels {
     readonly hasWorkspace: string;
     readonly notOnShip: string;
     readonly folder: string;
+    readonly picking: string;
+    readonly pickTitle: string;
+    readonly notPicked: string;
+    readonly pickFailed: string;
     readonly notFullPath: string;
     readonly logbookCreated: (ship: string) => string;
     readonly project: string;
@@ -492,7 +496,13 @@ const de: Labels = {
     choices: {
       existing: { open: "Dieses Schiff öffnen", new: "Neues Schiff anlegen" },
       ship: { nova: "Nova", aurora: "Aurora", kepler: "Kepler" },
-      logbook: { fits: "Passt so", other: "Anderen Ordner wählen", open: "Dieses Logbuch öffnen" },
+      logbook: {
+        fits: "Passt so",
+        other: "Anderen Ordner wählen",
+        local: "Ordner auf diesem PC wählen",
+        oneDrive: "Ordner in OneDrive wählen",
+        open: "Dieses Logbuch öffnen",
+      },
       project: {
         new: "Neues Projekt starten",
         existing: "Bestehendes Projekt hinzufügen",
@@ -519,8 +529,8 @@ const de: Labels = {
     shipOpened: (ship) => `Willkommen zurück auf der ${ship}. Dein Logbuch habe ich gefunden.`,
     ship: (name) =>
       `Schön, dich kennenzulernen, ${name}. Dein Schiff ist dein Arbeitsbereich für alle deine Projekte, und es braucht einen Namen. Wie soll deins heißen?`,
-    logbook: (ship) =>
-      `Wo soll ich das Logbuch der ${ship} aufbewahren, also alles, was wir über deine Projekte festhalten? Ich schlage diesen Ordner vor. Alles bleibt auf diesem Rechner.`,
+    logbook: (ship, local) =>
+      `Wo soll ich das Logbuch der ${ship} aufbewahren, also alles, was wir über deine Projekte festhalten? Ich schlage diesen Ordner vor.${local ? " Alles bleibt auf diesem Rechner." : ""}`,
     documents: "Dokumente",
     details: "Details",
     inRepository:
@@ -532,6 +542,11 @@ const de: Labels = {
       "Dein Name steht nicht auf der Liste dieses Logbuchs. Wähle bitte einen anderen Ordner.",
     folder:
       "Gib mir den vollen Pfad des Ordners, zum Beispiel C:\\Users\\alex\\Documents\\Loxora. Fehlende Ordner lege ich an.",
+    picking:
+      "Ich öffne das Fenster zur Ordnerauswahl. Wähle dort den Ordner, in den das Logbuch kommt; darin lege ich den Ordner „Loxora“ an.",
+    pickTitle: "Loxora: Wähle den Ordner für dein Logbuch",
+    notPicked: "Du hast keinen Ordner gewählt. Wo soll das Logbuch liegen?",
+    pickFailed: "Das Fenster zur Ordnerauswahl ließ sich nicht öffnen.",
     notFullPath: "Das ist kein voller Pfad. Er beginnt zum Beispiel mit C:\\ oder mit /.",
     logbookCreated: (ship) => `Das Logbuch der ${ship} ist angelegt.`,
     project:
@@ -856,7 +871,13 @@ const en: Labels = {
     choices: {
       existing: { open: "Open this ship", new: "Create a new ship" },
       ship: { nova: "Nova", aurora: "Aurora", kepler: "Kepler" },
-      logbook: { fits: "That's fine", other: "Choose another folder", open: "Open this logbook" },
+      logbook: {
+        fits: "That's fine",
+        other: "Choose another folder",
+        local: "Choose a folder on this PC",
+        oneDrive: "Choose a folder in OneDrive",
+        open: "Open this logbook",
+      },
       project: {
         new: "Start a new project",
         existing: "Add an existing project",
@@ -883,8 +904,8 @@ const en: Labels = {
     shipOpened: (ship) => `Welcome back on the ${ship}. I found your logbook.`,
     ship: (name) =>
       `Nice to meet you, ${name}. Your ship is your workspace for all your projects, and it needs a name. What should yours be called?`,
-    logbook: (ship) =>
-      `Where should I keep the logbook of the ${ship}, that is, everything we record about your projects? I suggest this folder. Everything stays on this computer.`,
+    logbook: (ship, local) =>
+      `Where should I keep the logbook of the ${ship}, that is, everything we record about your projects? I suggest this folder.${local ? " Everything stays on this computer." : ""}`,
     documents: "Documents",
     details: "Details",
     inRepository:
@@ -895,6 +916,11 @@ const en: Labels = {
     notOnShip: "Your name is not on this logbook's list. Please choose another folder.",
     folder:
       "Give me the full path of the folder, for example C:\\Users\\alex\\Documents\\Loxora. I create missing folders.",
+    picking:
+      "I'm opening the folder window. Choose the folder the logbook goes into; I create the folder “Loxora” inside it.",
+    pickTitle: "Loxora: Choose the folder for your logbook",
+    notPicked: "You didn't choose a folder. Where should the logbook be?",
+    pickFailed: "The folder window could not be opened.",
     notFullPath: "That is not a full path. It starts with C:\\ or with /, for example.",
     logbookCreated: (ship) => `The logbook of the ${ship} is ready.`,
     project:

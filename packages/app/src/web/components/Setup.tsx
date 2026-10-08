@@ -59,6 +59,12 @@ function bootDelay(): number {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : 900;
 }
 
+/** The ship terms the conversation has used, and which of them are unfolded. */
+interface Glossary {
+  readonly terms: readonly Term[];
+  readonly open: ReadonlySet<Term>;
+}
+
 export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => Promise<void> }) {
   const t = useLabels();
   const { language } = useLanguage();
@@ -69,7 +75,7 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
   const [booted, setBooted] = useState(false);
   const [messages, setMessages] = useState<readonly Message[]>([]);
   const [asking, setAsking] = useState<Asking | null>(null);
-  const [terms, setTerms] = useState<readonly Term[]>([]);
+  const [glossary, setGlossary] = useState<Glossary>({ terms: [], open: new Set() });
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState("");
   const draft = useRef<Draft | null>(null);
@@ -85,8 +91,19 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
   };
   const say = (line: string, detail?: ReactNode) => push({ from: "xora", text: line, detail });
   const reply = (line: string) => push({ from: "captain", text: line });
+  /** New terms join the list; only the newest ones stay unfolded, the rest fold away. */
   const learn = (key: PromptKey) =>
-    setTerms((known) => [...known, ...PROMPTS[key].terms.filter((term) => !known.includes(term))]);
+    setGlossary((known) => {
+      const fresh = PROMPTS[key].terms.filter((term) => !known.terms.includes(term));
+      return fresh.length ? { terms: [...known.terms, ...fresh], open: new Set(fresh) } : known;
+    });
+  const toggleTerm = (term: Term) =>
+    setGlossary((known) => {
+      const open = new Set(known.open);
+      if (open.has(term)) open.delete(term);
+      else open.add(term);
+      return { ...known, open };
+    });
   const update = (next: SetupInfo): SetupInfo => {
     const merged = { ...info, ...next };
     setInfo(merged);
@@ -112,16 +129,41 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
   const askShip = (current: SetupInfo) =>
     current.existing ? ask("existing", current) : ask("ship", current);
 
-  /** The logbook buttons follow the folder's checks (Milestone 13 section 6). */
+  /**
+   * The logbook buttons follow the folder's checks (Milestone 13 section 6). With OneDrive set
+   * up, "another folder" is offered as two answers: on this PC, or in OneDrive.
+   */
   const askLogbook = (current: SetupInfo, silent = false) => {
     const logbook = current.logbook;
-    let buttons = ["fits", "other"];
-    if (logbook?.inRepository) buttons = ["other"];
+    const other = logbook?.places ? ["local", "oneDrive"] : ["other"];
+    let buttons = ["fits", ...other];
+    if (logbook?.inRepository) buttons = other;
     else if (logbook?.hasWorkspace) {
       const member = logbook.reviewers.includes(current.answers?.captain ?? "");
-      buttons = member ? ["open", "other"] : ["other"];
+      buttons = member ? ["open", ...other] : other;
     }
     ask("logbook", current, { silent, buttons });
+  };
+
+  /**
+   * Another logbook folder: in the folder window of the operating system when the server can
+   * open it, else as a typed path. A folder chosen in the window is checked like a typed one.
+   */
+  const chooseFolder = async (place: "local" | "oneDrive" | "documents") => {
+    if (!info.logbook?.picker) return ask("folder", info);
+    say(t.setup.picking);
+    let next: SetupInfo;
+    try {
+      next = update(
+        await post<SetupInfo>("/api/setup/folder", { place, title: t.setup.pickTitle }),
+      );
+    } catch {
+      say(t.setup.pickFailed);
+      return ask("folder", info);
+    }
+    if (next.picked) return askLogbook(next);
+    say(t.setup.notPicked);
+    return askLogbook(next, true);
   };
 
   /** Rebuilds the conversation from the stored answers (section 3, Resume). */
@@ -138,7 +180,9 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
       reply(answers.shipName);
     }
     if (current.mode === "setup") return askLogbook(current);
-    say(t.setup.logbook(answers.shipName ?? ""));
+    say(
+      t.setup.logbook(answers.shipName ?? "", current.logbook ? !current.logbook.oneDrive : false),
+    );
     learn("logbook");
     if (answers.logbookPath) reply(answers.logbookPath);
     say(t.setup.logbookCreated(answers.shipName ?? ""));
@@ -257,7 +301,8 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
           say(t.xora.replies.notUnderstood);
           return askLogbook(info, true);
         }
-        if (choice === "other") return ask("folder", info);
+        if (choice === "other") return chooseFolder("documents");
+        if (choice === "local" || choice === "oneDrive") return chooseFolder(choice);
         if (choice === "open" && info.logbook) {
           return open(info.logbook.path, info.answers?.captain ?? undefined);
         }
@@ -369,16 +414,31 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
           <span>{t.setup.xoraRole}</span>
         </div>
         <p className="console-status">{booted ? t.setup.statusOnline : t.setup.statusConnecting}</p>
-        {terms.length ? (
+        {glossary.terms.length ? (
           <section className="ship-terms" aria-labelledby={termsId}>
             <h2 id={termsId}>{t.setup.termsTitle}</h2>
             <dl>
-              {TERMS.filter((term) => terms.includes(term)).map((term) => (
-                <div key={term}>
-                  <dt>{t.setup.terms[term].name}</dt>
-                  <dd>{t.setup.terms[term].text}</dd>
-                </div>
-              ))}
+              {TERMS.filter((term) => glossary.terms.includes(term)).map((term) => {
+                const open = glossary.open.has(term);
+                return (
+                  <div key={term} className={open ? "term open" : "term"}>
+                    <dt>
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-controls={`${termsId}-${term}`}
+                        onClick={() => toggleTerm(term)}
+                      >
+                        <span className="chevron" aria-hidden="true" />
+                        {t.setup.terms[term].name}
+                      </button>
+                    </dt>
+                    <dd id={`${termsId}-${term}`} hidden={!open}>
+                      {t.setup.terms[term].text}
+                    </dd>
+                  </div>
+                );
+              })}
             </dl>
           </section>
         ) : null}
@@ -525,7 +585,10 @@ function promptMessage(
     case "ship":
       return [t.setup.ship(name)];
     case "logbook":
-      return [t.setup.logbook(ship), <LogbookPlace key="place" t={t} info={info} />];
+      return [
+        t.setup.logbook(ship, !info.logbook?.oneDrive),
+        <LogbookPlace key="place" t={t} info={info} />,
+      ];
     case "folder":
       return [t.setup.folder];
     case "project":

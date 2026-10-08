@@ -1,6 +1,6 @@
 # Milestone 14: Setup as a conversation with Xora (script mode)
 
-**Status:** Authorized (this document merged in pull request #33, October 5, 2026); both deliveries (section 11) implemented: delivery 1 in pull requests #35 and #36, delivery 2 in the pull request that adds this line. The manual Windows check (section 10) is still open.
+**Status:** Authorized (this document merged in pull request #33, October 5, 2026); both deliveries (section 11) implemented: delivery 1 in pull requests #35 and #36, delivery 2 in pull request #37. The manual Windows check (section 10) started on October 8, 2026; its findings led to the follow-up below.
 **Decision Owner:** Ocomic
 **Change class:** C2 (RFC-008): a changed UI surface, changed setup routes and assistant inputs, bundled typefaces
 **Implements:** RFC-011 Amendment 1 (setup as a conversation), on top of [Milestone 13](./MILESTONE-13.md)
@@ -150,3 +150,15 @@ These follow from Amendment 1 but were not decided there. The decision owner can
 - New: this document. RFC-011 links it from its Decision section and Amendment 1.
 - On implementation: `APP.md`, RFC-011, the RFC index, `open-questions.md`, and `AGENTS.md`.
 - The fixed texts of the prototype move into the label module; the prototype itself stays outside the repository.
+
+## Follow-up after the first Windows check
+
+Decided by Ocomic on October 8, 2026, after running the setup on Windows, where the Documents folder was redirected to OneDrive. The logbook landed in OneDrive with only a warning, and choosing another place meant typing a full path.
+
+- **Ship terms fold.** Each ship term has a chevron. The terms a prompt introduces are unfolded; all others fold when new terms arrive. The person can unfold or fold any term.
+- **Logbook on this PC or in OneDrive.** When OneDrive is set up on the computer, "Choose another folder" becomes two answers: "Choose a folder on this PC" and "Choose a folder in OneDrive". Without OneDrive, "Choose another folder" stays.
+- **Folder window.** The answer opens the folder window of Windows (opened by the local app server through PowerShell), starting in the home folder or in the OneDrive folder; "Choose another folder" starts in Documents. The logbook goes into a `Loxora` folder inside the chosen folder, unless the chosen folder is already called so or already holds a logbook. The chosen folder is checked like a typed one (Git working tree, OneDrive, existing logbook). Closing the window keeps the previous folder. Where the server cannot open the window (outside Windows), the folder is typed as before.
+- **Route.** `POST /api/setup/folder` with `{ place: "local" | "oneDrive" | "documents", title }`, setup mode only, one window at a time.
+- **Text.** "Everything stays on this computer" is said only when the proposed folder is not synchronized by OneDrive.
+- **Checks.** Server tests with a stand-in folder window; a Playwright check for folding. The folder window itself is checked manually on Windows.
+

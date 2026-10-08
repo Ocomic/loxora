@@ -132,6 +132,15 @@ test.describe("German, by tapping", () => {
     await say(page, text.answer, "Alex");
     await expect(page.getByRole("heading", { name: text.terms })).toBeVisible();
     await tap(page, "Nova");
+    // Only the newest ship term is unfolded; the others open on a click.
+    const captain = page.getByRole("button", { name: "Kapitän" });
+    await expect(captain).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("button", { name: "Logbuch" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await captain.click();
+    await expect(captain).toHaveAttribute("aria-expanded", "true");
     await expect(page.getByText("Dokumente › Loxora")).toBeVisible();
     await tap(page, text.fits);
     await tap(page, text.newProject);

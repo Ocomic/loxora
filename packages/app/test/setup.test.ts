@@ -8,7 +8,7 @@ import { runCli } from "@loxora/cli";
 import { WORKSPACE_EXPORT_SECTIONS, workspaceExportRecords } from "@loxora/core";
 import { openSqliteReadOnlyStore } from "@loxora/sqlite";
 import { startAppServer } from "../src/index.js";
-import { captainId, isOneDrivePath } from "../src/server/setup.js";
+import { captainId, type FolderPicker, isOneDrivePath } from "../src/server/setup.js";
 import {
   goalOf,
   interpret,
@@ -35,6 +35,7 @@ async function serve(
   t: test.TestContext,
   place: ReturnType<typeof home>,
   extra: { workspaceDirectory?: string; actor?: string } = {},
+  setup: { env?: Record<string, string>; pickFolder?: FolderPicker } = {},
 ) {
   const server = await startAppServer({
     port: 0,
@@ -43,7 +44,9 @@ async function serve(
       path: place.settingsPath,
       defaultWorkspace: place.defaultWorkspace,
       documents: () => place.documents,
-      env: {},
+      env: setup.env ?? {},
+      home: place.root,
+      ...(setup.pickFolder ? { pickFolder: setup.pickFolder } : {}),
     },
   });
   t.after(() => server.close());
@@ -112,6 +115,8 @@ test("without a workspace the app runs the setup, then Mission Control with the 
     oneDrive: false,
     hasWorkspace: false,
     reviewers: [],
+    places: null,
+    picker: false,
   });
   assert.deepEqual(first.body.xora, { state: "not_installed" });
   assert.equal(first.body.step, "name");
@@ -218,6 +223,69 @@ test("the setup refuses a logbook inside a code project or an existing logbook",
   assert.equal(exists.body.error, "WorkspaceExists");
   const relative = await post(server.url, "/api/setup/answers", { logbookPath: "Loxora" });
   assert.equal(relative.status, 400);
+});
+
+test("another logbook folder is chosen in the folder window, on this PC or in OneDrive", async (t) => {
+  const place = home(t);
+  const oneDrive = join(place.root, "OneDrive");
+  const projects = join(place.root, "Projekte");
+  mkdirSync(projects);
+  const calls: [string, string][] = [];
+  let answer: string | null = projects;
+  const server = await serve(
+    t,
+    place,
+    {},
+    {
+      env: { OneDrive: oneDrive },
+      pickFolder: async (start, title) => {
+        calls.push([start, title]);
+        return answer;
+      },
+    },
+  );
+  await post(server.url, "/api/setup/answers", { name: "Alex", shipName: "Nova" });
+  const state = await get(`${server.url}/api/setup`);
+  assert.deepEqual((state.body.logbook as { places: unknown }).places, {
+    local: place.root,
+    oneDrive,
+  });
+  assert.equal((state.body.logbook as { picker: boolean }).picker, true);
+
+  const local = await post(server.url, "/api/setup/folder", { place: "local", title: "Wähle" });
+  assert.equal(local.status, 200);
+  assert.equal(local.body.picked, true);
+  assert.deepEqual(calls, [[place.root, "Wähle"]]);
+  // A "Loxora" folder goes inside the chosen folder; the conversation checks it again.
+  assert.equal((local.body.logbook as { path: string }).path, join(projects, "Loxora"));
+  assert.equal((local.body.logbook as { oneDrive: boolean }).oneDrive, false);
+
+  answer = join(oneDrive, "Loxora");
+  const cloud = await post(server.url, "/api/setup/folder", { place: "oneDrive" });
+  assert.equal(calls[1]?.[0], oneDrive);
+  assert.equal((cloud.body.logbook as { path: string }).path, answer);
+  assert.equal((cloud.body.logbook as { oneDrive: boolean }).oneDrive, true);
+
+  // Closing the window keeps the folder chosen before.
+  answer = null;
+  const closed = await post(server.url, "/api/setup/folder", { place: "local" });
+  assert.equal(closed.body.picked, false);
+  assert.equal((closed.body.logbook as { path: string }).path, join(oneDrive, "Loxora"));
+
+  const invalid = await post(server.url, "/api/setup/folder", { place: "desktop" });
+  assert.equal(invalid.status, 400);
+});
+
+test("without OneDrive and a folder window, another folder is typed", async (t) => {
+  const place = home(t);
+  const server = await serve(t, place);
+  await post(server.url, "/api/setup/answers", { name: "Alex", shipName: "Nova" });
+  const state = await get(`${server.url}/api/setup`);
+  assert.equal((state.body.logbook as { places: unknown }).places, null);
+  assert.equal((state.body.logbook as { picker: boolean }).picker, false);
+  const refused = await post(server.url, "/api/setup/folder", { place: "documents" });
+  assert.equal(refused.status, 409);
+  assert.equal(refused.body.error, "NoPicker");
 });
 
 test("an existing workspace is offered and opened in place, never migrated", async (t) => {
@@ -663,6 +731,10 @@ test("the keyword list places typed setup answers in both languages", () => {
     ["logbook", "/home/alex/logbook", "en", { choice: "path", value: "/home/alex/logbook" }],
     ["logbook", "Yes, that's fine", "en", { choice: "fits" }],
     ["logbook", "another folder please", "en", { choice: "other" }],
+    ["logbook", "Ordner auf diesem PC wählen", "de", { choice: "local" }],
+    ["logbook", "Lieber in OneDrive", "de", { choice: "oneDrive" }],
+    ["logbook", "Choose a folder on this PC", "en", { choice: "local" }],
+    ["logbook", "in OneDrive", "en", { choice: "oneDrive" }],
     ["project", "Ein neues Projekt anlegen", "de", { choice: "new" }],
     ["project", "Ich möchte ein bestehendes hinzufügen", "de", { choice: "existing" }],
     ["project", "Ich schau mich erst mal um", "de", { choice: "look" }],
@@ -720,7 +792,7 @@ test("setup answers go through the assistant and write nothing", async (t) => {
   assert.deepEqual(typed.body, {
     prompt: "logbook",
     choice: "fits",
-    choices: ["fits", "other", "open"],
+    choices: ["fits", "other", "local", "oneDrive", "open"],
     terms: ["logbook"],
   });
   const unknown = await post(server.url, "/api/assistant/message", {

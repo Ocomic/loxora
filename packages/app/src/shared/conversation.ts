@@ -55,10 +55,13 @@ export const PROMPTS = {
     accepts: "choicesOrText",
     terms: ["ship"],
   },
-  /** The logbook folder; "open" only when the folder already holds a logbook. */
+  /**
+   * The logbook folder; "open" only when the folder already holds a logbook. When OneDrive is
+   * set up, "local" and "oneDrive" take the place of "other" and open the folder picker there.
+   */
   logbook: {
     step: "logbook",
-    choices: ["fits", "other", "open"],
+    choices: ["fits", "other", "local", "oneDrive", "open"],
     accepts: "choicesOrPath",
     terms: ["logbook"],
   },
@@ -105,7 +108,9 @@ const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = 
     },
     logbook: {
       fits: ["passt", "ja", "ok", "okay", "gut", "einverstanden", "klar", "genau", "nimm"],
-      other: ["ander*", "ordner", "woanders", "nein", "aender*"],
+      other: ["ander*", "woanders", "nein", "aender*"],
+      local: ["lokal*", "pc", "rechner", "computer"],
+      oneDrive: ["onedrive", "drive", "cloud"],
       open: ["oeffn*"],
     },
     project: {
@@ -131,7 +136,9 @@ const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = 
     },
     logbook: {
       fits: ["fine", "yes", "ok", "okay", "good", "sure", "great", "fits", "agree"],
-      other: ["other", "another", "different", "folder", "elsewhere", "no", "change"],
+      other: ["other", "another", "different", "elsewhere", "no", "change"],
+      local: ["local*", "pc", "computer"],
+      oneDrive: ["onedrive", "drive", "cloud"],
       open: ["open*"],
     },
     project: {
