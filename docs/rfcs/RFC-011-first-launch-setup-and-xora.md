@@ -275,7 +275,7 @@ Accepted by Ocomic on October 4, 2026, after the proposal was merged in pull req
 
 Amendment 1 (October 5, 2026) changes the shape of the setup to a conversation with Xora and authorizes a third milestone document for it, [Milestone 14](../implementation/MILESTONE-14.md), implemented in two deliveries (pull requests #35 and #36, then the style and documentation delivery); the manual Windows check is still open. It does not change sections 2 to 7 or 9 to 11.
 
-Amendment 2 (October 6, 2026) replaces the 2D bridge visualizer (section 8 and milestone 4 in section 12) with the bridge as the ship's chat. It authorizes no code by itself: the chat needs an ADR for storing chat history and its own milestone document.
+Amendment 2 (October 6, 2026) replaces the 2D bridge visualizer (section 8 and milestone 4 in section 12) with the bridge as the ship's chat. It authorizes no code by itself: the chat needs an ADR for storing chat history and its own milestone document. The ADR is [ADR-007](../adr/ADR-007-bridge-chat-history-and-threads.md) (accepted October 10, 2026); the milestone document is [Milestone 15](../implementation/MILESTONE-15.md) (proposed).
 
 ## Amendments
 

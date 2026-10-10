@@ -121,7 +121,7 @@ Rejected for the first slice. The export is the workspace's portability contract
 
 ## Implementation (after acceptance)
 
-Acceptance authorizes a milestone document (Milestone 15, "Bridge as the ship's chat", RFC-011 milestone 4) that covers:
+Acceptance authorizes a milestone document, [Milestone 15](../implementation/MILESTONE-15.md) ("Bridge as the ship's chat", RFC-011 milestone 4), that covers:
 
 - the Core module, migration, export version 4, and tests for each rule above;
 - the bridge layout of RFC-011 Amendment 2: side list, ship channel, project channels with one thread per Mission, the direct chat with Xora, and the details panel;
