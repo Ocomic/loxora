@@ -1,6 +1,6 @@
 # ADR-007 — Bridge Chat History and Threads
 
-**Status:** Accepted
+**Status:** Accepted (Amendment 1 proposed)
 **Date:** October 10, 2026
 **Decision Date:** October 10, 2026
 **Decision Owner:** Ocomic
@@ -121,7 +121,7 @@ Rejected for the first slice. The export is the workspace's portability contract
 
 ## Implementation (after acceptance)
 
-Acceptance authorizes a milestone document (Milestone 15, "Bridge as the ship's chat", RFC-011 milestone 4) that covers:
+Acceptance authorizes a milestone document, [Milestone 15](../implementation/MILESTONE-15.md) ("Bridge as the ship's chat", RFC-011 milestone 4), that covers:
 
 - the Core module, migration, export version 4, and tests for each rule above;
 - the bridge layout of RFC-011 Amendment 2: side list, ship channel, project channels with one thread per Mission, the direct chat with Xora, and the details panel;
@@ -141,6 +141,30 @@ Acceptance authorizes a milestone document (Milestone 15, "Bridge as the ship's 
 Accepted by Ocomic on October 10, 2026, as proposed (pull request #40).
 
 This acceptance authorizes a milestone document under `docs/implementation/` for the bridge as the ship's chat (RFC-011 milestone 4). Group chats with several agents, voice input, search, a CLI command, and MCP tools remain out of scope. The open questions above remain open.
+
+## Amendment 1 — Task channels, the decisions channel, and message links (October 10, 2026)
+
+Decided by Ocomic on October 10, 2026, after accepting this ADR: the bridge should work even more like a team messenger.
+
+**What changes**
+
+- **Task channels.** Besides the ship channel and the project channels, the captain can create channels for particular tasks, with a name and optionally a project. Their kind is `topic`. A task channel is stored as a `chats` row when it is created. Work in it happens in threads with message roots (section 2). The captain can rename a task channel and archive it; an archived channel is read-only and hidden from the side list. Deleting its messages follows section 5.
+- **Decisions channel** ("#entscheidungen" / "#decisions"). A derived channel that is always first in the side list, with the counter. It shows one entry for each thing that waits for the captain: today every open Attention Request of a Mission. Each entry links to the thread where the decision is made and shows a preview of it; following the link jumps there. The entry disappears when the decision is made. Nothing is stored for it (section 3). This is how RFC-011 Amendment 2's rule "attention stays outside the chat flow" looks on the bridge.
+- **Message links.** Every stored message and every derived entry has a stable address (chat, thread root, message). A message can link to another message; the link is shown as a preview card (author, chat, beginning of the text) and opens the linked message in its thread, highlighted. A link to a deleted message shows that it was deleted. Links are stored as message references (section 2).
+- **Mentions.** `@name` addresses a participant of the chat. The reference is stored with the message. Today only Xora answers when she is mentioned; a mention of the captain by Xora puts the message into the decisions channel until the captain has read it.
+
+**Not in this amendment: agents in channels and conversations between models**
+
+The decision owner also wants to add agents to channels, ping them with `@`, and let models talk with each other in one thread while the captain follows and can step in. This is multi-agent orchestration and needs its own RFC (RFC-011 Amendment 2, AGENTS.md "Always gated"). The data model of this ADR already fits it: a message has an author actor id, threads hang on a message or a Mission, and mentions are references. When the multi-agent RFC is accepted, the Core rule in section 4 that only the captain and Xora write is the part that changes. These wishes are recorded here as requirements for that RFC:
+
+- channel membership for agents, and adding or removing an agent from a channel;
+- addressing an agent with `@`, and the agent answering in the same thread;
+- several agents in one thread, visible to the captain, who can write in it at any time;
+- every decision an agent needs from the captain appears in the decisions channel with a link to its thread.
+
+**What stays**
+
+Sections 1 to 8. The export (section 7) includes task channels; the decisions channel is derived and not exported.
 
 ## Related documents
 
