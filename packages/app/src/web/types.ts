@@ -202,3 +202,148 @@ export interface AssistantReply extends Interpretation {
   readonly choices?: readonly string[];
   readonly terms?: readonly Term[];
 }
+
+/** The bridge chat (Milestone 15 section 6). Addresses: ship, project:<id>, topic:<id>, decisions, direct:xora. */
+export type ChatKind = "ship" | "project" | "topic" | "direct" | "decisions";
+
+export interface ChatSummary {
+  readonly address: string;
+  readonly kind: ChatKind;
+  readonly name: string | null;
+  readonly projectId: string | null;
+  readonly archived: boolean;
+}
+
+/** `GET /api/chats`: the side list. */
+export interface ChatList {
+  /** False on a workspace without migration 008_chat: the bridge is read-only. */
+  readonly available: boolean;
+  readonly writable: boolean;
+  readonly decisions: { readonly address: string; readonly count: number };
+  readonly channels: readonly ChatSummary[];
+  readonly direct: readonly ChatSummary[];
+  readonly projects: readonly ProjectLabel[];
+}
+
+export interface ChatAuthor {
+  readonly id: string;
+  readonly name: string;
+  readonly role: "captain" | "xora" | "shipComputer" | "other";
+}
+
+export interface MessagePreview {
+  readonly id: string;
+  readonly address: string;
+  readonly chat: ChatSummary;
+  readonly thread: string | null;
+  readonly author: ChatAuthor;
+  readonly excerpt: string | null;
+  readonly at: string;
+  readonly deleted: boolean;
+}
+
+export interface MessageEntry {
+  readonly type: "message";
+  readonly id: string;
+  readonly at: string;
+  readonly author: ChatAuthor;
+  readonly body: string | null;
+  readonly deleted: { readonly by: string; readonly at: string } | null;
+  readonly thread: string | null;
+  readonly mentions: readonly ChatAuthor[];
+  readonly links: readonly MessagePreview[];
+  readonly replies: number;
+  readonly lastReplyAt: string | null;
+}
+
+export type ShipEventKind =
+  | "projectCreated"
+  | "missionCreated"
+  | "missionStarted"
+  | "missionWaiting"
+  | "missionCompleted"
+  | "missionFailed"
+  | "missionCancelled"
+  | "knowledgeAccepted";
+
+export interface ShipEventEntry {
+  readonly type: "event";
+  readonly id: string;
+  readonly at: string;
+  readonly event: ShipEventKind;
+  readonly author: ChatAuthor;
+  readonly project: ProjectLabel;
+  readonly address: string;
+  readonly mission?: { readonly id: string; readonly title: string };
+  readonly thread?: string;
+  readonly title?: string | null;
+}
+
+export interface MissionCardEntry {
+  readonly type: "mission";
+  readonly id: string;
+  readonly at: string;
+  readonly mission: MissionSummary;
+  readonly thread: string;
+  readonly replies: number;
+  readonly lastReplyAt: string | null;
+}
+
+export interface AttentionEntry {
+  readonly type: "attention";
+  readonly id: string;
+  readonly at: string;
+  readonly mission: MissionSummary;
+  readonly waitReason: string | null;
+  readonly address: string;
+  readonly thread: string;
+}
+
+export interface MissionEventEntry {
+  readonly type: "missionEvent";
+  readonly id: string;
+  readonly at: string;
+  readonly event: Pick<
+    MissionEvent,
+    "type" | "newState" | "waitReason" | "actorId" | "reason" | "payload"
+  >;
+}
+
+export type ChatEntry =
+  | MessageEntry
+  | ShipEventEntry
+  | MissionCardEntry
+  | AttentionEntry
+  | MissionEventEntry;
+
+export type ChatDetails =
+  | {
+      readonly kind: "project";
+      readonly project: ProjectLabel & { readonly purpose: string };
+      readonly missions: number;
+      readonly open: number;
+    }
+  | { readonly kind: "topic"; readonly project: (ProjectLabel & { purpose: string }) | null }
+  | { readonly kind: "direct"; readonly mode: "script" }
+  | { readonly kind: "ship" | "decisions"; readonly crew: readonly ChatAuthor[] };
+
+export interface ChatThread {
+  readonly key: string;
+  readonly root: MessageEntry | { readonly type: "mission"; readonly mission: MissionDetail };
+  readonly entries: readonly ChatEntry[];
+}
+
+/** `GET /api/chats/:address`. */
+export interface ChatView {
+  readonly chat: ChatSummary & { readonly writable: boolean };
+  readonly details: ChatDetails;
+  readonly entries: readonly ChatEntry[];
+  readonly thread?: ChatThread;
+}
+
+/** `POST /api/chats/:address/messages`. */
+export interface PostedMessage {
+  readonly message: MessageEntry;
+  readonly reply?: MessageEntry;
+  readonly thread: string | null;
+}

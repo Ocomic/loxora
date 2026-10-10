@@ -6,7 +6,7 @@ import type { MissionFilter, MissionList, MissionSummary } from "../types.js";
 import { useFirstMission } from "./FirstMission.js";
 import { MissionDetailView } from "./MissionDetailView.js";
 import { StatusBadge } from "./StatusBadge.js";
-import { useXora } from "./XoraBar.js";
+import { useXora } from "./useXora.js";
 
 const FILTERS: readonly MissionFilter[] = [
   "all",

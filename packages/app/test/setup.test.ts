@@ -678,13 +678,10 @@ test("the first steps need a human captain, a set-up logbook, and valid choices"
   const early = await post(server.url, "/api/assistant/message", { choice: "firstMission" });
   assert.equal(early.status, 409);
   assert.equal(early.body.error, "NotReady");
+  // The old input bar route moved to the chat (Milestone 15 section 6).
   const bar = await post(server.url, "/api/assistant/message", { text: "Hello Xora" });
-  assert.deepEqual(bar.body, { reply: "notOnBoard" });
-  const topic = await post(server.url, "/api/assistant/message", {
-    text: "What are missions?",
-    topic: "missions",
-  });
-  assert.deepEqual(topic.body, { reply: "missions" });
+  assert.equal(bar.status, 410);
+  assert.equal(bar.body.error, "Moved");
   assert.equal(
     (await post(server.url, "/api/assistant/message", { choice: "launch" })).body.error,
     "Invalid",
