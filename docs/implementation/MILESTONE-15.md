@@ -24,8 +24,8 @@ There is still no language model. Xora answers in script mode with fixed replies
 - A Core module `packages/core/src/chat.ts` with the chat types and a `ChatService` over a `ChatStore` port, following `MissionService`.
 - Chat addresses: `ship`, `project:<projectId>`, and `direct:xora`. The ship chat and the project chats are derived from the workspace and its projects; a `chats` row is written with a chat's first stored message.
 - Operations: `postMessage` (chat, author, body, optional thread root: a message id or a Mission id, optional references), `deleteMessage`, `deleteThread`, `deleteDirectChat`, and reads (`listChats`, `getChat`, `getThread`).
-- Rules in Core: only a human actor and `agent:xora` write; any other `agent:` actor is rejected (group chats are gated). A Mission thread root must be a Mission of the channel's project. A reply to a reply is stored under the same root. References must exist. A message body is 1 to 4,000 characters.
-- Deletion removes the body and records who deleted it and when. Only a human deletes.
+- Rules in Core: only a reviewer of the workspace (the captain) and `agent:xora` write; any other human id and any other `agent:` actor are rejected (group chats are gated). Core reads the reviewers from the workspace, as review operations already do; it does not rely on the server choosing the actor. A Mission thread root must be a Mission of the channel's project. A reply to a reply is stored under the same root. References must exist. A message body is 1 to 4,000 characters.
+- Deletion removes the body and records who deleted it and when. Only a reviewer of the workspace deletes.
 - Migration `008_chat` with `chats`, `chat_messages`, and `chat_message_references` (`STRICT`, `CHECK` constraints). The app opens an existing workspace without migrating it (Milestone 13); a workspace without `008_chat` shows the bridge read-only with the existing hint to run any `loxora` CLI command once after a backup copy, and the input bar is disabled. The app's other screens keep requiring only `007_missions`.
 
 ### 2. Derived entries
@@ -48,7 +48,7 @@ The bridge replaces the Mission overview as the start screen at `/bridge`.
 - **Side list (left):** "Needs you" with every Mission that waits for the captain, in red with a counter (RFC-011 Amendment 2, "Attention stays outside the chat flow"); the channels (`#brücke` / `#bridge` and one per project); the direct chat with Xora; the crew as empty stations ("No crew yet"); and "Missions", which opens the existing Mission overview.
 - **Chat (middle):** the open chat. In a project channel each Mission card shows its state and the number of replies; opening it shows its thread next to the channel, as in a team messenger. A message shows the author's picture (Xora's picture of Milestone 14, a neutral mark for the ship computer, initials for the captain), name, time, and text.
 - **Details panel (right):** for Xora her picture, status ("Online · script mode"), and what she can do today; for a project its purpose and Missions; for the ship channel who is on board.
-- **Input bar:** the Xora input bar of Milestone 13 becomes the input of the open chat or thread. In a channel, a message that mentions Xora (`@Xora`) gets her script-mode reply in the same place; other messages are stored without a reply. In the direct chat every message gets her reply.
+- **Input bar:** the Xora input bar of Milestone 13 becomes the input of the open chat or thread. In a channel, a message that mentions Xora (`@Xora`) gets her script-mode reply in the same place; other messages are stored without a reply. In the direct chat every message gets her reply. There, a message written outside a thread starts a new topic thread (its own root, ADR-007 section 2), and Xora answers inside it; the direct chat lists its topic threads, newest first, and the input bar writes into the open one or starts a new one.
 - **Mission Detail** (`/missions/:id`) and the Mission overview (`/missions`) stay reachable unchanged; the Mission card links to Mission Detail.
 - **Deletion:** a message menu offers "Delete" for stored messages, with a confirmation. The direct chat with Xora offers "Clear chat". Derived entries have no menu.
 - **Narrow windows:** below 900 pixels the side list and the details panel fold away behind buttons; the chat stays usable.
@@ -61,7 +61,8 @@ The bridge replaces the Mission overview as the start screen at `/bridge`.
 
 ### 5. The first Mission moves into Xora's direct chat
 
-- The first-Mission offer of Milestone 14 section 4 moves from the banner and `/first-steps` into Xora's direct chat: Xora's messages and confirmation cards for the steps E1 to E4 appear there. They are derived from the setup state, as in Milestone 14, and not stored.
+- The first-Mission offer of Milestone 14 section 4 moves from the banner and `/first-steps` into Xora's direct chat: while it is pending, it is pinned at the top of the direct chat as Xora's guide with the steps E1 to E4 and their confirmation cards. It is an offer, not chat history: it is shown from the setup state, as in Milestone 14, is not stored as messages, and is gone when the first Mission is finished or the offer is dismissed. "Clear chat" does not affect it.
+- What the first Mission leaves behind lives in the workspace and travels with it: the Mission and its thread in the project channel, and the accepted project goal.
 - After the Mission starts, Xora links to its thread in the project channel; the captain answers the question there, and Xora's direct chat continues with recording the project goal.
 - **Three hints** introduce the bridge (RFC-011 section 1, part E): the side list ("Red means: I need you"), threads ("Every Mission has its own thread"), and the input bar ("You write here, to me or in the open channel"). Then Xora proposes one concrete next step: opening the project channel to follow the finished first Mission.
 - The writes, actors, and stages stay exactly as in Milestone 13 section 7. The offer can still be dismissed.
@@ -110,7 +111,7 @@ These follow from Amendment 2 and ADR-007 but were not decided there. The decisi
 
 - **The bridge is a new start screen** at `/bridge`; the Mission overview and Mission Detail stay unchanged and reachable.
 - **Chat addresses** are `ship`, `project:<id>`, and `direct:xora`.
-- **The first-Mission conversation is derived**, not stored, as in Milestone 14.
+- **The first-Mission offer is a pinned guide**, not chat history; its state stays in the setup settings, as in Milestone 14.
 - **The three hints** cover the side list, threads, and the input bar; the next step is following the finished Mission in its project channel.
 - **No unread markers** in this milestone; counters show only what needs the captain.
 - **An unmigrated workspace** shows the bridge read-only with a migration hint instead of migrating it.
@@ -121,7 +122,7 @@ These follow from Amendment 2 and ADR-007 but were not decided there. The decisi
 - Any language model or model runtime (RFC-011 milestone 3).
 - Group chats with several agents, crew members, and agent direct chats other than Xora's (multi-agent RFC).
 - Voice input, search, editing messages, unread markers, notifications, and push.
-- Threads on a topic without a Mission (ADR-007 open question 3).
+- Topic threads without a Mission in the ship and project channels (ADR-007 open question 3); in Xora's direct chat topic threads are in scope (section 3).
 - An export variant without chat (ADR-007 open question 1).
 - A CLI command or MCP tool for the chat.
 - Restyling Mission Detail.
