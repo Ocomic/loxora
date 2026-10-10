@@ -288,6 +288,10 @@ export class SqliteLifecycleStore
     return this.workspaceExport.readWorkspaceExport();
   }
 
+  public readWorkspaceSections(names: readonly string[]) {
+    return this.workspaceExport.readWorkspaceSections(names);
+  }
+
   public async restoreWorkspaceExport(document: WorkspaceExport): Promise<void> {
     return this.workspaceExport.restoreWorkspaceExport(document);
   }

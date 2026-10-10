@@ -492,7 +492,7 @@ async function api(
       response,
       200,
       await withStore(workspaceDirectory, async (store) =>
-        new Labels(await store.readWorkspaceExport()).projectList(),
+        (await Labels.read(store)).projectList(),
       ),
     );
   }
@@ -504,7 +504,7 @@ async function api(
       response,
       200,
       await withStore(workspaceDirectory, async (store) => {
-        const labels = new Labels(await store.readWorkspaceExport());
+        const labels = await Labels.read(store);
         const all = (
           await new MissionService(store).listMissions(
             project ? { projectId: project as never } : {},
@@ -535,7 +535,7 @@ async function api(
         if (!mission) throw new NotFoundError(`Mission ${missionId} was not found`);
         const events = await missions.getMissionEvents({ missionId });
         if (detail[2]) return events;
-        return missionDetail(mission, events, new Labels(await store.readWorkspaceExport()), actor);
+        return missionDetail(mission, events, await Labels.read(store), actor);
       }),
     );
   }
@@ -690,7 +690,7 @@ async function act(
   return missionDetail(
     updated,
     await missions.getMissionEvents({ missionId }),
-    new Labels(await store.readWorkspaceExport()),
+    await Labels.read(store),
     actorId,
   );
 }

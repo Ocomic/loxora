@@ -2,11 +2,8 @@ import {
   MISSION_TRANSITIONS,
   type Mission,
   type MissionEvent,
-  type WorkspaceExport,
   missionNeedsHuman,
-  WORKSPACE_EXPORT_SECTIONS,
   type WorkspaceExportRecord,
-  workspaceExportRecords,
 } from "@loxora/core";
 
 /** Status filters of the Mission Control sidebar (RFC-010, section 4). */
@@ -34,18 +31,35 @@ export function matchesFilter(mission: Mission, filter: MissionFilter): boolean 
   }
 }
 
+/**
+ * The export sections the labels read. Reading only these keeps Mission Control working on a
+ * workspace that has `007_missions` but not a later migration (Milestone 15 section 1).
+ */
+export const LABEL_SECTIONS = [
+  "projects",
+  "knowledgeNodes",
+  "knowledgeNodeKeys",
+  "plannedKnowledgeItems",
+  "plannedKnowledgeRevisions",
+] as const;
+
+type Sections = Readonly<Record<string, readonly WorkspaceExportRecord[]>>;
+
 /** Name lookups built from one workspace read; values are display labels only. */
 export class Labels {
+  public static async read(store: {
+    readWorkspaceSections(names: readonly string[]): Promise<Sections>;
+  }): Promise<Labels> {
+    return new Labels(await store.readWorkspaceSections(LABEL_SECTIONS));
+  }
+
   private readonly projects: Map<unknown, string>;
   private readonly nodes: Map<unknown, WorkspaceExportRecord>;
   private readonly keys: Map<unknown, string>;
   private readonly plans: Map<unknown, { title: string; status: string }>;
 
-  public constructor(document: WorkspaceExport) {
-    const records = (name: string) => {
-      const spec = WORKSPACE_EXPORT_SECTIONS.find((entry) => entry.name === name);
-      return spec ? workspaceExportRecords(document, spec) : [];
-    };
+  public constructor(sections: Sections) {
+    const records = (name: (typeof LABEL_SECTIONS)[number]) => sections[name] ?? [];
     this.projects = new Map(records("projects").map((p) => [p.id, String(p.name)]));
     this.nodes = new Map(records("knowledgeNodes").map((n) => [n.id, n]));
     this.keys = new Map(records("knowledgeNodeKeys").map((k) => [k.nodeId, String(k.key)]));
