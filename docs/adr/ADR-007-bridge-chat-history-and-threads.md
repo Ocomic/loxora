@@ -1,7 +1,8 @@
 # ADR-007 — Bridge Chat History and Threads
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** October 10, 2026
+**Decision Date:** October 10, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (schema migration, export format version, new HTTP routes; see RFC-008)
 
@@ -134,6 +135,12 @@ Acceptance authorizes a milestone document (Milestone 15, "Bridge as the ship's 
 2. With several people on one ship: are direct chats with Xora per person or shared?
 3. Can a person start a thread on a topic without a Mission, and when does such a thread become a Mission?
 4. Should the captain be able to delete derived reports from view (hide), separate from deleting stored messages?
+
+## Acceptance
+
+Accepted by Ocomic on October 10, 2026, as proposed (pull request #40).
+
+This acceptance authorizes a milestone document under `docs/implementation/` for the bridge as the ship's chat (RFC-011 milestone 4). Group chats with several agents, voice input, search, a CLI command, and MCP tools remain out of scope. The open questions above remain open.
 
 ## Related documents
 
