@@ -34,11 +34,12 @@ Chats and messages are stored in the workspace database, in new tables of their 
 |---|---|
 | **Chat** | A place for messages. Kinds: `ship` (exactly one per workspace), `project` (exactly one per project), `direct` (one per assistant or agent; in this ADR only Xora). |
 | **Message** | Text written by the captain or by Xora in a chat. Fields: id, chat, author actor id, body, created time, optional thread root, references. |
-| **Thread** | A message and its replies. A reply names its thread root; threads have one level, replies to replies stay in the same thread. |
+| **Thread** | A root and its replies. The root is either a stored message or a Mission: a reply names a root message id or a Mission id, never both. Threads have one level; replies to replies stay in the same thread. |
 | **Reference** | A typed link from a message to a Mission, a Proposal, a Node, or another message or chat. |
 
-- **One thread per Mission.** In a project channel every Mission has its own thread. Its root is the Mission card. Everything about that Mission appears in this thread: its Mission Events, its Attention Requests (answered in place), its Outcome, and the messages the captain and Xora write about it. This is how one topic is followed from start to result.
+- **One thread per Mission.** In a project channel every Mission has its own thread. Its root is the Mission itself, shown as the Mission card; replies name the Mission id as their root, so no root message is stored and nothing is duplicated (section 3). Core checks that the Mission belongs to the channel's project. Everything about that Mission appears in this thread: its Mission Events, its Attention Requests (answered in place), its Outcome, and the messages the captain and Xora write about it. This is how one topic is followed from start to result.
 - **Conversations of the models.** Whatever an assistant or agent reports while it works on a Mission appears in that Mission's thread. Today agents report through Mission Events (ADR-005), so their work is visible without storing anything new. When an assistant gets a direct chat, each topic it is asked about starts a thread there, so the captain can open one conversation at a time.
+- **Chats exist without rows.** The ship chat and the project chats are derived from the workspace and its projects, and the direct chat with Xora always exists. A `chats` row is written only with the first stored message in a chat. So existing workspaces, new projects, and restored older exports have every channel without a migration step or a bootstrap.
 - **The side list** shows the chats, and the threads that need the captain, with the counter of Missions that need input (RFC-011 Amendment 2: attention stays outside the chat flow).
 
 ### 3. What is stored and what is derived
@@ -71,7 +72,7 @@ Chats and messages are stored in the workspace database, in new tables of their 
 ### 6. Core and storage
 
 - A Core module defines the chat types and a `ChatService` over a `ChatStore` port, following `MissionService` (ADR-005). All rules live in Core: chat kinds, who may write, one-level threads, reference checks, deletion.
-- A new SQLite migration adds `chats`, `chat_messages`, and `chat_message_references`, as `STRICT` tables with `CHECK` constraints. Deletion is the only update of a message row.
+- A new SQLite migration adds `chats` (written with a chat's first message), `chat_messages` (with either a root message id or a root Mission id), and `chat_message_references`, as `STRICT` tables with `CHECK` constraints. Deletion is the only update of a message row.
 - Chat messages do not write knowledge Audit Events, as Missions do not (ADR-005).
 - Chats are never part of Context Packages, navigation projections, or knowledge maps.
 
@@ -79,7 +80,7 @@ Chats and messages are stored in the workspace database, in new tables of their 
 
 - The workspace export gets format version 4 with sections for chats, messages, and message references (ADR-003 rules unchanged). Derived reports are not exported, because they are rebuilt from the exported events.
 - Deleted messages are exported as markers without text.
-- The reader keeps accepting versions 1 to 3; an older document restores with no chats.
+- The reader keeps accepting versions 1 to 3; an older document restores with no stored messages. Its channels still appear, because they are derived (section 2).
 
 ### 8. Server and UI
 
