@@ -20,14 +20,13 @@ The decision owner chose a Mission Control direction for the product UI (see [`U
 
 ## Documentation and ticket systems
 
-Recorded on October 10, 2026, at the decision owner's request: documentation and ticket systems are topics Loxora should consider. Nothing is decided yet. Open questions:
-
-Existing documents and issues are already Sources (RFC-002). The open part is how Loxora works with them.
+Recorded on October 10, 2026, at the decision owner's request: documentation and ticket systems are topics Loxora should consider. Nothing is decided yet. Existing documents and issues are already Sources (RFC-002); the open part is how Loxora works with them. Open questions:
 
 - Documentation: how existing docs are ingested and kept in sync as Sources, whether Loxora also generates or updates documentation from accepted knowledge, and how generated docs stay consistent with the logbook.
 - Ticket systems (for example GitHub Issues or Jira): how tickets are ingested and synchronized as Sources, whether Missions link to tickets, and whether Loxora keeps its own lightweight tickets.
 - Integrations are capabilities with replaceable adapters (AGENTS.md). Open: where the capability and adapter boundaries for documentation and tickets lie.
 - Which of these would send data off the machine, which makes them C3 decisions.
+- Scope: whether Loxora only connects to existing team messengers, wikis, and ticket systems, or can also replace them for small teams that want to run such tools locally, at low cost, and adapt them themselves. The decision owner raised the second as an idea (October 10, 2026). Replacing them would widen the product well beyond project knowledge and needs its own product decision.
 
 Any integration is a new external integration (C2 under RFC-008) and needs an RFC or ADR first.
 
