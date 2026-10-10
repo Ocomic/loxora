@@ -479,6 +479,39 @@ test("the UI never migrates: a missing or outdated workspace answers 503", async
   }
 });
 
+/** A workspace as a CLI before Milestone 15 left it: migrated up to `007_missions`. */
+function withoutChatMigration(workspace: string) {
+  const database = new DatabaseSync(join(workspace, "workspace.sqlite"));
+  try {
+    database.exec(`DROP TABLE chat_message_references; DROP TABLE chat_messages;
+      DROP TABLE chats; DELETE FROM schema_migrations WHERE id = '008_chat';`);
+  } finally {
+    database.close();
+  }
+}
+
+test("Mission Control keeps working on a workspace without 008_chat", async (t) => {
+  const { workspace, input } = await workspaceWithMissions(t);
+  withoutChatMigration(workspace);
+  const server = await serve(t, workspace, undefined, "Ocomic");
+  const projects = await fetch(`${server.url}/api/projects`);
+  assert.equal(projects.status, 200);
+  assert.deepEqual(
+    ((await projects.json()) as { name: string }[]).map((project) => project.name),
+    ["Game"],
+  );
+  const list = await get(`${server.url}/api/missions`);
+  assert.equal(list.status, 200);
+  assert.equal((list.body.missions as unknown[]).length, 3);
+  const detail = await get(`${server.url}/api/missions/${input}`);
+  assert.equal(detail.status, 200);
+  const answered = await send(server.url, `/api/missions/${input}/answer`, {
+    sequence: detail.body.sequence,
+    response: "512",
+  });
+  assert.equal(answered.status, 200);
+});
+
 test("the web client is served with a single-page fallback and no path traversal", async (t) => {
   const root = mkdtempSync(join(tmpdir(), "loxora-app-web-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));

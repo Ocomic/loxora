@@ -107,6 +107,30 @@ export class SqliteWorkspaceExportStore implements WorkspaceExportStore {
     }
   }
 
+  /**
+   * Reads named canonical sections only, checking just their tables. The product UI uses it
+   * for display labels, so it keeps working on a workspace that lacks a later migration.
+   */
+  public async readWorkspaceSections(
+    names: readonly string[],
+  ): Promise<Readonly<Record<string, readonly WorkspaceExportRecord[]>>> {
+    const specs = names.map((name) => {
+      const spec = WORKSPACE_EXPORT_SECTIONS.find((entry) => entry.name === name);
+      if (!spec) throw new ValidationError(`Unknown export section ${name}`);
+      return spec;
+    });
+    for (const spec of specs) this.assertTableMatches(spec);
+    this.database.exec("BEGIN");
+    try {
+      const sections = Object.fromEntries(specs.map((spec) => [spec.name, this.readSection(spec)]));
+      this.database.exec("COMMIT");
+      return sections;
+    } catch (error) {
+      if (this.database.isTransaction) this.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
   public async restoreWorkspaceExport(document: WorkspaceExport): Promise<void> {
     assertWorkspaceExport(document);
     this.assertSchemaMatchesFormat();
@@ -168,21 +192,23 @@ export class SqliteWorkspaceExportStore implements WorkspaceExportStore {
     }
   }
 
+  private assertTableMatches(spec: WorkspaceExportSectionSpec): void {
+    const actual = (
+      this.database.prepare(`PRAGMA table_info(${table(spec)})`).all() as { name: string }[]
+    )
+      .map((column) => column.name)
+      .sort();
+    const expected = spec.fields.map(exportColumnName).sort();
+    if (actual.join(",") !== expected.join(",")) {
+      throw new IntegrityError(
+        `Table ${table(spec)} does not match export section ${spec.name}; update the export format`,
+      );
+    }
+  }
+
   /** Fails loudly when a migration changed a table without a matching export format update. */
   private assertSchemaMatchesFormat(): void {
-    for (const spec of ALL_SECTIONS) {
-      const actual = (
-        this.database.prepare(`PRAGMA table_info(${table(spec)})`).all() as { name: string }[]
-      )
-        .map((column) => column.name)
-        .sort();
-      const expected = spec.fields.map(exportColumnName).sort();
-      if (actual.join(",") !== expected.join(",")) {
-        throw new IntegrityError(
-          `Table ${table(spec)} does not match export section ${spec.name}; update the export format`,
-        );
-      }
-    }
+    for (const spec of ALL_SECTIONS) this.assertTableMatches(spec);
     const exported = new Set(ALL_SECTIONS.map(table));
     const unexported = (
       this.database
