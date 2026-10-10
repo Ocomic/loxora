@@ -55,6 +55,7 @@ import {
   type NodeKey,
   type NodeKeyStore,
   type MissionStore,
+  type ChatStore,
   type PlannedKnowledgeRevision,
   type PlannedKnowledgeRevisionDecision,
   type PlannedKnowledgeRevisionId,
@@ -71,6 +72,7 @@ import { SqliteCrossProjectImpactStore } from "./impact.js";
 import { SqlitePlannedKnowledgeStore } from "./planned.js";
 import { SqliteNodeKeyStore } from "./node-keys.js";
 import { SqliteMissionStore } from "./mission.js";
+import { SqliteChatStore } from "./chat.js";
 import { SqliteWorkspaceExportStore } from "./export.js";
 
 interface ProposalRow {
@@ -223,6 +225,7 @@ export class SqliteLifecycleStore
     ReviewInboxStore,
     NodeKeyStore,
     MissionStore,
+    ChatStore,
     WorkspaceExportStore
 {
   private readonly database: DatabaseSync;
@@ -231,6 +234,7 @@ export class SqliteLifecycleStore
   private readonly planned: SqlitePlannedKnowledgeStore;
   private readonly nodeKeys: SqliteNodeKeyStore;
   private readonly missions: SqliteMissionStore;
+  private readonly chats: SqliteChatStore;
   private readonly workspaceExport: SqliteWorkspaceExportStore;
 
   public constructor(
@@ -273,6 +277,7 @@ export class SqliteLifecycleStore
     this.impact = new SqliteCrossProjectImpactStore(this.database, this.faults);
     this.planned = new SqlitePlannedKnowledgeStore(this.database);
     this.missions = new SqliteMissionStore(this.database);
+    this.chats = new SqliteChatStore(this.database);
     this.nodeKeys = new SqliteNodeKeyStore(this.database, (event) =>
       this.planned.insertAudit(event),
     );
@@ -1037,6 +1042,39 @@ export class SqliteLifecycleStore
   }
   public missingMissionReferences(input: Parameters<MissionStore["missingMissionReferences"]>[0]) {
     return this.missions.missingMissionReferences(input);
+  }
+  public getStoredChat(input: Parameters<ChatStore["getStoredChat"]>[0]) {
+    return this.chats.getStoredChat(input);
+  }
+  public listStoredChats() {
+    return this.chats.listStoredChats();
+  }
+  public insertChat(input: Parameters<ChatStore["insertChat"]>[0]) {
+    return this.chats.insertChat(input);
+  }
+  public updateChat(input: Parameters<ChatStore["updateChat"]>[0]) {
+    return this.chats.updateChat(input);
+  }
+  public insertChatMessage(input: Parameters<ChatStore["insertChatMessage"]>[0]) {
+    return this.chats.insertChatMessage(input);
+  }
+  public getChatMessage(input: Parameters<ChatStore["getChatMessage"]>[0]) {
+    return this.chats.getChatMessage(input);
+  }
+  public listChatMessages(input: Parameters<ChatStore["listChatMessages"]>[0]) {
+    return this.chats.listChatMessages(input);
+  }
+  public deleteChatMessages(input: Parameters<ChatStore["deleteChatMessages"]>[0]) {
+    return this.chats.deleteChatMessages(input);
+  }
+  public projectExists(input: Parameters<ChatStore["projectExists"]>[0]) {
+    return this.chats.projectExists(input);
+  }
+  public missionProject(input: Parameters<ChatStore["missionProject"]>[0]) {
+    return this.chats.missionProject(input);
+  }
+  public missingChatReferences(input: Parameters<ChatStore["missingChatReferences"]>[0]) {
+    return this.chats.missingChatReferences(input);
   }
 
   public getCurrentEndpoint(input: Parameters<CrossProjectImpactStore["getCurrentEndpoint"]>[0]) {

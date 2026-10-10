@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { ValidationError } from "./errors.js";
 
 export const WORKSPACE_EXPORT_FORMAT = "loxora.workspace-export";
-export const WORKSPACE_EXPORT_FORMAT_VERSION = 3;
+export const WORKSPACE_EXPORT_FORMAT_VERSION = 4;
 /** Versions `parseWorkspaceExport` accepts; older documents are upgraded on parse. */
-export const WORKSPACE_EXPORT_SUPPORTED_VERSIONS: readonly number[] = Object.freeze([1, 2, 3]);
+export const WORKSPACE_EXPORT_SUPPORTED_VERSIONS: readonly number[] = Object.freeze([1, 2, 3, 4]);
 
 export type WorkspaceExportValue = string | number | null;
 export type WorkspaceExportRecord = Readonly<Record<string, WorkspaceExportValue>>;
@@ -477,6 +477,42 @@ export const WORKSPACE_EXPORT_SECTIONS: readonly WorkspaceExportSectionSpec[] = 
     ["missionId", "position", "kind", "locator"],
   ),
   section(
+    "chats",
+    ["id"],
+    [
+      "id",
+      "kind",
+      "projectId",
+      "agentId",
+      "name",
+      "createdBy",
+      "createdAt",
+      "archivedBy",
+      "archivedAt",
+    ],
+  ),
+  section(
+    "chatMessages",
+    ["id"],
+    [
+      "id",
+      "sequence",
+      "chatId",
+      "authorId",
+      "body",
+      "threadRootMessageId",
+      "threadRootMissionId",
+      "createdAt",
+      "deletedBy",
+      "deletedAt",
+    ],
+  ),
+  section(
+    "chatMessageReferences",
+    ["messageId", "position"],
+    ["messageId", "position", "kind", "projectId", "targetId"],
+  ),
+  section(
     "auditEvents",
     ["id"],
     [
@@ -611,10 +647,18 @@ export const WORKSPACE_EXPORT_VERSION_3_SECTIONS: readonly string[] = Object.fre
   "missionLogReferences",
 ]);
 
+/** Sections added in format version 4 (ADR-007, the bridge chat). */
+export const WORKSPACE_EXPORT_VERSION_4_SECTIONS: readonly string[] = Object.freeze([
+  "chats",
+  "chatMessages",
+  "chatMessageReferences",
+]);
+
 /** Sections each format version added over its predecessor. */
 const ADDED_SECTIONS: Readonly<Record<number, readonly string[]>> = Object.freeze({
   2: WORKSPACE_EXPORT_VERSION_2_SECTIONS,
   3: WORKSPACE_EXPORT_VERSION_3_SECTIONS,
+  4: WORKSPACE_EXPORT_VERSION_4_SECTIONS,
 });
 
 /**

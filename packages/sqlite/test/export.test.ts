@@ -113,7 +113,7 @@ test("the export format covers every persisted table and column", async (t) => {
     assert.deepEqual(workspaceExportRecords(document, spec), []);
   for (const spec of WORKSPACE_EXPORT_DERIVED_SECTIONS)
     assert.deepEqual(workspaceExportRecords(document, spec, true), []);
-  assert.equal(document.sourceSchema.at(-1), "007_missions");
+  assert.equal(document.sourceSchema.at(-1), "008_chat");
 });
 
 test("exporting the same workspace twice yields identical canonical bytes", async (t) => {
@@ -168,7 +168,7 @@ test("parsing rejects unknown versions, unknown fields, and duplicate keys", asy
   const document = await store.readWorkspaceExport();
   const text = serializeWorkspaceExport(document);
   assert.throws(
-    () => parseWorkspaceExport(text.replace('"formatVersion": 3', '"formatVersion": 4')),
+    () => parseWorkspaceExport(text.replace('"formatVersion": 4', '"formatVersion": 5')),
     ValidationError,
   );
   assert.throws(

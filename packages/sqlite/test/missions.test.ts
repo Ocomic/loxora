@@ -461,7 +461,7 @@ test("missions stay out of navigation and Context and survive export and restore
   assert.deepEqual(after.projectMap.spaces, before.projectMap.spaces);
   assert.equal(after.projectMap.plannedKnowledgeCount, before.projectMap.plannedKnowledgeCount);
   const text = serializeWorkspaceExport(await store.readWorkspaceExport());
-  assert.match(text, /"formatVersion": 3/);
+  assert.match(text, /"formatVersion": 4/);
   assert.match(text, /"missionAttentionRequests"/);
   const directory = mkdtempSync(join(tmpdir(), "loxora-missions-restore-"));
   const target = await openSqliteStore(join(directory, "target.sqlite"));

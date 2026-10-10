@@ -26,10 +26,10 @@ The CLI needs Node.js as pinned in `.nvmrc`. It works on Windows, macOS, and Lin
 - **Initialization:** `loxora workspace init --reviewer <id> [--name <name>]`.
   - At least one reviewer is required, and `agent:*` ids are rejected as reviewers.
   - Initialization inside a Git working tree is refused unless `--allow-in-repository` is given.
-- **Migrations:** opening a workspace applies pending migrations, for example `006_plan_revisions_node_keys` (Milestone 9) or `007_missions` (Milestone 10). Every command opens the workspace, including `export`, so back up by copying the workspace directory before upgrading.
+- **Migrations:** opening a workspace applies pending migrations, for example `006_plan_revisions_node_keys` (Milestone 9) `007_missions` (Milestone 10), or `008_chat` (Milestone 15). Every command opens the workspace, including `export`, so back up by copying the workspace directory before upgrading.
 - **Backups:**
-  - `loxora export --out <file>` and `loxora export verify --in <file>` (format version 3).
-  - Older version 1 and 2 backups are upgraded on read. `export verify` reports "identical after upgrade" and names the migrations the restored store adds.
+  - `loxora export --out <file>` and `loxora export verify --in <file>` (format version 4).
+  - Older version 1, 2, and 3 backups are upgraded on read. `export verify` reports "identical after upgrade" and names the migrations the restored store adds.
 
 ## Actors and review
 
