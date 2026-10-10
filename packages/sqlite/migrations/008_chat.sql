@@ -24,6 +24,8 @@ CREATE TABLE chats (
 
 CREATE TABLE chat_messages (
   id TEXT PRIMARY KEY,
+  -- Workspace-wide insertion order; timestamps can tie within a millisecond.
+  sequence INTEGER NOT NULL UNIQUE CHECK (sequence >= 1),
   chat_id TEXT NOT NULL,
   author_id TEXT NOT NULL CHECK (length(trim(author_id)) > 0),
   body TEXT CHECK (body IS NULL OR (length(trim(body)) > 0 AND length(body) <= 4000)),
@@ -41,9 +43,9 @@ CREATE TABLE chat_messages (
   CHECK ((deleted_at IS NULL) = (body IS NOT NULL))
 ) STRICT;
 
-CREATE INDEX chat_messages_chat ON chat_messages(chat_id, created_at, id);
-CREATE INDEX chat_messages_message_thread ON chat_messages(thread_root_message_id, created_at, id);
-CREATE INDEX chat_messages_mission_thread ON chat_messages(thread_root_mission_id, created_at, id);
+CREATE INDEX chat_messages_chat ON chat_messages(chat_id, sequence);
+CREATE INDEX chat_messages_message_thread ON chat_messages(thread_root_message_id, sequence);
+CREATE INDEX chat_messages_mission_thread ON chat_messages(thread_root_mission_id, sequence);
 
 CREATE TABLE chat_message_references (
   message_id TEXT NOT NULL,
@@ -73,7 +75,8 @@ CREATE TRIGGER chat_messages_no_delete BEFORE DELETE ON chat_messages
 BEGIN SELECT RAISE(ABORT, 'Chat messages are never removed; deleting keeps a marker'); END;
 CREATE TRIGGER chat_messages_delete_once BEFORE UPDATE ON chat_messages
 WHEN OLD.deleted_at IS NOT NULL OR NEW.deleted_at IS NULL OR NEW.body IS NOT NULL
-  OR NEW.id <> OLD.id OR NEW.chat_id <> OLD.chat_id OR NEW.author_id <> OLD.author_id
+  OR NEW.id <> OLD.id OR NEW.sequence <> OLD.sequence OR NEW.chat_id <> OLD.chat_id
+  OR NEW.author_id <> OLD.author_id
   OR NEW.thread_root_message_id IS NOT OLD.thread_root_message_id
   OR NEW.thread_root_mission_id IS NOT OLD.thread_root_mission_id
   OR NEW.created_at <> OLD.created_at

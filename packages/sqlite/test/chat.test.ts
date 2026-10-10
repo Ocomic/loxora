@@ -317,7 +317,9 @@ test("deleting keeps a marker; only the captain deletes; threads and Xora's chat
 
 test("export version 4 round-trips chats; deleted messages leave no text", async (t) => {
   const { store, chat, project, mission, directory } = await fixture(t);
-  await chat.createChannel({ name: "Art", actorId: "alex" });
+  const art = await chat.createChannel({ name: "Art", actorId: "alex" });
+  await chat.postMessage({ chatId: art.id, actorId: "alex", body: "Sketches" });
+  await chat.archiveChannel({ chatId: art.id, actorId: "alex" });
   const secret = await chat.postMessage({ chatId: XORA_CHAT_ID, actorId: "alex", body: "Secret" });
   await chat.postMessage({
     chatId: projectChat(project.id),
@@ -349,4 +351,50 @@ test("export version 4 round-trips chats; deleted messages leave no text", async
   const upgraded = parseWorkspaceExport(JSON.stringify(legacy));
   assert.equal(upgraded.formatVersion, 4);
   assert.deepEqual(upgraded.sections.chatMessages, []);
+});
+
+test("topic threads are refused in ship and project channels; order survives equal timestamps", async (t) => {
+  const { store, project } = await fixture(t);
+  const sameTime = { now: () => "2026-10-10T12:00:00.000Z" };
+  const chat = new ChatService(store, { isCaptain: (id) => id === "alex" }, undefined, sameTime);
+  const top = await chat.postMessage({ chatId: SHIP_CHAT_ID, actorId: "alex", body: "Top" });
+  await assert.rejects(
+    () =>
+      chat.postMessage({
+        chatId: SHIP_CHAT_ID,
+        actorId: "alex",
+        body: "Reply",
+        threadRoot: { kind: "message", messageId: top.id },
+      }),
+    /Topic threads/,
+  );
+  const bodies = ["one", "two", "three", "four", "five"];
+  for (const body of bodies) {
+    await chat.postMessage({ chatId: projectChat(project.id), actorId: "alex", body });
+  }
+  assert.deepEqual(
+    (await chat.listMessages({ chatId: projectChat(project.id) })).map((entry) => entry.body),
+    bodies,
+  );
+});
+
+test("a first message finds a chat row another first message wrote; archived chats refuse inserts", async (t) => {
+  const { store, chat } = await fixture(t);
+  const first = await chat.postMessage({ chatId: XORA_CHAT_ID, actorId: "alex", body: "One" });
+  const late = await store.getStoredChat({ chatId: XORA_CHAT_ID });
+  assert.ok(late);
+  await store.insertChatMessage({
+    chat: late,
+    message: { ...first, id: "second" as ChatMessageId, body: "Two" },
+  });
+  assert.equal((await chat.listMessages({ chatId: XORA_CHAT_ID })).length, 2);
+  const channel = await chat.createChannel({ name: "Art", actorId: "alex" });
+  await chat.archiveChannel({ chatId: channel.id, actorId: "alex" });
+  await assert.rejects(
+    () =>
+      store.insertChatMessage({
+        message: { ...first, id: "third" as ChatMessageId, chatId: channel.id },
+      }),
+    /archived/,
+  );
 });

@@ -4,7 +4,7 @@ Milestone 7 implements ADR-003. Milestone 9 (ADR-006) introduces format version 
 
 ## Core (`@loxora/core`)
 
-- `WORKSPACE_EXPORT_FORMAT` (`"loxora.workspace-export"`) and `WORKSPACE_EXPORT_FORMAT_VERSION` (`3`). `WORKSPACE_EXPORT_SUPPORTED_VERSIONS` is `[1, 2, 3]`.
+- `WORKSPACE_EXPORT_FORMAT` (`"loxora.workspace-export"`) and `WORKSPACE_EXPORT_FORMAT_VERSION` (`4`). `WORKSPACE_EXPORT_SUPPORTED_VERSIONS` is `[1, 2, 3, 4]`.
 - `upgradeWorkspaceExport(value)`: upgrades older documents step by step to the current version by adding the empty sections of each newer version (`WORKSPACE_EXPORT_VERSION_2_SECTIONS`, `WORKSPACE_EXPORT_VERSION_3_SECTIONS`, `WORKSPACE_EXPORT_VERSION_4_SECTIONS`); existing records stay unchanged. `parseWorkspaceExport` applies it before validation. An older document that already contains a newer section is rejected.
 - `WORKSPACE_EXPORT_SECTIONS` and `WORKSPACE_EXPORT_DERIVED_SECTIONS`: each section's name, its exact field list, and its sort key, in restore order. These lists are the public format contract.
 - `assertWorkspaceExport(value)` / `parseWorkspaceExport(text)`: these reject:

@@ -82,7 +82,10 @@ export interface ChatStore {
     archivedBy?: string;
     archivedAt?: string;
   }): Promise<void>;
-  /** Inserts the message, and `chat` first when the chat has no row yet, in one transaction. */
+  /**
+   * Inserts the message, and `chat` first when the chat has no row yet, in one transaction.
+   * Fails with ValidationError when the chat was archived meanwhile.
+   */
   insertChatMessage(input: { chat?: StoredChat; message: ChatMessage }): Promise<void>;
   getChatMessage(input: { messageId: ChatMessageId }): Promise<ChatMessage | null>;
   /**
@@ -319,7 +322,13 @@ export class ChatService {
     if (!parent || parent.chatId !== chat.id) {
       throw new NotFoundError(`Message ${root.messageId} was not found in ${chat.id}`);
     }
-    return parent.threadRoot ?? Object.freeze({ kind: "message", messageId: parent.id });
+    if (parent.threadRoot) return parent.threadRoot;
+    if (chat.kind !== "direct" && chat.kind !== "topic") {
+      throw new ValidationError(
+        "Topic threads exist in task channels and direct chats; in a project channel a thread belongs to a Mission",
+      );
+    }
+    return Object.freeze({ kind: "message", messageId: parent.id });
   }
 
   private async references(input: readonly ChatReference[]): Promise<readonly ChatReference[]> {

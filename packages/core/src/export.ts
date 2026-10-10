@@ -496,6 +496,7 @@ export const WORKSPACE_EXPORT_SECTIONS: readonly WorkspaceExportSectionSpec[] = 
     ["id"],
     [
       "id",
+      "sequence",
       "chatId",
       "authorId",
       "body",

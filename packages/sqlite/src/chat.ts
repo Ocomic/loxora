@@ -1,16 +1,17 @@
 import type { DatabaseSync } from "node:sqlite";
-import type {
-  ChatId,
-  ChatKind,
-  ChatMessage,
-  ChatMessageId,
-  ChatReference,
-  ChatReferenceKind,
-  ChatStore,
-  MissionId,
-  ProjectId,
-  StoredChat,
-  ThreadRoot,
+import {
+  ValidationError,
+  type ChatId,
+  type ChatKind,
+  type ChatMessage,
+  type ChatMessageId,
+  type ChatReference,
+  type ChatReferenceKind,
+  type ChatStore,
+  type MissionId,
+  type ProjectId,
+  type StoredChat,
+  type ThreadRoot,
 } from "@loxora/core";
 
 type Row = Record<string, string | number | null>;
@@ -57,11 +58,18 @@ export class SqliteChatStore implements ChatStore {
   }): Promise<void> {
     const { message } = input;
     this.transaction(() => {
-      if (input.chat) this.writeChat(input.chat);
+      if (input.chat) this.ensureChat(input.chat);
+      const target = this.database
+        .prepare("SELECT archived_at FROM chats WHERE id=?")
+        .get(message.chatId) as Row | undefined;
+      if (target?.archived_at) {
+        throw new ValidationError(`Chat ${message.chatId} is archived and takes no messages`);
+      }
       this.database
         .prepare(
-          `INSERT INTO chat_messages (id,chat_id,author_id,body,thread_root_message_id,thread_root_mission_id,
-           created_at,deleted_by,deleted_at) VALUES (?,?,?,?,?,?,?,?,?)`,
+          `INSERT INTO chat_messages (id,sequence,chat_id,author_id,body,thread_root_message_id,
+           thread_root_mission_id,created_at,deleted_by,deleted_at)
+           VALUES (?,(SELECT COALESCE(MAX(sequence),0)+1 FROM chat_messages),?,?,?,?,?,?,?,?)`,
         )
         .run(
           message.id,
@@ -111,7 +119,7 @@ export class SqliteChatStore implements ChatStore {
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const rows = this.database
-      .prepare(`SELECT * FROM chat_messages ${where} ORDER BY created_at, id`)
+      .prepare(`SELECT * FROM chat_messages ${where} ORDER BY sequence`)
       .all(...values) as Row[];
     return frozen(rows.map((row) => this.message(row)));
   }
@@ -164,6 +172,27 @@ export class SqliteChatStore implements ChatStore {
       if (!found) missing.push(`${entry.kind} ${entry.targetId}`);
     }
     return frozen(missing);
+  }
+
+  /**
+   * Writes the row of a chat that had none. Two first messages can race: the second finds
+   * the row already written and keeps it, as long as it is the same chat.
+   */
+  private ensureChat(value: StoredChat): void {
+    const existing = this.database
+      .prepare("SELECT kind,project_id,agent_id FROM chats WHERE id=?")
+      .get(value.id) as Row | undefined;
+    if (!existing) {
+      this.writeChat(value);
+      return;
+    }
+    if (
+      existing.kind !== value.kind ||
+      existing.project_id !== value.projectId ||
+      existing.agent_id !== value.agentId
+    ) {
+      throw new ValidationError(`Chat ${value.id} exists with a different kind`);
+    }
   }
 
   private writeChat(value: StoredChat): void {
