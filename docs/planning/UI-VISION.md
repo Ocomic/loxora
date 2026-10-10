@@ -83,6 +83,17 @@ The decision owner replaced the bridge visualizer with a chat. The bridge is org
 
 [RFC-011](../rfcs/RFC-011-first-launch-setup-and-xora.md) Amendment 2 records the decision and its limits. It does not authorize implementation.
 
+### Agent conversations as threads (decision owner idea, October 10, 2026)
+
+The decision owner wants the conversations of the models to be visible as individual threads or chats. It should feel like a channel in a team messenger: the person opens a topic and can follow every conversation about it, including what agents say to each other while they work on it, and can open each conversation on its own.
+
+This is a direction, not a decision. It extends the bridge chat of RFC-011 Amendment 2 (channels and direct chats) with threads. Limits that already apply:
+
+- **Chat is not knowledge.** Agent conversations are execution history. They enter the logbook only through reviewed proposals.
+- **Gated parts.** Showing what agents say to each other presupposes several agents working together, which needs the multi-agent RFC. Storing the threads is chat history and needs the ADR named in Amendment 2.
+
+Open questions are listed at the end of this document.
+
 ## 3. Core near-term screen: Mission Detail
 
 The most important new UI concept is the Mission Detail screen. A mission is a meaningful unit of work assigned to or coordinated by Loxora.
@@ -283,6 +294,7 @@ Implementation still requires an ADR for storage and interfaces and an authorize
 - Which external notification channels are acceptable, and how are they governed (C3: data leaving the machine)?
 - What is the smallest useful first slice: a read-only Mission Detail for externally started agent work, or a full Mission Control overview?
 - Which parts of the existing demo inspector are carried over, and which are retired?
+- Agent conversations as threads: what a thread hangs on (a Mission, a message, a topic, or a Mission Step), whether every model call becomes a visible message or only a summary, how long threads are kept, and how a thread can be cited as a Source or Evidence.
 
 ## Suggested next decision steps
 
