@@ -1,6 +1,6 @@
 # Loxora App (Mission Control)
 
-`@loxora/app` is the product UI (RFC-010). Milestone 11 delivers a **read-only Mission Control** on the real local workspace. Milestone 12 adds the **write path**: with a configured human actor, Missions can be answered, paused, stopped, and resumed in the UI. Milestone 13 (RFC-011) adds the **first-launch setup** in script mode: scenes A4 to C3 (name, ship, logbook folder, orientation) and the first steps D1 to E4 (first project, first Mission, first accepted knowledge), the Xora input bar, and empty states. Milestone 14 (RFC-011 Amendment 1) turns the setup into **one conversation with Xora**: name, ship, logbook, project, and bridge, typed or tapped, and moves the first Mission to the bridge. The Hackathon demo inspector (`WEB-UI.md`) stays frozen.
+`@loxora/app` is the product UI (RFC-010). Milestone 11 delivers a **read-only Mission Control** on the real local workspace. Milestone 12 adds the **write path**: with a configured human actor, Missions can be answered, paused, stopped, and resumed in the UI. Milestone 13 (RFC-011) adds the **first-launch setup** in script mode: scenes A4 to C3 (name, ship, logbook folder, orientation) and the first steps D1 to E4 (first project, first Mission, first accepted knowledge), the Xora input bar, and empty states. Milestone 14 (RFC-011 Amendment 1) turns the setup into **one conversation with Xora**: name, ship, logbook, project, and bridge, typed or tapped, and moves the first Mission to the bridge. Milestone 15 (RFC-011 Amendment 2, ADR-007) makes **the bridge the ship's chat** at `/bridge`, the start screen: a ship channel, one channel per project with a thread per Mission, task channels, a decisions channel, and a direct chat with Xora. The Hackathon demo inspector (`WEB-UI.md`) stays frozen.
 
 ## Running it
 
@@ -13,7 +13,7 @@ npm run app -- --actor <your-id>              # write mode as a human workspace 
 
 - **Workspace:**
   - With `--workspace` or `LOXORA_WORKSPACE`, the app uses that workspace and never runs the setup (Milestone 12 behavior).
-  - Otherwise it reads the app settings file on every request. While the file has no workspace, or its folder holds none, the app shows the setup at `/setup`. As soon as the workspace exists, Mission Control opens.
+  - Otherwise it reads the app settings file on every request. While the file has no workspace, or its folder holds none, the app shows the setup at `/setup`. As soon as the workspace exists, the bridge opens.
 - **Never migrates.** If the workspace needs a newer migration, the UI says so. Back up by copying the workspace directory, then run any `loxora` command once.
 - **Human actor** (RFC-010 section 9), in this order:
   1. `--actor`: the app refuses to start if the actor is an `agent:*` id or not listed in `workspace.json` `reviewers`;
@@ -76,7 +76,7 @@ All `POST` routes need the same request protection as the write API below. The s
 | `POST /api/setup/folder` | `{ place: "local" \| "oneDrive" \| "documents", title }` | opens the folder window of the operating system in that place and stores the chosen logbook folder; answers the setup state with `picked` (409 `NoPicker` where the window is not available, 409 `Picking` while one is open) |
 | `POST /api/setup/workspace` | `{ action: "create" }` or `{ action: "open", path, captain? }` | creates the workspace in the chosen folder (400 `InRepository`, 409 `WorkspaceExists` or `FolderInUse`) or opens an existing one without migrating it |
 | `POST /api/setup/finish` | `{ skipped?: boolean }` | ends the setup conversation (`setup.completedAt`, kept if already set); `skipped: true` also dismisses the first Mission offer (`setup.firstMissionDismissedAt`); 409 `NotReady` before the workspace exists. `POST /api/setup/intro` (Milestone 13) is removed. |
-| `POST /api/assistant/message` | `{ prompt, choice }` or `{ prompt, text }`, `{ text, topic? }`, or `{ choice, … }`, each with `language?` | asks the assistant; never writes. A setup answer (`prompt`: a prompt key of `shared/conversation.ts`) returns `{ prompt, choice?, value?, goal?, choices, terms }`, or `reply: "notUnderstood"` when the keyword list cannot place the text; an unknown prompt or a choice that is not one of the prompt's buttons is 400. `text` alone (the input bar) returns `{ reply }`, a fixed reply key. `choice` is `goal` (`goal`: `game`, `website`, `writing`, or `other`; `projectName`; `purpose`, required for `other`, otherwise replacing the template's purpose), `firstMission`, or `goalText` (`text`) and returns `{ action }`: the proposed action with its `id` and exactly what will be written. These choices need ready mode (409 `NotReady`) and a human actor (403 `ReadOnly`) |
+| `POST /api/assistant/message` | `{ prompt, choice }` or `{ prompt, text }`, or `{ choice, … }`, each with `language?` | asks the assistant; never writes. A setup answer (`prompt`: a prompt key of `shared/conversation.ts`) returns `{ prompt, choice?, value?, goal?, choices, terms }`, or `reply: "notUnderstood"` when the keyword list cannot place the text; an unknown prompt or a choice that is not one of the prompt's buttons is 400. `text` alone (the old input bar) answers 410 `Moved` since Milestone 15; messages to Xora go to the chat routes below. `choice` is `goal` (`goal`: `game`, `website`, `writing`, or `other`; `projectName`; `purpose`, required for `other`, otherwise replacing the template's purpose), `firstMission`, or `goalText` (`text`) and returns `{ action }`: the proposed action with its `id` and exactly what will be written. These choices need ready mode (409 `NotReady`) and a human actor (403 `ReadOnly`) |
 | `POST /api/assistant/confirm` | `{ actionId, confirm }` | `confirm: true` executes the pending action, `false` discards it; returns `{ confirmed, firstSteps }`. 404 `UnknownAction` for an unknown, used, or expired id (pending actions live 30 minutes, in memory); 409 `WrongStep` when the action is not due; `SetupFinished` for the project after the setup ended, and for the first Mission after its offer was dismissed |
 | `GET /api/settings` | | `{ available, language }` |
 | `POST /api/settings/language` | `{ language: "de" \| "en" \| null }` | stores the language |
@@ -116,6 +116,27 @@ The server binds to `127.0.0.1`, serves the web client and `/api` from one origi
 - **Never migrates:** writes open the workspace writable but without migrations, and require `007_missions` like reads.
 - **Not in the UI:** creating, starting, completing, or failing Missions, evidence on answers, and reviewing Proposals. Use the CLI. The only exception is the first Mission and the first proposal of the setup (above).
 
+## Bridge chat (Milestone 15)
+
+The bridge (`/bridge`, `/bridge/:address?thread=&message=`) shows stored messages and derived entries merged by time. Chat addresses are `ship`, `project:<projectId>`, `topic:<id>` (task channels), `decisions`, and `direct:xora`. A thread key is `mission:<id>` or `message:<id>`. A message link is `<origin>/bridge/m/<messageId>`; the app resolves it to the message's chat and thread and highlights the message.
+
+| Route | Body | Result |
+|---|---|---|
+| `GET /api/chats` | | `{ available, writable, decisions: { address, count }, channels, direct, projects }`; `available` is `false` without migration `008_chat`; archived task channels are left out |
+| `GET /api/chats/:address?thread=<key>` | | `{ chat, details, entries, thread? }`. `chat` adds `writable`. Entries are `message` (author, body or `null` when deleted, `deleted`, `mentions`, `links` with previews, `replies`), `event` (ship computer reports), `mission` (Mission cards with `replies`), `attention` (open Attention Requests, in `decisions`), and `missionEvent` (in a Mission thread). `thread.root` is the root message, or for a Mission its detail with `availableActions` |
+| `GET /api/chats/messages/:id` | | `{ id, address, chat, thread, author, excerpt, at, deleted }`, the preview of a linked message |
+| `POST /api/chats/:address/messages` | `{ text, threadRoot?, language?, topic? }` | `{ message, reply?, thread }`. Stores the captain's message; `@Xora` and pasted message links become references. In the direct chat, and in a channel when the message mentions `@Xora`, Xora's script-mode reply is stored in the same place, as the text shown, in `language`. In the direct chat a message outside a thread starts a topic thread, and `thread` names it |
+| `POST /api/chats/messages/:id/delete` | `{ thread? }` | `{ deleted }`; removes the body and keeps a marker; `thread: true` deletes a topic with its replies |
+| `POST /api/chats/direct:xora/clear` | `{}` | `{ deleted }` |
+| `POST /api/chats` | `{ name, projectId? }` | `{ address, name }`, a new task channel |
+| `POST /api/chats/:address/rename`, `POST /api/chats/:address/archive` | `{ name }`, `{}` | the task channel's `{ address, name }` or `{ address, archivedAt }` |
+
+- **Derived, never stored** (ADR-007 section 3): the ship channel reports projects created, Missions created, started, waiting for the captain (not for a provider limit), completed, failed, and cancelled, and knowledge accepted; a project channel has one card per Mission at its last activity; the decisions channel has one entry per open Attention Request. The entry texts are in `labels.ts`.
+- **Writers:** only the captain (a workspace reviewer acting as the app's actor) and Xora; Core enforces it (ADR-007 section 4). Writes use the request protection of the write API. Without an actor, chat writes answer 403 `ReadOnly`.
+- **Without `008_chat`** the bridge is read-only: reads show derived entries, writes answer 503 with the migration hint, and the app does not migrate. Mission Control keeps requiring only `007_missions`.
+- **Status codes:** 400 for a message Core refuses (empty, over 4,000 characters, an archived channel, a topic thread in a project channel, an unknown linked message, the decisions channel); 404 for an unknown chat or message.
+- **Polling:** the side list and the open chat poll every 5 seconds; there is no push.
+
 ## Language
 
 The UI is available in German and English (RFC-010, Amendment 1). All UI text lives in `src/web/labels.ts`, with one entry per language for the same keys; a test checks that both languages have the same keys.
@@ -146,7 +167,7 @@ The UI is available in German and English (RFC-010, Amendment 1). All UI text li
   - the timeline and referenced Nodes (with keys) and plans;
   - technical details behind a disclosure.
 - **Write mode only:** option buttons and a free-text answer (Approve and Reject for `needs_approval`), and Pause, Stop, and Resume in the Mission header. Stop asks for a reason and a confirmation. The CLI hints for answering and resuming are hidden while the UI offers the action.
-- **Not shown,** because there is no data source yet (RFC-010 section 5): steps and checklist, crew panel, chat, costs and limit percentage, and the automatic-continuation toggle.
+- **Not shown,** because there is no data source yet (RFC-010 section 5): steps and checklist, crew panel, costs and limit percentage, and the automatic-continuation toggle.
 
 ## Guarantees
 
@@ -162,5 +183,5 @@ The UI is available in German and English (RFC-010, Amendment 1). All UI text li
 
 ## Tests
 
-- `packages/app/test/app.test.ts` and `setup.test.ts` (in `npm test`): read and write API, setup, the keyword list, first steps and the first Mission offer, assistant routes, request protection, label parity.
-- `packages/app/e2e/setup.spec.ts` (Playwright, `npm run test:app:e2e`): the setup in German by tapping (apart from the name) through the first Mission from the bridge, with requests to other hosts blocked to show the typefaces are bundled; in English by typing, with "Change name", a not-understood reply, and dismissing the offer; "Look around first" with the inactive "Add an existing project"; a not-understood reply and a resumed setup; and opening an existing workspace. Each test starts its own server with a temporary `LOXORA_HOME`; the real user folders are never touched. CI runs it as "App end-to-end (Playwright)".
+- `packages/app/test/app.test.ts`, `bridge.test.ts`, and `setup.test.ts` (in `npm test`): read and write API, the bridge chat routes and derived entries, setup, the keyword list, first steps and the first Mission offer, assistant routes, request protection, label parity.
+- `packages/app/e2e/setup.spec.ts` (Playwright, `npm run test:app:e2e`): the setup in German by tapping (apart from the name) through the first Mission from the bridge, with requests to other hosts blocked to show the typefaces are bundled; in English by typing, with "Change name", a not-understood reply, and dismissing the offer; "Look around first" with the inactive "Add an existing project"; a not-understood reply and a resumed setup; and opening an existing workspace. `packages/app/e2e/bridge.spec.ts`: the decisions channel leading to an open question, answering and writing in a Mission thread with and without `@Xora`, Xora's direct chat, a message link preview and jump, creating, renaming, and archiving a task channel, deleting a message, the narrow layout, and a workspace without `008_chat`. Each test starts its own server with a temporary `LOXORA_HOME`; the real user folders are never touched. CI runs it as "App end-to-end (Playwright)".

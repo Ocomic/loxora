@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { api } from "./api.js";
+import { Bridge, MessageLink } from "./components/Bridge.js";
 import { FirstMissionProvider, useFirstMission } from "./components/FirstMission.js";
 import { FirstSteps } from "./components/FirstSteps.js";
 import { MissionOverview } from "./components/MissionOverview.js";
 import { Setup } from "./components/Setup.js";
 import { Shell } from "./components/Shell.js";
-import { XoraProvider } from "./components/XoraBar.js";
 import { useLabels } from "./i18n.js";
 import type { SetupInfo } from "./types.js";
 
 /**
  * Without a finished setup the app shows the setup conversation at /setup (Milestone 14);
- * otherwise Mission Control with the Xora input bar. While the first Mission is offered it
- * is reachable at /first-steps, from a banner and from the empty Mission list.
+ * otherwise the bridge, the ship's chat, at /bridge (Milestone 15), with Mission Control at
+ * /missions. While the first Mission is offered it is reachable at /first-steps, from a
+ * banner and from the empty Mission list.
  */
 export function App() {
   const t = useLabels();
@@ -59,7 +60,7 @@ export function App() {
   }
   const inSetup = location.pathname === "/setup";
   const showSetup = setup.mode === "setup" || (setup.mode === "ready" && Boolean(setup.step));
-  if (!showSetup && inSetup) return <Navigate to="/missions" replace />;
+  if (!showSetup && inSetup) return <Navigate to="/bridge" replace />;
   if (showSetup) {
     // The setup state is loaded once, so the conversation continues after the logbook
     // exists; `onDone` reloads it and Mission Control takes over.
@@ -73,32 +74,33 @@ export function App() {
   const firstStepsOpen = setup.mode === "ready" && setup.firstSteps?.pending === true;
   return (
     <Shell>
-      <XoraProvider>
-        <FirstMissionProvider initial={setup.firstSteps ?? null} onDismissed={load}>
-          {location.pathname !== "/first-steps" ? <FirstMissionBanner /> : null}
-          <Routes>
-            <Route path="/" element={<Navigate to="/missions" replace />} />
-            <Route path="/missions" element={<MissionOverview />} />
-            <Route path="/missions/:id" element={<MissionOverview />} />
-            <Route
-              path="/first-steps"
-              element={
-                firstStepsOpen ? (
-                  <FirstSteps
-                    onFinished={async () => {
-                      await load();
-                      navigate("/missions", { replace: true });
-                    }}
-                  />
-                ) : (
-                  <Navigate to="/missions" replace />
-                )
-              }
-            />
-            <Route path="*" element={<Navigate to="/missions" replace />} />
-          </Routes>
-        </FirstMissionProvider>
-      </XoraProvider>
+      <FirstMissionProvider initial={setup.firstSteps ?? null} onDismissed={load}>
+        {location.pathname !== "/first-steps" ? <FirstMissionBanner /> : null}
+        <Routes>
+          <Route path="/" element={<Navigate to="/bridge" replace />} />
+          <Route path="/bridge" element={<Bridge />} />
+          <Route path="/bridge/m/:id" element={<MessageLink />} />
+          <Route path="/bridge/:address" element={<Bridge />} />
+          <Route path="/missions" element={<MissionOverview />} />
+          <Route path="/missions/:id" element={<MissionOverview />} />
+          <Route
+            path="/first-steps"
+            element={
+              firstStepsOpen ? (
+                <FirstSteps
+                  onFinished={async () => {
+                    await load();
+                    navigate("/bridge", { replace: true });
+                  }}
+                />
+              ) : (
+                <Navigate to="/bridge" replace />
+              )
+            }
+          />
+          <Route path="*" element={<Navigate to="/bridge" replace />} />
+        </Routes>
+      </FirstMissionProvider>
     </Shell>
   );
 }

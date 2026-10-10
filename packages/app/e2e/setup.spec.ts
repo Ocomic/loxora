@@ -9,7 +9,7 @@ import { expect, type Page, test } from "@playwright/test";
  * The setup conversation of Milestone 14 in script mode, as a person would go through it:
  * in German by tapping (apart from the name), in English by typing, opening an existing
  * workspace, looking around first, the not-understood reply, a resumed setup, and the first
- * Mission from the bridge. Every test has its own temporary LOXORA_HOME and Documents folder.
+ * Mission from the bridge, which is the ship's chat since Milestone 15. Every test has its own temporary LOXORA_HOME and Documents folder.
  */
 interface Ship {
   readonly url: string;
@@ -81,7 +81,7 @@ const TEXT = {
     notUnderstood: "Das verstehe ich noch nicht",
     terms: "Bordbegriffe",
     completed: "Abgeschlossen",
-    bar: "Nachricht an Xora",
+    bar: "Nachricht",
     send: "Senden",
     notOnBoard: "Ich bin in dieser Version noch nicht an Bord",
   },
@@ -148,7 +148,7 @@ test.describe("German, by tapping", () => {
     await expect(page.getByText(text.projectCard)).toBeVisible();
     await tap(page, text.create);
     await tap(page, text.toBridge);
-    await expect(page).toHaveURL(/\/missions$/);
+    await expect(page).toHaveURL(/\/bridge$/);
 
     for (const family of ["Orbitron", "Exo 2", "Share Tech Mono"]) {
       const loaded = await page.evaluate(
@@ -171,12 +171,14 @@ test.describe("German, by tapping", () => {
     await tap(page, text.next);
     await tap(page, text.next);
     await tap(page, text.toBridge);
-    await expect(page).toHaveURL(/\/missions$/);
+    await expect(page).toHaveURL(/\/bridge$/);
     await expect(page.getByRole("link", { name: text.firstMission })).toHaveCount(0);
     await expect(page.getByText(text.completed).first()).toBeVisible();
 
-    // The input bar answers with the fixed script-mode text.
-    await page.getByLabel(text.bar, { exact: true }).fill("Hallo Xora");
+    // In Xora's direct chat she answers with the fixed script-mode text, now stored.
+    await page.getByRole("link", { name: "Xora", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Xora" })).toBeVisible();
+    await page.getByRole("textbox", { name: text.bar }).fill("Hallo Xora");
     await page.getByRole("button", { name: text.send }).click();
     await expect(page.getByText(text.notOnBoard)).toBeVisible();
 
@@ -197,7 +199,7 @@ test.describe("German, by tapping", () => {
     await expect(page.getByText(text.later)).toBeVisible();
     await tap(page, text.look);
     await tap(page, text.toBridge);
-    await expect(page).toHaveURL(/\/missions$/);
+    await expect(page).toHaveURL(/\/bridge$/);
     await expect(page.getByRole("link", { name: text.firstMission })).toHaveCount(0);
     const setup = settings().setup as Record<string, unknown>;
     expect(typeof setup.completedAt).toBe("string");
@@ -236,7 +238,7 @@ test.describe("German, by tapping", () => {
     await expect(page.getByText("Willkommen zurück auf der Kepler.")).toBeVisible();
     await tap(page, text.look);
     await tap(page, text.toBridge);
-    await expect(page).toHaveURL(/\/missions$/);
+    await expect(page).toHaveURL(/\/bridge$/);
     expect(settings().workspacePath).toBe(workspace);
     expect(errors).toEqual([]);
   });
@@ -262,7 +264,7 @@ test.describe("English, by typing", () => {
     await say(page, text.answer, "banana");
     await expect(page.getByText(text.notUnderstood)).toBeVisible();
     await say(page, text.answer, "to the bridge");
-    await expect(page).toHaveURL(/\/missions$/);
+    await expect(page).toHaveURL(/\/bridge$/);
 
     const setup = settings().setup as Record<string, unknown>;
     expect(setup.purpose).toBe("A small platform game for my kids.");

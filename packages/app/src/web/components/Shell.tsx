@@ -7,7 +7,8 @@ import type { WorkspaceInfo } from "../types.js";
 
 /**
  * Stable shell (RFC-010, section 3). Only implemented sections appear in the navigation,
- * so there are no dead ends; Station, Crew, Chat, Memory, and Settings follow later. During
+ * so there are no dead ends; the bridge is the ship's chat (Milestone 15); Station, Crew,
+ * Memory, and Settings follow later. During
  * the first-launch setup only the language switch is shown.
  */
 export function Shell({ children, setup = false }: { children: ReactNode; setup?: boolean }) {
@@ -29,6 +30,9 @@ export function Shell({ children, setup = false }: { children: ReactNode; setup?
         </div>
         {setup ? null : (
           <nav aria-label={t.shell.sections} className="sections">
+            <NavLink to="/bridge" className="section">
+              {t.shell.bridge}
+            </NavLink>
             <NavLink to="/missions" className="section">
               {t.shell.missions}
             </NavLink>
