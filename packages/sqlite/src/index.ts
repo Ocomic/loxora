@@ -2,6 +2,7 @@ import type {
   ContextPackageStore,
   CrossProjectImpactStore,
   LifecycleStore,
+  ChatStore,
   MissionStore,
   NodeKeyStore,
   NavigationStore,
@@ -25,6 +26,7 @@ export async function openSqliteStore(
     ReviewInboxStore &
     NodeKeyStore &
     MissionStore &
+    ChatStore &
     WorkspaceExportStore
 > {
   return new SqliteLifecycleStore(path);
@@ -50,7 +52,7 @@ export async function openSqliteReadOnlyContextStore(path: string): Promise<Cont
 export async function openSqliteWritableStore(
   path: string,
   requiredMigrationId: string,
-): Promise<LifecycleStore & NavigationStore & MissionStore & WorkspaceExportStore> {
+): Promise<LifecycleStore & NavigationStore & MissionStore & ChatStore & WorkspaceExportStore> {
   return new SqliteLifecycleStore(path, {}, { runMigrations: false, requiredMigrationId });
 }
 
@@ -68,6 +70,7 @@ export async function openSqliteReadOnlyStore(
     ReviewInboxStore &
     NodeKeyStore &
     MissionStore &
+    ChatStore &
     WorkspaceExportStore
 > {
   return new SqliteLifecycleStore(

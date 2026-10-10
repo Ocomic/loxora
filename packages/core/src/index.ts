@@ -9,3 +9,4 @@ export * from "./planned.js";
 export * from "./export.js";
 export * from "./node-keys.js";
 export * from "./mission.js";
+export * from "./chat.js";

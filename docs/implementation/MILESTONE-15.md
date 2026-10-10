@@ -1,6 +1,6 @@
 # Milestone 15: The bridge as the ship's chat (script mode)
 
-**Status:** Proposed
+**Status:** Authorized (this document merged in pull request #41, October 10, 2026); delivery 1 (Core, migration, store, export version 4) implemented.
 **Decision Owner:** Ocomic
 **Change class:** C2 (RFC-008): schema migration, export format version 4, new HTTP routes, a changed UI surface
 **Implements:** RFC-011 Amendment 2 (the bridge as the ship's chat) and [ADR-007](../adr/ADR-007-bridge-chat-history-and-threads.md) with its Amendment 1 (task channels, decisions channel, message links), on top of [Milestone 14](./MILESTONE-14.md)

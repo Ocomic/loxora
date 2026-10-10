@@ -1,6 +1,6 @@
 # ADR-007 — Bridge Chat History and Threads
 
-**Status:** Accepted (Amendment 1 proposed)
+**Status:** Accepted (with Amendment 1)
 **Date:** October 10, 2026
 **Decision Date:** October 10, 2026
 **Decision Owner:** Ocomic
@@ -138,7 +138,7 @@ Acceptance authorizes a milestone document, [Milestone 15](../implementation/MIL
 
 ## Acceptance
 
-Accepted by Ocomic on October 10, 2026, as proposed (pull request #40).
+Accepted by Ocomic on October 10, 2026, as proposed (pull request #40). Amendment 1 was accepted by Ocomic on October 10, 2026, together with the Milestone 15 document (pull request #41).
 
 This acceptance authorizes a milestone document under `docs/implementation/` for the bridge as the ship's chat (RFC-011 milestone 4). Group chats with several agents, voice input, search, a CLI command, and MCP tools remain out of scope. The open questions above remain open.
 

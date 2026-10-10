@@ -109,7 +109,7 @@ test("Planned Knowledge stays separate, durable, and append-only", async () => {
         id: string;
       }
     ).id,
-    "007_missions",
+    "008_chat",
   );
   db.close();
   rmSync(directory, { recursive: true, force: true });

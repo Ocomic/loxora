@@ -835,7 +835,8 @@ test("export verify accepts a version 1 backup and reports the upgrade", async (
   const document = JSON.parse(readFileSync(out, "utf8"));
   document.formatVersion = 1;
   document.sourceSchema = document.sourceSchema.filter(
-    (id: string) => id !== "006_plan_revisions_node_keys" && id !== "007_missions",
+    (id: string) =>
+      id !== "006_plan_revisions_node_keys" && id !== "007_missions" && id !== "008_chat",
   );
   for (const name of [
     "plannedKnowledgeRevisions",
@@ -853,6 +854,9 @@ test("export verify accepts a version 1 backup and reports the upgrade", async (
     "missionOutcomes",
     "missionOutcomeProposals",
     "missionLogReferences",
+    "chats",
+    "chatMessages",
+    "chatMessageReferences",
   ]) {
     delete document.sections[name];
   }
@@ -862,7 +866,7 @@ test("export verify accepts a version 1 backup and reports the upgrade", async (
   assert.equal(verified.code, 0, verified.stderr);
   assert.match(
     verified.stdout,
-    /identical after upgrade to format version 3 \(restored store adds migrations: 006_plan_revisions_node_keys, 007_missions\)/,
+    /identical after upgrade to format version 4 \(restored store adds migrations: 006_plan_revisions_node_keys, 007_missions, 008_chat\)/,
   );
 });
 

@@ -76,6 +76,13 @@ function missionsMigration(): Migration {
   };
 }
 
+function chatMigration(): Migration {
+  return {
+    id: "008_chat",
+    sql: readFileSync(new URL("../../migrations/008_chat.sql", import.meta.url), "utf8"),
+  };
+}
+
 export function migrationCatalog(): readonly Migration[] {
   return [
     initialMigration(),
@@ -85,6 +92,7 @@ export function migrationCatalog(): readonly Migration[] {
     plannedKnowledgeMigration(),
     planRevisionsNodeKeysMigration(),
     missionsMigration(),
+    chatMigration(),
   ];
 }
 
