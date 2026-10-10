@@ -246,7 +246,7 @@ export class BridgeReader {
       chat: summary,
       thread:
         threadKey(message.threadRoot) ??
-        (summary.kind === "direct" ? `message:${message.id}` : null),
+        (summary.kind === "direct" || summary.kind === "topic" ? `message:${message.id}` : null),
       author: this.author(message.authorId),
       excerpt: message.body ? excerpt(message.body) : null,
       at: message.createdAt,

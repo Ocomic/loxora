@@ -661,6 +661,9 @@ function MessageView({
     }
   };
   const deletable = chat.writable && !entry.deleted;
+  // A deleted topic root keeps "Delete topic" while it still has replies.
+  const threadDeletable =
+    chat.writable && isRoot && threadKey !== null && (!entry.deleted || entry.replies > 0);
   return (
     <li
       id={`message-${entry.id}`}
@@ -689,13 +692,15 @@ function MessageView({
               {entry.replies > 0 ? t.bridge.replies(entry.replies) : t.bridge.reply}
             </button>
           ) : null}
-          {entry.deleted ? null : (
+          {entry.deleted && !threadDeletable ? null : (
             <details className="menu">
               <summary aria-label={t.bridge.messageMenu}>⋯</summary>
               <div className="menu-items">
-                <button type="button" className="button button-quiet" onClick={() => void copy()}>
-                  {t.bridge.copyLink}
-                </button>
+                {entry.deleted ? null : (
+                  <button type="button" className="button button-quiet" onClick={() => void copy()}>
+                    {t.bridge.copyLink}
+                  </button>
+                )}
                 {deletable ? (
                   <button
                     type="button"
@@ -705,7 +710,7 @@ function MessageView({
                     {t.bridge.delete}
                   </button>
                 ) : null}
-                {deletable && isRoot && threadKey ? (
+                {threadDeletable ? (
                   <button
                     type="button"
                     className="button button-danger"

@@ -351,6 +351,12 @@ test("task channels are created, renamed, and archived by the captain", async (t
     threadRoot: `message:${(topic.body.message as Body).id}`,
   });
   assert.equal(thread.status, 200);
+  // A link to a topic root opens its thread.
+  const rootPreview = await get(
+    server.url,
+    `/api/chats/messages/${(topic.body.message as Body).id}`,
+  );
+  assert.equal(rootPreview.body.thread, `message:${(topic.body.message as Body).id}`);
   const list = await get(server.url, "/api/chats");
   assert.ok((list.body.channels as Body[]).some((chat) => chat.name === "Level"));
 
