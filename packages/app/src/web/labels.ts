@@ -267,6 +267,9 @@ export interface Labels {
     readonly hints: readonly string[];
     readonly closing: string;
     readonly finish: string;
+    readonly later: string;
+    readonly guideBadge: string;
+    readonly backToXora: string;
   };
   readonly xora: {
     readonly bar: string;
@@ -680,7 +683,7 @@ const de: Labels = {
       mission: "Deine erste Mission wartet: Halte das Ziel deines Projekts fest.",
       answer: "Deine erste Mission wartet auf deine Entscheidung.",
       record: "Deine erste Mission hat eine Antwort. Jetzt halten wir das Projektziel fest.",
-      hints: "Fast geschafft: noch zwei kurze Hinweise zur Brücke.",
+      hints: "Fast geschafft: noch drei kurze Hinweise zur Brücke.",
     },
     continue: "Erste Mission",
     dismiss: "Nicht jetzt",
@@ -696,8 +699,8 @@ const de: Labels = {
     missionRationale: (rationale) => `Warum ich frage: ${rationale}`,
     start: "Starten",
     waiting:
-      "Die Mission wartet jetzt auf dich. Öffne sie, beantworte die Frage, und komm dann über den Hinweis oben hierher zurück.",
-    openMission: "Mission öffnen",
+      "Die Mission läuft und wartet auf dich. Sie hat ihren eigenen Thread im Kanal deines Projekts. Beantworte dort meine Frage, danach geht es hier weiter.",
+    openMission: "Zum Thread",
     recordQuestion:
       "Danke. Schreib das Ziel deines Projekts in ein paar Sätzen auf. Eine Vorlage habe ich dir schon eingetragen.",
     goalLabel: "Projektziel",
@@ -708,12 +711,16 @@ const de: Labels = {
     change: "Ändern",
     next: "Weiter",
     hints: [
-      "Hier unten sprichst du mit mir.",
-      "Links siehst du deine Missionen. Rot heißt: Ich brauche dich.",
+      "Links ganz oben steht #entscheidungen. Rot heißt: Ich brauche dich. Jeder Eintrag bringt dich in den richtigen Thread.",
+      "Jede Mission hat ihren eigenen Thread im Kanal ihres Projekts. Dort verfolgst du sie von Anfang bis Ende.",
+      "Unten schreibst du, an mich oder in den offenen Kanal. Mit @Xora holst du mich in einen Kanal dazu.",
     ],
     closing:
-      "Heute kannst du Missionen verfolgen, Fragen beantworten und Missionen anhalten. Sobald ich ganz an Bord bin, schlage ich dir die nächsten Schritte vor. Sag mir einfach, wenn du etwas anders willst.",
-    finish: "Zur Brücke",
+      "Mein Vorschlag für den nächsten Schritt: Öffne den Kanal deines Projekts und sieh dir deine erste Mission in ihrem Thread an, von der Frage bis zum festgehaltenen Ziel.",
+    finish: "Projektkanal öffnen",
+    later: "Später",
+    guideBadge: "Deine erste Mission wartet hier",
+    backToXora: "Weiter bei Xora",
   },
   xora: {
     bar: "Nachricht an Xora",
@@ -1146,7 +1153,7 @@ const en: Labels = {
       mission: "Your first mission is waiting: record the goal of your project.",
       answer: "Your first mission is waiting for your decision.",
       record: "Your first mission has an answer. Now let's record the project goal.",
-      hints: "Almost done: two short hints about the bridge.",
+      hints: "Almost done: three short hints about the bridge.",
     },
     continue: "First mission",
     dismiss: "Not now",
@@ -1161,8 +1168,8 @@ const en: Labels = {
     missionRationale: (rationale) => `Why I ask: ${rationale}`,
     start: "Start",
     waiting:
-      "The mission is now waiting for you. Open it, answer the question, then come back here through the notice at the top.",
-    openMission: "Open the mission",
+      "The mission is running and waiting for you. It has its own thread in your project's channel. Answer my question there, then we continue here.",
+    openMission: "Go to thread",
     recordQuestion:
       "Thanks. Write down the goal of your project in a few sentences. I've already filled in a template.",
     goalLabel: "Project goal",
@@ -1173,12 +1180,16 @@ const en: Labels = {
     change: "Change",
     next: "Continue",
     hints: [
-      "Down here you talk to me.",
-      "On the left you see your missions. Red means: I need you.",
+      "At the top left is #decisions. Red means: I need you. Each entry takes you to the right thread.",
+      "Every mission has its own thread in its project's channel. There you follow it from start to finish.",
+      "Down here you write, to me or in the open channel. With @Xora you bring me into a channel.",
     ],
     closing:
-      "Today you can follow missions, answer questions, and pause missions. Once I'm fully on board, I'll suggest the next steps. Just tell me if you want something different.",
-    finish: "To the bridge",
+      "My suggestion for the next step: open your project's channel and look at your first mission in its thread, from the question to the recorded goal.",
+    finish: "Open project channel",
+    later: "Later",
+    guideBadge: "Your first mission is waiting here",
+    backToXora: "Continue with Xora",
   },
   xora: {
     bar: "Message to Xora",

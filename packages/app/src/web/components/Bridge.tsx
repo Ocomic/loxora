@@ -21,6 +21,8 @@ import type {
   MessagePreview,
   PostedMessage,
 } from "../types.js";
+import { useFirstMission } from "./FirstMission.js";
+import { FirstSteps } from "./FirstSteps.js";
 import { eventText, StatePanel } from "./MissionDetailView.js";
 import { StatusBadge } from "./StatusBadge.js";
 
@@ -31,6 +33,9 @@ import { StatusBadge } from "./StatusBadge.js";
  */
 
 const enc = encodeURIComponent;
+
+/** Xora's direct chat, where the first Mission is pinned (Milestone 15 section 5). */
+export const XORA_ADDRESS = "direct:xora";
 
 export function bridgePath(address: string, thread?: string | null, message?: string | null) {
   const query = new URLSearchParams();
@@ -156,6 +161,7 @@ function SideList({
   onCreated: () => void;
 }) {
   const t = useLabels();
+  const guide = useFirstMission().open;
   const [creating, setCreating] = useState(false);
   const item = (chat: Pick<ChatSummary, "address" | "kind" | "name">, extra?: ReactNode) => (
     <li key={chat.address}>
@@ -220,7 +226,15 @@ function SideList({
             {list.direct.map((chat) =>
               item(
                 chat,
-                <span className="presence" title={t.bridge.xoraStatus} aria-hidden="true" />,
+                <>
+                  {guide && chat.address === XORA_ADDRESS ? (
+                    <span className="count count-guide" title={t.firstSteps.guideBadge}>
+                      <span className="visually-hidden">{t.firstSteps.guideBadge}</span>
+                      <span aria-hidden="true">1</span>
+                    </span>
+                  ) : null}
+                  <span className="presence" title={t.bridge.xoraStatus} aria-hidden="true" />
+                </>,
               ),
             )}
           </ul>
@@ -315,6 +329,7 @@ function ChatPane({
   const name = chatName(t, chat);
   const direct = chat.kind === "direct";
   const canThread = direct || chat.kind === "topic";
+  const { open: guide, steps } = useFirstMission();
   return (
     <>
       <header className={`chat-header chat-header-${chat.kind}`}>
@@ -341,11 +356,27 @@ function ChatPane({
       ) : chat.kind === "decisions" ? (
         <p className="bridge-note bridge-note-alert">{t.bridge.decisionsNote}</p>
       ) : null}
+      {direct && guide ? (
+        <FirstSteps
+          onWritten={reload}
+          onOpenThread={(projectId, missionId) =>
+            onOpen(`project:${projectId}`, `mission:${missionId}`)
+          }
+          onFinished={(next) => {
+            const { projectId, missionId } = steps ?? {};
+            if (next === "project" && projectId) {
+              onOpen(`project:${projectId}`, missionId ? `mission:${missionId}` : null);
+            }
+          }}
+        />
+      ) : null}
       {direct && view.entries.length > 0 ? (
         <h2 className="chat-subtitle">{t.bridge.topics}</h2>
       ) : null}
       {view.entries.length === 0 ? (
-        <p className="muted chat-empty">{t.bridge.empty[chat.kind]}</p>
+        direct && guide ? null : (
+          <p className="muted chat-empty">{t.bridge.empty[chat.kind]}</p>
+        )
       ) : (
         <ol className="chat-entries" aria-live="polite" aria-relevant="additions">
           {view.entries.map((entry) => (
@@ -825,6 +856,7 @@ function ThreadPane({
 }) {
   const t = useLabels();
   const titleId = useId();
+  const { steps } = useFirstMission();
   const { root } = thread;
   return (
     <section className="bridge-thread" aria-labelledby={titleId}>
@@ -842,6 +874,13 @@ function ThreadPane({
           </div>
           <p className="goal">{root.mission.goal}</p>
           <StatePanel mission={root.mission} onDone={reload} />
+          {steps?.pending && steps.stage === "record" && steps.missionId === root.mission.id ? (
+            <p className="bridge-note">
+              <button type="button" className="button" onClick={() => onOpen(XORA_ADDRESS)}>
+                {t.firstSteps.backToXora}
+              </button>
+            </p>
+          ) : null}
         </div>
       ) : (
         <ol className="chat-entries">

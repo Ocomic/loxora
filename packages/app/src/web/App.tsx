@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { api } from "./api.js";
-import { Bridge, MessageLink } from "./components/Bridge.js";
-import { FirstMissionProvider, useFirstMission } from "./components/FirstMission.js";
-import { FirstSteps } from "./components/FirstSteps.js";
+import { Bridge, bridgePath, MessageLink, XORA_ADDRESS } from "./components/Bridge.js";
+import { FirstMissionProvider } from "./components/FirstMission.js";
 import { MissionOverview } from "./components/MissionOverview.js";
 import { Setup } from "./components/Setup.js";
 import { Shell } from "./components/Shell.js";
@@ -13,13 +12,12 @@ import type { SetupInfo } from "./types.js";
 /**
  * Without a finished setup the app shows the setup conversation at /setup (Milestone 14);
  * otherwise the bridge, the ship's chat, at /bridge (Milestone 15), with Mission Control at
- * /missions. While the first Mission is offered it is reachable at /first-steps, from a
- * banner and from the empty Mission list.
+ * /missions. While the first Mission is offered it is pinned in Xora's direct chat, where the
+ * end of the setup leads (Milestone 15 section 5); /first-steps leads there too.
  */
 export function App() {
   const t = useLabels();
   const location = useLocation();
-  const navigate = useNavigate();
   const [setup, setSetup] = useState<SetupInfo | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -60,7 +58,9 @@ export function App() {
   }
   const inSetup = location.pathname === "/setup";
   const showSetup = setup.mode === "setup" || (setup.mode === "ready" && Boolean(setup.step));
-  if (!showSetup && inSetup) return <Navigate to="/bridge" replace />;
+  const firstStepsOpen = setup.mode === "ready" && setup.firstSteps?.pending === true;
+  const guide = bridgePath(XORA_ADDRESS);
+  if (!showSetup && inSetup) return <Navigate to={firstStepsOpen ? guide : "/bridge"} replace />;
   if (showSetup) {
     // The setup state is loaded once, so the conversation continues after the logbook
     // exists; `onDone` reloads it and Mission Control takes over.
@@ -71,11 +71,9 @@ export function App() {
       </Shell>
     );
   }
-  const firstStepsOpen = setup.mode === "ready" && setup.firstSteps?.pending === true;
   return (
     <Shell>
       <FirstMissionProvider initial={setup.firstSteps ?? null} onDismissed={load}>
-        {location.pathname !== "/first-steps" ? <FirstMissionBanner /> : null}
         <Routes>
           <Route path="/" element={<Navigate to="/bridge" replace />} />
           <Route path="/bridge" element={<Bridge />} />
@@ -83,44 +81,10 @@ export function App() {
           <Route path="/bridge/:address" element={<Bridge />} />
           <Route path="/missions" element={<MissionOverview />} />
           <Route path="/missions/:id" element={<MissionOverview />} />
-          <Route
-            path="/first-steps"
-            element={
-              firstStepsOpen ? (
-                <FirstSteps
-                  onFinished={async () => {
-                    await load();
-                    navigate("/bridge", { replace: true });
-                  }}
-                />
-              ) : (
-                <Navigate to="/bridge" replace />
-              )
-            }
-          />
+          <Route path="/first-steps" element={<Navigate to={guide} replace />} />
           <Route path="*" element={<Navigate to="/bridge" replace />} />
         </Routes>
       </FirstMissionProvider>
     </Shell>
-  );
-}
-
-/** Offers the first Mission on the bridge while it is open (Milestone 14 section 4). */
-function FirstMissionBanner() {
-  const t = useLabels();
-  const offer = useFirstMission();
-  if (!offer.steps?.pending) return null;
-  return (
-    <aside className="first-steps-banner" aria-label={t.firstSteps.title}>
-      <span>{t.firstSteps.banner[offer.steps.stage]}</span>
-      <span className="action-row">
-        <Link className="button" to="/first-steps">
-          {t.firstSteps.continue}
-        </Link>
-        <button type="button" className="button button-quiet" onClick={offer.dismiss}>
-          {t.firstSteps.dismiss}
-        </button>
-      </span>
-    </aside>
   );
 }
