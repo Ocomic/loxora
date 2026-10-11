@@ -971,18 +971,20 @@ function Composer({
     event?.preventDefault();
     const value = text.trim();
     if (!value || busy) return;
+    // The field empties at once, so text typed while the message is sent is kept.
     setBusy(true);
+    setText("");
     try {
       const posted = await post<PostedMessage>(`/api/chats/${enc(chat.address)}/messages`, {
         text: value,
         language,
         ...(threadRoot ? { threadRoot } : {}),
       });
-      setText("");
       setError(null);
       onPosted(posted);
-    } catch (value) {
-      setError(t.bridge.failed(value instanceof Error ? value.message : String(value)));
+    } catch (failure) {
+      setText((current) => current || value);
+      setError(t.bridge.failed(failure instanceof Error ? failure.message : String(failure)));
     } finally {
       setBusy(false);
     }

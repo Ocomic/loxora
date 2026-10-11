@@ -208,6 +208,7 @@ test.describe("English", () => {
 
     await chat.getByRole("textbox", { name: "Message" }).fill("World 1 sketch");
     await chat.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(chat.getByText("World 1 sketch")).toBeVisible();
     await chat.getByRole("textbox", { name: "Message" }).fill("Typo here");
     await chat.getByRole("textbox", { name: "Message" }).press("Enter");
     const typo = chat.locator(".entry-message", { hasText: "Typo here" });
