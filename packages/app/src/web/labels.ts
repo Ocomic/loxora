@@ -2,8 +2,22 @@
  * All UI text in one place (RFC-010, section 3 and Amendment 1): one entry per language.
  * German is the language of the designs; English carries the same keys.
  */
-import type { PromptKey, SetupStep, Term } from "../shared/conversation.js";
-import type { FirstStepsStage, Goal, MissionFilter, MissionState } from "./types.js";
+import {
+  type PromptKey,
+  type SetupStep,
+  type Term,
+  XORA_REPLIES,
+  type XoraReply,
+} from "../shared/conversation.js";
+import type {
+  ChatKind,
+  ChatSummary,
+  FirstStepsStage,
+  Goal,
+  MissionFilter,
+  MissionState,
+  ShipEventKind,
+} from "./types.js";
 
 export type Language = "de" | "en";
 
@@ -39,6 +53,7 @@ export interface Labels {
   readonly shell: {
     readonly skipLink: string;
     readonly sections: string;
+    readonly bridge: string;
     readonly missions: string;
     readonly workspace: string;
     readonly actorTitle: string;
@@ -259,8 +274,84 @@ export interface Labels {
     readonly send: string;
     readonly close: string;
     readonly notStored: string;
-    readonly replies: Record<"notOnBoard" | "missions" | "notUnderstood", string>;
+    readonly replies: Record<XoraReply, string>;
     readonly askMissions: string;
+  };
+  readonly bridge: {
+    readonly title: string;
+    readonly chats: string;
+    readonly decisions: string;
+    readonly decisionsCount: (count: number) => string;
+    readonly channels: string;
+    readonly shipChannel: string;
+    readonly direct: string;
+    readonly crew: string;
+    readonly noCrew: string;
+    readonly missions: string;
+    readonly newChannel: string;
+    readonly channelName: string;
+    readonly channelProject: string;
+    readonly noProject: string;
+    readonly create: string;
+    readonly cancel: string;
+    readonly rename: string;
+    readonly save: string;
+    readonly archive: string;
+    readonly archiveConfirm: (name: string) => string;
+    readonly archived: string;
+    readonly clear: string;
+    readonly clearConfirm: string;
+    readonly channelMenu: string;
+    readonly messageMenu: string;
+    readonly reply: string;
+    readonly replies: (count: number) => string;
+    readonly openThread: string;
+    readonly closeThread: string;
+    readonly thread: string;
+    readonly topics: string;
+    readonly copyLink: string;
+    readonly linkCopied: string;
+    readonly copyFailed: (link: string) => string;
+    readonly delete: string;
+    readonly deleteConfirm: string;
+    readonly deleteThread: string;
+    readonly deleteThreadConfirm: string;
+    readonly deleted: string;
+    readonly shipComputer: string;
+    readonly input: string;
+    readonly placeholder: (chat: string) => string;
+    readonly placeholderXora: string;
+    readonly placeholderThread: string;
+    readonly send: string;
+    readonly mentionHint: string;
+    readonly mentionList: string;
+    readonly readOnly: string;
+    readonly archivedNote: string;
+    readonly decisionsNote: string;
+    readonly migration: string;
+    readonly empty: Record<ChatKind, string>;
+    readonly emptyThread: string;
+    readonly events: Record<
+      ShipEventKind,
+      (entry: { project: string; mission: string; title: string }) => string
+    >;
+    readonly toThread: string;
+    readonly toChannel: string;
+    readonly missionDetail: string;
+    readonly waitsForYou: string;
+    readonly details: string;
+    readonly xoraStatus: string;
+    readonly xoraCan: readonly string[];
+    readonly purpose: string;
+    readonly missionCount: (total: number, open: number) => string;
+    readonly onBoard: string;
+    readonly showChats: string;
+    readonly showDetails: string;
+    readonly hidePanel: string;
+    readonly loading: string;
+    readonly linkPreview: string;
+    readonly notFound: string;
+    readonly failed: (message: string) => string;
   };
 }
 
@@ -270,6 +361,7 @@ const de: Labels = {
   shell: {
     skipLink: "Zum Inhalt springen",
     sections: "Bereiche",
+    bridge: "Brücke",
     missions: "Missionen",
     workspace: "Workspace",
     actorTitle: "Schreiben in der UI braucht einen konfigurierten Akteur (RFC-010, Abschnitt 9)",
@@ -629,15 +721,107 @@ const de: Labels = {
     send: "Senden",
     close: "Schließen",
     notStored: "Nachrichten werden nicht gespeichert.",
-    replies: {
-      notOnBoard:
-        "Ich bin in dieser Version noch nicht an Bord und kann noch nicht frei antworten. Heute kannst du deine Missionen verfolgen, Fragen beantworten und Missionen anhalten oder stoppen.",
-      missions:
-        "Missionen legen heute Agenten über die Kommandozeile an, mit „loxora mission create“. Sobald ich an Bord bin, kannst du mich direkt darum bitten.",
-      notUnderstood:
-        "Das verstehe ich noch nicht, ich bin noch im Skriptmodus. Tipp einfach eine der Antworten an.",
-    },
+    replies: XORA_REPLIES.de,
     askMissions: "Wie bekomme ich Missionen?",
+  },
+  bridge: {
+    title: "Brücke",
+    chats: "Kanäle und Chats",
+    decisions: "#entscheidungen",
+    decisionsCount: (count) =>
+      count === 1 ? "1 offene Entscheidung" : `${count} offene Entscheidungen`,
+    channels: "Kanäle",
+    shipChannel: "#brücke",
+    direct: "Direktnachrichten",
+    crew: "Crew",
+    noCrew: "Noch keine Crew",
+    missions: "Alle Missionen",
+    newChannel: "Neuer Kanal",
+    channelName: "Name des Kanals",
+    channelProject: "Projekt (optional)",
+    noProject: "Kein Projekt",
+    create: "Anlegen",
+    cancel: "Abbrechen",
+    rename: "Umbenennen",
+    save: "Speichern",
+    archive: "Archivieren",
+    archiveConfirm: (name) =>
+      `Kanal „${name}“ archivieren? Er verschwindet aus der Liste und nimmt keine Nachrichten mehr an. Verlinkte Nachrichten bleiben erreichbar.`,
+    archived: "Archiviert",
+    clear: "Chat leeren",
+    clearConfirm:
+      "Alle Nachrichten mit Xora löschen? Es bleibt nur ein Vermerk, dass gelöscht wurde.",
+    channelMenu: "Kanal-Menü",
+    messageMenu: "Nachrichten-Menü",
+    reply: "Im Thread antworten",
+    replies: (count) => (count === 1 ? "1 Antwort" : `${count} Antworten`),
+    openThread: "Thread öffnen",
+    closeThread: "Thread schließen",
+    thread: "Thread",
+    topics: "Themen",
+    copyLink: "Link kopieren",
+    linkCopied: "Link kopiert",
+    copyFailed: (link) => `Kopieren ging nicht. Der Link: ${link}`,
+    delete: "Löschen",
+    deleteConfirm: "Diese Nachricht löschen? Es bleibt nur ein Vermerk, dass gelöscht wurde.",
+    deleteThread: "Thema löschen",
+    deleteThreadConfirm:
+      "Dieses Thema mit allen Antworten löschen? Es bleibt nur ein Vermerk, dass gelöscht wurde.",
+    deleted: "Nachricht gelöscht",
+    shipComputer: "Bordcomputer",
+    input: "Nachricht",
+    placeholder: (chat) => `Nachricht an ${chat}`,
+    placeholderXora: "Neues Thema mit Xora …",
+    placeholderThread: "Im Thread antworten …",
+    send: "Senden",
+    mentionHint: "Mit @Xora antwortet Xora hier.",
+    mentionList: "Erwähnen",
+    readOnly: "Nur lesen: Schreiben kann nur der Kapitän dieses Schiffs.",
+    archivedNote: "Dieser Kanal ist archiviert und nimmt keine Nachrichten mehr an.",
+    decisionsNote:
+      "Rot heißt: Hier wartet etwas auf dich. Jeder Eintrag führt zum passenden Thread.",
+    migration:
+      "Das Logbuch ist noch nicht auf dem Stand für den Brücken-Chat. Mach eine Sicherungskopie des Logbuch-Ordners und führe dann einmal einen beliebigen loxora-Befehl aus. Bis dahin ist die Brücke nur lesbar.",
+    empty: {
+      ship: "Noch keine Meldungen. Der Bordcomputer meldet hier, was an Bord passiert.",
+      project: "Noch keine Missionen in diesem Projekt.",
+      topic: "Noch keine Nachrichten in diesem Kanal.",
+      direct: "Schreib Xora eine Nachricht. Jede neue Nachricht beginnt ein eigenes Thema.",
+      decisions: "Nichts wartet auf dich.",
+    },
+    emptyThread: "Noch keine Antworten.",
+    events: {
+      projectCreated: ({ project }) => `Projekt „${project}“ angelegt.`,
+      missionCreated: ({ mission, project }) => `Mission „${mission}“ in ${project} angelegt.`,
+      missionStarted: ({ mission }) => `Mission „${mission}“ gestartet.`,
+      missionWaiting: ({ mission }) => `Mission „${mission}“ wartet auf den Kapitän.`,
+      missionCompleted: ({ mission }) => `Mission „${mission}“ abgeschlossen.`,
+      missionFailed: ({ mission }) => `Mission „${mission}“ fehlgeschlagen.`,
+      missionCancelled: ({ mission }) => `Mission „${mission}“ gestoppt.`,
+      knowledgeAccepted: ({ title, project }) =>
+        title ? `Wissen „${title}“ in ${project} übernommen.` : `Wissen in ${project} übernommen.`,
+    },
+    toThread: "Zum Thread",
+    toChannel: "Zum Kanal",
+    missionDetail: "Missionsdetails",
+    waitsForYou: "Wartet auf dich",
+    details: "Details",
+    xoraStatus: "Online · Skriptmodus",
+    xoraCan: [
+      "Antwortet mit festen Texten, sie ist noch nicht frei im Gespräch.",
+      "Begleitet die erste Mission.",
+      "Antwortet in Kanälen, wenn du @Xora schreibst.",
+    ],
+    purpose: "Zweck",
+    missionCount: (total, open) => `${total} Missionen, davon ${open} offen`,
+    onBoard: "An Bord",
+    showChats: "Kanäle",
+    showDetails: "Details",
+    hidePanel: "Ausblenden",
+    loading: "Lade …",
+    linkPreview: "Verlinkte Nachricht",
+    notFound: "Diese Nachricht oder dieser Chat wurde nicht gefunden.",
+    failed: (message) => `Das hat nicht geklappt: ${message}`,
   },
 };
 
@@ -647,6 +831,7 @@ const en: Labels = {
   shell: {
     skipLink: "Skip to content",
     sections: "Sections",
+    bridge: "Bridge",
     missions: "Missions",
     workspace: "Workspace",
     actorTitle: "Writing in the UI needs a configured actor (RFC-010, section 9)",
@@ -1001,15 +1186,107 @@ const en: Labels = {
     send: "Send",
     close: "Close",
     notStored: "Messages are not stored.",
-    replies: {
-      notOnBoard:
-        "In this version I'm not on board yet and can't answer freely. Today you can follow your missions, answer questions, and pause or stop missions.",
-      missions:
-        "Today agents create missions on the command line, with “loxora mission create”. Once I'm on board, you can simply ask me.",
-      notUnderstood:
-        "I don't understand that yet, I'm still in script mode. Just tap one of the answers.",
-    },
+    replies: XORA_REPLIES.en,
     askMissions: "How do I get missions?",
+  },
+  bridge: {
+    title: "Bridge",
+    chats: "Channels and chats",
+    decisions: "#decisions",
+    decisionsCount: (count) => (count === 1 ? "1 open decision" : `${count} open decisions`),
+    channels: "Channels",
+    shipChannel: "#bridge",
+    direct: "Direct messages",
+    crew: "Crew",
+    noCrew: "No crew yet",
+    missions: "All missions",
+    newChannel: "New channel",
+    channelName: "Channel name",
+    channelProject: "Project (optional)",
+    noProject: "No project",
+    create: "Create",
+    cancel: "Cancel",
+    rename: "Rename",
+    save: "Save",
+    archive: "Archive",
+    archiveConfirm: (name) =>
+      `Archive channel “${name}”? It leaves the list and takes no more messages. Linked messages stay reachable.`,
+    archived: "Archived",
+    clear: "Clear chat",
+    clearConfirm: "Delete all messages with Xora? Only a note that they were deleted remains.",
+    channelMenu: "Channel menu",
+    messageMenu: "Message menu",
+    reply: "Reply in thread",
+    replies: (count) => (count === 1 ? "1 reply" : `${count} replies`),
+    openThread: "Open thread",
+    closeThread: "Close thread",
+    thread: "Thread",
+    topics: "Topics",
+    copyLink: "Copy link",
+    linkCopied: "Link copied",
+    copyFailed: (link) => `Copying did not work. The link: ${link}`,
+    delete: "Delete",
+    deleteConfirm: "Delete this message? Only a note that it was deleted remains.",
+    deleteThread: "Delete topic",
+    deleteThreadConfirm:
+      "Delete this topic with all replies? Only a note that it was deleted remains.",
+    deleted: "Message deleted",
+    shipComputer: "Ship computer",
+    input: "Message",
+    placeholder: (chat) => `Message ${chat}`,
+    placeholderXora: "New topic with Xora …",
+    placeholderThread: "Reply in thread …",
+    send: "Send",
+    mentionHint: "With @Xora, Xora answers here.",
+    mentionList: "Mention",
+    readOnly: "Read-only: only the captain of this ship writes.",
+    archivedNote: "This channel is archived and takes no more messages.",
+    decisionsNote:
+      "Red means: something here waits for you. Each entry takes you to the right thread.",
+    migration:
+      "The logbook is not up to date for the bridge chat yet. Make a backup copy of the logbook folder, then run any loxora command once. Until then the bridge is read-only.",
+    empty: {
+      ship: "No reports yet. The ship computer reports here what happens on board.",
+      project: "No missions in this project yet.",
+      topic: "No messages in this channel yet.",
+      direct: "Write Xora a message. Every new message starts its own topic.",
+      decisions: "Nothing waits for you.",
+    },
+    emptyThread: "No replies yet.",
+    events: {
+      projectCreated: ({ project }) => `Project “${project}” created.`,
+      missionCreated: ({ mission, project }) => `Mission “${mission}” created in ${project}.`,
+      missionStarted: ({ mission }) => `Mission “${mission}” started.`,
+      missionWaiting: ({ mission }) => `Mission “${mission}” waits for the captain.`,
+      missionCompleted: ({ mission }) => `Mission “${mission}” completed.`,
+      missionFailed: ({ mission }) => `Mission “${mission}” failed.`,
+      missionCancelled: ({ mission }) => `Mission “${mission}” stopped.`,
+      knowledgeAccepted: ({ title, project }) =>
+        title
+          ? `Knowledge “${title}” accepted in ${project}.`
+          : `Knowledge accepted in ${project}.`,
+    },
+    toThread: "To the thread",
+    toChannel: "To the channel",
+    missionDetail: "Mission details",
+    waitsForYou: "Waits for you",
+    details: "Details",
+    xoraStatus: "Online · script mode",
+    xoraCan: [
+      "Answers with fixed texts; she cannot talk freely yet.",
+      "Guides you through the first mission.",
+      "Answers in channels when you write @Xora.",
+    ],
+    purpose: "Purpose",
+    missionCount: (total, open) => `${total} missions, ${open} open`,
+    onBoard: "On board",
+    showChats: "Channels",
+    showDetails: "Details",
+    hidePanel: "Hide",
+    loading: "Loading …",
+    linkPreview: "Linked message",
+    notFound: "This message or chat was not found.",
+    failed: (message) => `That did not work: ${message}`,
   },
 };
 
@@ -1072,4 +1349,18 @@ export function proposalStatusLabel(t: Labels, status: string): string {
 
 export function planStatusLabel(t: Labels, status: string): string {
   return t.planStatus[status] ?? status;
+}
+
+/** A chat's name as the side list shows it. */
+export function chatName(t: Labels, chat: Pick<ChatSummary, "kind" | "name">): string {
+  switch (chat.kind) {
+    case "ship":
+      return t.bridge.shipChannel;
+    case "decisions":
+      return t.bridge.decisions;
+    case "direct":
+      return chat.name ?? "Xora";
+    default:
+      return `#${chat.name ?? ""}`;
+  }
 }

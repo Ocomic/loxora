@@ -92,7 +92,7 @@ export function MissionDetailView({ id }: { id: string }) {
   );
 }
 
-function StatePanel({ mission, onDone }: { mission: MissionDetail; onDone: () => void }) {
+export function StatePanel({ mission, onDone }: { mission: MissionDetail; onDone: () => void }) {
   const t = useLabels();
   if (mission.state === "running") {
     return (
@@ -278,7 +278,7 @@ function Timeline({ events, live }: { events: readonly MissionEvent[]; live: boo
   );
 }
 
-function eventText(t: Labels, event: MissionEvent): string {
+export function eventText(t: Labels, event: MissionEvent): string {
   const payload = event.payload;
   const text =
     (typeof payload.activity === "string" && payload.activity) ||

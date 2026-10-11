@@ -12,15 +12,28 @@ import {
   WORKSPACE_CONFIG_FILE,
 } from "@loxora/cli";
 import {
+  type ChatId,
+  type ChatMessageId,
+  ChatService,
   compareMissionsByAttention,
   LoxoraError,
   type MissionId,
   MissionService,
   NotFoundError,
+  type ProjectId,
   StaleMissionError,
 } from "@loxora/core";
 import { openSqliteReadOnlyStore, openSqliteWritableStore } from "@loxora/sqlite";
 import { PROMPT_KEYS, PROMPTS, type PromptKey } from "../shared/conversation.js";
+import {
+  BridgeReader,
+  CHAT_MIGRATION,
+  type ChatContext,
+  type ChatReadStore,
+  DECISIONS_ADDRESS,
+  parseThreadKey,
+  postToChat,
+} from "./chat.js";
 import {
   type AssistantInput,
   describeAction,
@@ -235,6 +248,7 @@ async function openStore<S extends { close(): Promise<void> }, T>(
   workspaceDirectory: string,
   open: (path: string, requiredMigrationId: string) => Promise<S>,
   work: (store: S) => Promise<T>,
+  migration = REQUIRED_MIGRATION,
 ): Promise<T> {
   const path = databasePath(workspaceDirectory);
   if (!existsSync(path)) {
@@ -244,17 +258,79 @@ async function openStore<S extends { close(): Promise<void> }, T>(
   }
   let store: S;
   try {
-    store = await open(path, REQUIRED_MIGRATION);
+    store = await open(path, migration);
   } catch {
-    throw new WorkspaceUnavailable(
-      `The workspace needs migration ${REQUIRED_MIGRATION}. The UI never migrates; run any loxora CLI command once (after a backup copy of the workspace directory).`,
-    );
+    throw new WorkspaceUnavailable(migrationHint(migration));
   }
   try {
     return await work(store);
   } finally {
     await store.close();
   }
+}
+
+function migrationHint(migration: string): string {
+  return `The workspace needs migration ${migration}. The UI never migrates; run any loxora CLI command once (after a backup copy of the workspace directory).`;
+}
+
+/**
+ * Opens the workspace for a bridge read: with `008_chat` the stored chat is available;
+ * without it the bridge shows only derived entries (Milestone 15 section 1).
+ */
+async function withChatStore<T>(
+  context: ApiContext,
+  work: (store: ChatReadStore, chat: ChatContext) => Promise<T>,
+): Promise<T> {
+  const directory = requireWorkspace(context);
+  try {
+    return await openStore(
+      directory,
+      openSqliteReadOnlyStore,
+      (store) => work(store, chatContext(context, directory, true)),
+      CHAT_MIGRATION,
+    );
+  } catch (error) {
+    if (!(error instanceof WorkspaceUnavailable) || !existsSync(databasePath(directory))) {
+      throw error;
+    }
+    return withStore(directory, (store) => work(store, chatContext(context, directory, false)));
+  }
+}
+
+/** Opens the workspace for a bridge write; it needs `008_chat` and the captain. */
+async function withChatWrite<T>(
+  context: ApiContext,
+  work: (store: WritableStore, chat: ChatContext & { readonly actor: string }) => Promise<T>,
+): Promise<T> {
+  const { actor } = context;
+  if (!actor) {
+    throw new RequestRejected(
+      403,
+      "ReadOnly",
+      "The app runs read-only; only the captain writes on the bridge.",
+    );
+  }
+  const directory = requireWorkspace(context);
+  return openStore(
+    directory,
+    openSqliteWritableStore,
+    (store) => work(store, { ...chatContext(context, directory, true), actor }),
+    CHAT_MIGRATION,
+  );
+}
+
+function chatContext(context: ApiContext, directory: string, available: boolean): ChatContext {
+  const captainId = context.actor ?? context.settings?.captain ?? null;
+  return {
+    available,
+    actor: context.actor,
+    reviewers: loadWorkspaceConfig(directory).reviewers,
+    captainId,
+    captainName:
+      captainId !== null && captainId === context.settings?.captain
+        ? (context.settings?.displayName ?? null)
+        : null,
+  };
 }
 
 type Mode = "fixed" | "ready" | "setup" | "settingsError";
@@ -441,13 +517,18 @@ async function api(
     const action = MISSION_ACTIONS.find((name) => name === write?.[2]);
     const setupRoute = SETUP_ROUTES.find((route) => route === url.pathname);
     const assistantRoute = ASSISTANT_ROUTES.find((route) => route === url.pathname);
-    if (request.method !== "POST" || (!(write && action) && !setupRoute && !assistantRoute)) {
+    const chatRoute = chatWriteRoute(url.pathname);
+    if (
+      request.method !== "POST" ||
+      (!(write && action) && !setupRoute && !assistantRoute && !chatRoute)
+    ) {
       return json(response, 405, {
         error: "MethodNotAllowed",
-        message: "Only the Mission, setup, assistant, and settings write routes accept POST.",
+        message: "Only the Mission, chat, setup, assistant, and settings write routes accept POST.",
       });
     }
     const body = await readWriteRequest(request, context);
+    if (chatRoute) return json(response, 200, await chatWrite(context, chatRoute, body));
     if (setupRoute) return json(response, 200, await setupWrite(context, setupRoute, body));
     if (assistantRoute) {
       return json(response, 200, await assistantWrite(context, assistantRoute, body));
@@ -474,6 +555,36 @@ async function api(
       available: context.environment !== null && context.settingsError === null,
       language: context.settings?.language ?? null,
     });
+  }
+  if (url.pathname === "/api/chats") {
+    return json(
+      response,
+      200,
+      await withChatStore(context, (store, chat) => new BridgeReader(store, chat).chatList()),
+    );
+  }
+  const preview = url.pathname.match(/^\/api\/chats\/messages\/([^/]+)$/);
+  if (preview) {
+    const messageId = decodeURIComponent(preview[1] ?? "") as ChatMessageId;
+    return json(
+      response,
+      200,
+      await withChatStore(context, (store, chat) =>
+        new BridgeReader(store, chat).preview(messageId),
+      ),
+    );
+  }
+  const chatRead = url.pathname.match(/^\/api\/chats\/([^/]+)$/);
+  if (chatRead) {
+    const address = decodeURIComponent(chatRead[1] ?? "");
+    const thread = parseThreadKey(url.searchParams.get("thread"));
+    return json(
+      response,
+      200,
+      await withChatStore(context, (store, chat) =>
+        new BridgeReader(store, chat).chat(address, thread),
+      ),
+    );
   }
   const workspaceDirectory = requireWorkspace(context);
   if (url.pathname === "/api/workspace") {
@@ -540,6 +651,106 @@ async function api(
     );
   }
   json(response, 404, { error: "NotFound" });
+}
+
+type ChatWriteRoute =
+  | { readonly kind: "create" }
+  | { readonly kind: "delete"; readonly messageId: ChatMessageId }
+  | {
+      readonly kind: "messages" | "rename" | "archive" | "clear";
+      readonly address: string;
+    };
+
+/** The chat write routes of Milestone 15 section 6. */
+function chatWriteRoute(pathname: string): ChatWriteRoute | null {
+  if (pathname === "/api/chats") return { kind: "create" };
+  const deletion = pathname.match(/^\/api\/chats\/messages\/([^/]+)\/delete$/);
+  if (deletion) {
+    return { kind: "delete", messageId: decodeURIComponent(deletion[1] ?? "") as ChatMessageId };
+  }
+  const match = pathname.match(/^\/api\/chats\/([^/]+)\/(messages|rename|archive|clear)$/);
+  if (!match || match[1] === "messages") return null;
+  return {
+    kind: match[2] as "messages" | "rename" | "archive" | "clear",
+    address: decodeURIComponent(match[1] ?? ""),
+  };
+}
+
+const MAX_CHANNEL_NAME = 80;
+
+async function chatWrite(
+  context: ApiContext,
+  route: ChatWriteRoute,
+  body: Record<string, unknown>,
+) {
+  return withChatWrite(context, async (store, chat) => {
+    const chats = new ChatService(store, { isCaptain: (id) => chat.reviewers.includes(id) });
+    switch (route.kind) {
+      case "messages": {
+        if (typeof body.text !== "string") {
+          throw new RequestRejected(400, "Invalid", "text must not be empty");
+        }
+        const threadRoot = parseThreadKey(body.threadRoot);
+        const topic = typeof body.topic === "string" ? body.topic : undefined;
+        return postToChat(store, chat, context.assistant, {
+          address: route.address,
+          text: body.text,
+          language: requestLanguage(context, body),
+          ...(threadRoot ? { threadRoot } : {}),
+          ...(topic ? { topic } : {}),
+        });
+      }
+      case "delete":
+        return {
+          deleted: await chats.deleteMessage({
+            messageId: route.messageId,
+            actorId: chat.actor,
+            thread: body.thread === true,
+          }),
+        };
+      case "clear":
+        return {
+          deleted: await chats.clearDirectChat({
+            chatId: route.address as ChatId,
+            actorId: chat.actor,
+          }),
+        };
+      case "create": {
+        const projectId =
+          typeof body.projectId === "string" && body.projectId ? body.projectId : null;
+        const created = await chats.createChannel({
+          name: field(body, "name", MAX_CHANNEL_NAME),
+          actorId: chat.actor,
+          ...(projectId ? { projectId: projectId as ProjectId } : {}),
+        });
+        return { address: created.id, name: created.name };
+      }
+      case "rename": {
+        const renamed = await chats.renameChannel({
+          chatId: route.address as ChatId,
+          name: field(body, "name", MAX_CHANNEL_NAME),
+          actorId: chat.actor,
+        });
+        return { address: renamed.id, name: renamed.name };
+      }
+      case "archive": {
+        if (route.address === DECISIONS_ADDRESS) {
+          throw new RequestRejected(400, "Invalid", "The decisions channel cannot be archived");
+        }
+        const archived = await chats.archiveChannel({
+          chatId: route.address as ChatId,
+          actorId: chat.actor,
+        });
+        return { address: archived.id, archivedAt: archived.archivedAt };
+      }
+    }
+  });
+}
+
+function requestLanguage(context: ApiContext, body: Record<string, unknown>): Language {
+  return body.language === "de" || body.language === "en"
+    ? body.language
+    : (context.settings?.language ?? "en");
 }
 
 const SETUP_ROUTES = [
@@ -764,14 +975,13 @@ function assistantInput(body: Record<string, unknown>): AssistantInput {
     return { kind: "setup", prompt, text: field(body, "text", MAX_GOAL_TEXT) };
   }
   switch (body.choice) {
-    case undefined: {
-      const topic = typeof body.topic === "string" ? body.topic : undefined;
-      return {
-        kind: "message",
-        text: field(body, "text", MAX_GOAL_TEXT),
-        ...(topic ? { topic } : {}),
-      };
-    }
+    case undefined:
+      // The input bar writes into the open chat now (Milestone 15 section 6).
+      throw new RequestRejected(
+        410,
+        "Moved",
+        "Messages to Xora go to POST /api/chats/direct:xora/messages",
+      );
     case "goal": {
       const goal = GOALS.find((name) => name === body.goal);
       if (!goal) throw new RequestRejected(400, "Invalid", `goal must be ${GOALS.join(", ")}`);
@@ -804,10 +1014,7 @@ async function assistantWrite(
 ) {
   if (route === "/api/assistant/message") {
     const input = assistantInput(body);
-    const language: Language =
-      body.language === "de" || body.language === "en"
-        ? body.language
-        : (context.settings?.language ?? "en");
+    const language = requestLanguage(context, body);
     if (input.kind !== "message" && input.kind !== "setup") await requireFirstSteps(context);
     const turn = await context.assistant.respond(input, language);
     return {

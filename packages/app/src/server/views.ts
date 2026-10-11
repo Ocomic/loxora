@@ -54,6 +54,7 @@ export class Labels {
   }
 
   private readonly projects: Map<unknown, string>;
+  private readonly purposes: Map<unknown, string>;
   private readonly nodes: Map<unknown, WorkspaceExportRecord>;
   private readonly keys: Map<unknown, string>;
   private readonly plans: Map<unknown, { title: string; status: string }>;
@@ -61,6 +62,7 @@ export class Labels {
   public constructor(sections: Sections) {
     const records = (name: (typeof LABEL_SECTIONS)[number]) => sections[name] ?? [];
     this.projects = new Map(records("projects").map((p) => [p.id, String(p.name)]));
+    this.purposes = new Map(records("projects").map((p) => [p.id, String(p.purpose ?? "")]));
     this.nodes = new Map(records("knowledgeNodes").map((n) => [n.id, n]));
     this.keys = new Map(records("knowledgeNodeKeys").map((k) => [k.nodeId, String(k.key)]));
     const latest = new Map<unknown, WorkspaceExportRecord>();
@@ -87,6 +89,10 @@ export class Labels {
 
   public project(id: unknown) {
     return { id: String(id), name: this.projects.get(id) ?? String(id).slice(0, 8) };
+  }
+
+  public purpose(id: unknown): string {
+    return this.purposes.get(id) ?? "";
   }
 
   public projectList() {

@@ -266,3 +266,30 @@ export function interpret(
   if (accepts === "choicesOrText" && value) return { value };
   return null;
 }
+
+/** Xora's fixed replies in script mode (Milestone 13 section 6). */
+export const XORA_REPLY_KEYS = ["notOnBoard", "missions", "notUnderstood"] as const;
+export type XoraReply = (typeof XORA_REPLY_KEYS)[number];
+
+/**
+ * The reply texts. The setup shows them from here, and on the bridge the server stores the
+ * text shown as Xora's chat message, in the language it was shown in (Milestone 15 section 4).
+ */
+export const XORA_REPLIES: Record<Language, Record<XoraReply, string>> = {
+  de: {
+    notOnBoard:
+      "Ich bin in dieser Version noch nicht an Bord und kann noch nicht frei antworten. Heute kannst du deine Missionen verfolgen, Fragen beantworten und Missionen anhalten oder stoppen.",
+    missions:
+      "Missionen legen heute Agenten über die Kommandozeile an, mit „loxora mission create“. Sobald ich an Bord bin, kannst du mich direkt darum bitten.",
+    notUnderstood:
+      "Das verstehe ich noch nicht, ich bin noch im Skriptmodus. Tipp einfach eine der Antworten an.",
+  },
+  en: {
+    notOnBoard:
+      "In this version I'm not on board yet and can't answer freely. Today you can follow your missions, answer questions, and pause or stop missions.",
+    missions:
+      "Today agents create missions on the command line, with “loxora mission create”. Once I'm on board, you can simply ask me.",
+    notUnderstood:
+      "I don't understand that yet, I'm still in script mode. Just tap one of the answers.",
+  },
+};
