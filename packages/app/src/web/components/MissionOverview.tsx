@@ -3,6 +3,7 @@ import { usePolling } from "../api.js";
 import { useLabels } from "../i18n.js";
 import { relativeTime } from "../labels.js";
 import type { MissionFilter, MissionList, MissionSummary } from "../types.js";
+import { bridgePath, XORA_ADDRESS } from "./Bridge.js";
 import { useFirstMission } from "./FirstMission.js";
 import { MissionDetailView } from "./MissionDetailView.js";
 import { StatusBadge } from "./StatusBadge.js";
@@ -133,7 +134,7 @@ function MissionTable({
         <div className="empty first-mission-offer">
           <p>{t.firstSteps.offer}</p>
           <div className="action-row">
-            <Link className="button" to="/first-steps">
+            <Link className="button" to={bridgePath(XORA_ADDRESS)}>
               {t.firstSteps.continue}
             </Link>
             <button type="button" className="button button-quiet" onClick={firstMission.dismiss}>

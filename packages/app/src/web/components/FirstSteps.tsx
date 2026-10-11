@@ -1,5 +1,4 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useState } from "react";
-import { Link } from "react-router-dom";
 import { api, post } from "../api.js";
 import { useLabels, useLanguage } from "../i18n.js";
 import type {
@@ -8,17 +7,31 @@ import type {
   ProposedAction,
   SetupInfo,
 } from "../types.js";
+import { useFirstMission } from "./FirstMission.js";
 
 /**
- * The first Mission, offered on the bridge after the setup (RFC-011 part E, Milestone 13
- * scenes E1 to E4, moved to the bridge by Milestone 14 section 4): start the Mission, answer
- * it, accept the project goal, and the bridge hints. Xora proposes each write as an action;
- * the server writes only after the person confirms the card that shows it.
+ * The first Mission as Xora's guide, pinned at the top of her direct chat (RFC-011 part E,
+ * Milestone 13 scenes E1 to E4, Milestone 15 section 5): start the Mission, answer it in its
+ * thread in the project channel, accept the project goal, then three hints about the bridge
+ * and one next step. Xora proposes each write as an action; the server writes only after the
+ * person confirms the card that shows it. Nothing here is stored as chat messages.
  */
 const TOTAL = 4;
 
-export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) {
+export function FirstSteps({
+  onOpenThread,
+  onWritten,
+  onFinished,
+}: {
+  /** A confirmed card wrote to the workspace; the bridge reloads its chats. */
+  onWritten: () => void;
+  /** Opens the first Mission's thread in its project channel. */
+  onOpenThread: (projectId: string, missionId: string) => void;
+  /** The guide closed; `project` opens the project channel as the proposed next step. */
+  onFinished: (next: "project" | "stay") => void;
+}) {
   const t = useLabels();
+  const offer = useFirstMission();
   const { language } = useLanguage();
   const titleId = useId();
   const [state, setState] = useState<FirstStepsState | null>(null);
@@ -27,6 +40,7 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
   const [action, setAction] = useState<ProposedAction | null>(null);
   const [goalText, setGoalText] = useState<string | null>(null);
   const [hint, setHint] = useState(0);
+  const { setHints } = offer;
 
   const load = useCallback(async () => {
     try {
@@ -66,23 +80,27 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
       });
       setAction(null);
       setState(result.firstSteps);
+      if (confirm) onWritten();
     });
-  // The setup has already ended; the last hint only leads back. Skipping dismisses the offer.
-  const finish = (skipped: boolean) =>
-    run(async () => {
-      if (skipped) await post("/api/setup/finish", { skipped });
-      await onFinished();
-    });
+  // The setup has already ended; the hints only lead on. "Not now" dismisses the offer.
+  const finish = (next: "project" | "stay") => {
+    setHints(false);
+    onFinished(next);
+  };
 
   // Scene E1 shows its card at once: proposing writes nothing.
   const stage = state?.stage;
+  // The hints are no longer an offer on the server; the guide keeps them open until closed.
+  useEffect(() => {
+    if (stage === "hints") setHints(true);
+  }, [stage, setHints]);
   useEffect(() => {
     if (stage === "mission" && !action && !busy && !error) void propose({ choice: "firstMission" });
   });
 
   if (!state) {
     return (
-      <section className="panel setup-main">
+      <section className="xora-guide" aria-label={t.firstSteps.title}>
         {error ? (
           <p className="action-error">{error}</p>
         ) : (
@@ -128,11 +146,17 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
     step = 2;
     screen = (
       <Step text={t.firstSteps.waiting}>
-        <div className="action-row">
-          <Link className="button" to={`/missions/${state.missionId ?? ""}`}>
-            {t.firstSteps.openMission}
-          </Link>
-        </div>
+        {state.projectId && state.missionId ? (
+          <div className="action-row">
+            <button
+              type="button"
+              className="button"
+              onClick={() => onOpenThread(state.projectId ?? "", state.missionId ?? "")}
+            >
+              {t.firstSteps.openMission}
+            </button>
+          </div>
+        ) : null}
       </Step>
     );
   } else if (state.stage === "record" && action?.kind === "recordGoal") {
@@ -171,9 +195,14 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
       <Step text={last ? t.firstSteps.closing : (t.firstSteps.hints[hint] ?? "")}>
         <div className="action-row">
           {last ? (
-            <button type="button" className="button" disabled={busy} onClick={() => finish(false)}>
-              {t.firstSteps.finish}
-            </button>
+            <>
+              <button type="button" className="button" onClick={() => finish("project")}>
+                {t.firstSteps.finish}
+              </button>
+              <button type="button" className="button button-quiet" onClick={() => finish("stay")}>
+                {t.firstSteps.later}
+              </button>
+            </>
           ) : (
             <button type="button" className="button" onClick={() => setHint(hint + 1)}>
               {t.firstSteps.next}
@@ -185,9 +214,12 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
   }
 
   return (
-    <section className="panel setup-main first-steps" aria-labelledby={titleId}>
-      <header className="setup-header">
-        <h1 id={titleId}>{t.firstSteps.title}</h1>
+    <section className="xora-guide" aria-labelledby={titleId}>
+      <header className="xora-guide-header">
+        <span className="pin" aria-hidden="true">
+          📌
+        </span>
+        <h2 id={titleId}>{t.firstSteps.title}</h2>
         <span className="muted">{t.firstSteps.progress(step, TOTAL)}</span>
       </header>
       {screen}
@@ -202,7 +234,7 @@ export function FirstSteps({ onFinished }: { onFinished: () => Promise<void> }) 
           type="button"
           className="button button-quiet setup-skip"
           disabled={busy}
-          onClick={() => finish(true)}
+          onClick={offer.dismiss}
         >
           {t.firstSteps.dismiss}
         </button>
@@ -237,7 +269,7 @@ function ConfirmCard({
   const t = useLabels();
   return (
     <section className="confirm-card" aria-label={t.firstSteps.confirmation}>
-      <h2>{t.firstSteps.confirmation}</h2>
+      <h3>{t.firstSteps.confirmation}</h3>
       {children}
       <div className="action-row">
         <button type="button" className="button" disabled={busy} onClick={onConfirm}>

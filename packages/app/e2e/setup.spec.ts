@@ -72,7 +72,15 @@ const TEXT = {
     firstMission: "Erste Mission",
     dismiss: "Nicht jetzt",
     start: "Starten",
-    openMission: "Mission öffnen",
+    openMission: "Zum Thread",
+    backToXora: "Weiter bei Xora",
+    openProject: "Projektkanal öffnen",
+    hints: [
+      "Rot heißt: Ich brauche dich.",
+      "Jede Mission hat ihren eigenen Thread",
+      "Unten schreibst du, an mich oder in den offenen Kanal.",
+    ],
+    nextStep: "Mein Vorschlag für den nächsten Schritt",
     option: "Für mich selbst",
     accept: "Übernehmen",
     next: "Weiter",
@@ -91,6 +99,7 @@ const TEXT = {
     toBridge: "To the bridge",
     firstMission: "First mission",
     dismiss: "Not now",
+    clear: "Clear chat",
     notUnderstood: "I don't understand that yet",
   },
 } as const;
@@ -148,7 +157,10 @@ test.describe("German, by tapping", () => {
     await expect(page.getByText(text.projectCard)).toBeVisible();
     await tap(page, text.create);
     await tap(page, text.toBridge);
-    await expect(page).toHaveURL(/\/bridge$/);
+    // The end of the setup leads to Xora's direct chat, where the first Mission is pinned.
+    await expect(page).toHaveURL(/\/bridge\/direct%3Axora$/);
+    const guide = page.getByRole("region", { name: text.firstMission });
+    await expect(guide).toBeVisible();
 
     for (const family of ["Orbitron", "Exo 2", "Share Tech Mono"]) {
       const loaded = await page.evaluate(
@@ -158,26 +170,31 @@ test.describe("German, by tapping", () => {
       expect(loaded, family).toBeGreaterThan(0);
     }
 
-    // The first Mission is offered in the empty Mission list and in the banner.
-    await page.getByRole("link", { name: text.firstMission }).first().click();
+    // E1: the card shows what is written; E2: the question is answered in the Mission's thread.
     await tap(page, text.start);
-    await page.getByRole("link", { name: text.openMission }).click();
-    await expect(page).toHaveURL(/\/missions\/[^/]+$/);
-    await page.getByRole("button", { name: text.option }).click();
-    await page.getByRole("link", { name: text.firstMission }).click();
-    await expect(page.locator("textarea")).toHaveValue(text.template);
+    await guide.getByRole("button", { name: text.openMission }).click();
+    await expect(page).toHaveURL(/\/bridge\/project%3A.+\?thread=mission%3A/);
+    const thread = page.locator(".bridge-thread");
+    await thread.getByRole("button", { name: text.option }).click();
+    await thread.getByRole("button", { name: text.backToXora }).click();
+    // E3: the project goal; E4: three hints, then the next step.
+    await expect(guide.locator("textarea")).toHaveValue(text.template);
     await tap(page, text.next);
     await tap(page, text.accept);
-    await tap(page, text.next);
-    await tap(page, text.next);
-    await tap(page, text.toBridge);
-    await expect(page).toHaveURL(/\/bridge$/);
-    await expect(page.getByRole("link", { name: text.firstMission })).toHaveCount(0);
-    await expect(page.getByText(text.completed).first()).toBeVisible();
+    for (const hint of text.hints) {
+      await expect(guide.getByText(hint, { exact: false })).toBeVisible();
+      await tap(page, text.next);
+    }
+    await expect(guide.getByText(text.nextStep)).toBeVisible();
+    await tap(page, text.openProject);
+    await expect(page).toHaveURL(/\/bridge\/project%3A.+\?thread=mission%3A/);
+    await expect(thread.getByText(text.completed).first()).toBeVisible();
+    await expect(page.getByRole("region", { name: text.firstMission })).toHaveCount(0);
 
     // In Xora's direct chat she answers with the fixed script-mode text, now stored.
     await page.getByRole("link", { name: "Xora", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Xora" })).toBeVisible();
+    await expect(page.getByRole("region", { name: text.firstMission })).toHaveCount(0);
     await page.getByRole("textbox", { name: text.bar }).fill("Hallo Xora");
     await page.getByRole("button", { name: text.send }).click();
     await expect(page.getByText(text.notOnBoard)).toBeVisible();
@@ -264,7 +281,7 @@ test.describe("English, by typing", () => {
     await say(page, text.answer, "banana");
     await expect(page.getByText(text.notUnderstood)).toBeVisible();
     await say(page, text.answer, "to the bridge");
-    await expect(page).toHaveURL(/\/bridge$/);
+    await expect(page).toHaveURL(/\/bridge\/direct%3Axora$/);
 
     const setup = settings().setup as Record<string, unknown>;
     expect(setup.purpose).toBe("A small platform game for my kids.");
@@ -273,8 +290,20 @@ test.describe("English, by typing", () => {
       join(ship.home, "Documents", "Loxora"),
     );
 
-    await page.getByRole("button", { name: text.dismiss }).first().click();
-    await expect(page.getByRole("link", { name: text.firstMission })).toHaveCount(0);
+    // The guide is not chat history: clearing the chat leaves it pinned.
+    const guide = page.getByRole("region", { name: text.firstMission });
+    await expect(guide).toBeVisible();
+    page.on("dialog", (dialog) => void dialog.accept());
+    await page.getByRole("textbox", { name: "Message" }).fill("Hello Xora");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(page.locator(".bridge-thread")).toContainText("Hello Xora");
+    await page.locator(".bridge-chat").getByLabel("Channel menu").click();
+    await page.getByRole("button", { name: text.clear }).click();
+    await expect(page.locator(".bridge-chat")).not.toContainText("Hello Xora");
+    await expect(guide).toBeVisible();
+
+    await guide.getByRole("button", { name: text.dismiss }).click();
+    await expect(page.getByRole("region", { name: text.firstMission })).toHaveCount(0);
     expect(typeof (settings().setup as Record<string, unknown>).firstMissionDismissedAt).toBe(
       "string",
     );

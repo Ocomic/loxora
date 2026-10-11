@@ -538,6 +538,24 @@ test("the first steps write the project, the Mission, and accepted knowledge aft
   const missionId = String(steps.missionId);
   const detail = (await get(`${server.url}/api/missions/${missionId}`)).body;
   assert.equal(detail.state, "waiting");
+  // The first Mission is answered in its thread in the project channel (Milestone 15
+  // section 5). The guide in Xora's direct chat is not chat history: it stores no messages,
+  // and clearing the chat leaves the offer pending.
+  const projectId = String(steps.projectId);
+  const threadView = (
+    await get(
+      `${server.url}/api/chats/${encodeURIComponent(`project:${projectId}`)}?thread=${encodeURIComponent(`mission:${missionId}`)}`,
+    )
+  ).body;
+  assert.equal(
+    ((threadView.thread as Record<string, unknown>).root as Record<string, unknown>).type,
+    "mission",
+  );
+  const direct = `${server.url}/api/chats/direct%3Axora`;
+  assert.deepEqual((await get(direct)).body.entries, []);
+  assert.equal((await post(server.url, "/api/chats/direct%3Axora/clear", {})).status, 200);
+  const kept = (await get(`${server.url}/api/setup`)).body.firstSteps as Record<string, unknown>;
+  assert.deepEqual([kept.pending, kept.stage], [true, "answer"]);
   const answered = await post(server.url, `/api/missions/${missionId}/answer`, {
     sequence: detail.sequence,
     response: "For myself",
