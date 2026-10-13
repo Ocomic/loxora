@@ -1,4 +1,4 @@
-import { cpSync, existsSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { databasePath } from "@loxora/cli";
@@ -51,7 +51,9 @@ export function backupDirectory(
     `${basename(workspaceDirectory)} ${BACKUP_WORD[language]} ${stamp}`,
   );
   let candidate = base;
-  for (let count = 2; existsSync(candidate); count += 1) candidate = `${base} (${count})`;
+  for (let count = 2; existsSync(candidate) || existsSync(`${candidate}.partial`); count += 1) {
+    candidate = `${base} (${count})`;
+  }
   return candidate;
 }
 
@@ -73,21 +75,36 @@ export async function updateLogbook(
     throw new UpdateRejected(409, "UpToDate", "The logbook is already up to date");
   }
   const backupPath = backupDirectory(workspaceDirectory, language, now);
+  // The copy is written under a temporary name and renamed only once it is complete, so a
+  // failed copy never looks like a usable backup; a failed one is removed again.
+  const partial = `${backupPath}.partial`;
   const databaseName = basename(database);
-  cpSync(workspaceDirectory, backupPath, {
-    recursive: true,
-    errorOnExist: true,
-    force: false,
-    filter: (source) => !basename(source).startsWith(databaseName),
-  });
-  const source = new DatabaseSync(database, { readOnly: true });
+  // Only the database and its SQLite sidecar files are left to VACUUM INTO.
+  const skipped = new Set(
+    ["", "-wal", "-shm", "-journal"].map((suffix) =>
+      join(workspaceDirectory, databaseName + suffix),
+    ),
+  );
   try {
-    source.prepare("VACUUM INTO ?").run(join(backupPath, databaseName));
-  } finally {
-    source.close();
-  }
-  if (!readdirSync(backupPath).includes(databaseName)) {
-    throw new UpdateRejected(500, "BackupFailed", "The backup copy is incomplete");
+    cpSync(workspaceDirectory, partial, {
+      recursive: true,
+      errorOnExist: true,
+      force: false,
+      filter: (source) => !skipped.has(source),
+    });
+    const source = new DatabaseSync(database, { readOnly: true });
+    try {
+      source.prepare("VACUUM INTO ?").run(join(partial, databaseName));
+    } finally {
+      source.close();
+    }
+    if (!readdirSync(partial).includes(databaseName)) {
+      throw new UpdateRejected(500, "BackupFailed", "The backup copy is incomplete");
+    }
+    renameSync(partial, backupPath);
+  } catch (error) {
+    rmSync(partial, { recursive: true, force: true });
+    throw error;
   }
   const store = await openSqliteStore(database);
   await store.close();

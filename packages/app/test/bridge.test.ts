@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
@@ -491,12 +491,16 @@ test("the captain updates an older logbook from the bridge after a backup copy",
   assert.equal(foreign.status, 403);
   assert.equal(migrated(join(workspace, "workspace.sqlite")), false, "nothing changed yet");
 
+  // Files that only start with the database name are kept in the copy.
+  writeFileSync(join(workspace, "workspace.sqlite-notes.txt"), "keep me");
   const updated = await send(server.url, "/api/workspace/update", { language: "de" });
   assert.equal(updated.status, 200, JSON.stringify(updated.body));
   const backupPath = String(updated.body.backupPath);
   assert.equal(dirname(backupPath), dirname(workspace));
   assert.match(basename(backupPath), /^ws Sicherung \d{4}-\d{2}-\d{2} \d{2}-\d{2}$/);
   assert.ok(existsSync(join(backupPath, "workspace.json")));
+  assert.ok(existsSync(join(backupPath, "workspace.sqlite-notes.txt")));
+  assert.ok(!existsSync(`${backupPath}.partial`));
   assert.equal(migrated(join(backupPath, "workspace.sqlite")), false, "the copy is the old state");
   assert.equal(migrated(join(workspace, "workspace.sqlite")), true);
 
