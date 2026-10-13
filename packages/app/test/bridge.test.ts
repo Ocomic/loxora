@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { runCli } from "@loxora/cli";
@@ -459,4 +459,58 @@ test("without 008_chat the bridge is read-only and the workspace is not migrated
   } finally {
     check.close();
   }
+});
+
+test("the captain updates an older logbook from the bridge after a backup copy", async (t) => {
+  const { workspace } = await ship(t);
+  const database = new DatabaseSync(join(workspace, "workspace.sqlite"));
+  database.exec(`DROP TABLE chat_message_references; DROP TABLE chat_messages;
+    DROP TABLE chats; DELETE FROM schema_migrations WHERE id = '008_chat';`);
+  database.close();
+  const migrated = (path: string) => {
+    const check = new DatabaseSync(path, { readOnly: true });
+    try {
+      return (
+        check.prepare("SELECT COUNT(*) count FROM schema_migrations WHERE id = '008_chat'").get()
+          ?.count === 1
+      );
+    } finally {
+      check.close();
+    }
+  };
+
+  // Without the captain nothing is offered or updated.
+  const reader = await serve(t, workspace);
+  assert.equal((await get(reader.url, "/api/chats")).body.updatable, false);
+  const readOnly = await send(reader.url, "/api/workspace/update", {});
+  assert.equal(readOnly.status, 403);
+
+  const server = await serve(t, workspace, "Ocomic");
+  assert.equal((await get(server.url, "/api/chats")).body.updatable, true);
+  const foreign = await send(server.url, "/api/workspace/update", {}, "https://evil.example");
+  assert.equal(foreign.status, 403);
+  assert.equal(migrated(join(workspace, "workspace.sqlite")), false, "nothing changed yet");
+
+  // Files that only start with the database name are kept in the copy.
+  writeFileSync(join(workspace, "workspace.sqlite-notes.txt"), "keep me");
+  const updated = await send(server.url, "/api/workspace/update", { language: "de" });
+  assert.equal(updated.status, 200, JSON.stringify(updated.body));
+  const backupPath = String(updated.body.backupPath);
+  assert.equal(dirname(backupPath), dirname(workspace));
+  assert.match(basename(backupPath), /^ws Sicherung \d{4}-\d{2}-\d{2} \d{2}-\d{2}$/);
+  assert.ok(existsSync(join(backupPath, "workspace.json")));
+  assert.ok(existsSync(join(backupPath, "workspace.sqlite-notes.txt")));
+  assert.ok(!existsSync(`${backupPath}.partial`));
+  assert.equal(migrated(join(backupPath, "workspace.sqlite")), false, "the copy is the old state");
+  assert.equal(migrated(join(workspace, "workspace.sqlite")), true);
+
+  const list = await get(server.url, "/api/chats");
+  assert.deepEqual(
+    [list.body.available, list.body.writable, list.body.updatable],
+    [true, true, false],
+  );
+  assert.equal((await send(server.url, "/api/chats/ship/messages", { text: "Hallo" })).status, 200);
+  const again = await send(server.url, "/api/workspace/update", {});
+  assert.equal(again.status, 409);
+  assert.equal(again.body.error, "UpToDate");
 });

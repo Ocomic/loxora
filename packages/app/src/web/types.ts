@@ -219,6 +219,8 @@ export interface ChatList {
   /** False on a workspace without migration 008_chat: the bridge is read-only. */
   readonly available: boolean;
   readonly writable: boolean;
+  /** The logbook lacks 008_chat and the captain may update it (Milestone 15 Amendment 1). */
+  readonly updatable: boolean;
   readonly decisions: { readonly address: string; readonly count: number };
   readonly channels: readonly ChatSummary[];
   readonly direct: readonly ChatSummary[];

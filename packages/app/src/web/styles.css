@@ -1819,3 +1819,13 @@ a.button {
     display: none;
   }
 }
+
+/* Updating an older logbook from the bridge (Milestone 15 Amendment 1). */
+.logbook-update {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.logbook-update p {
+  margin: 0;
+}

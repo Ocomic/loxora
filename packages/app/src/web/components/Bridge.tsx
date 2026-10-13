@@ -330,6 +330,7 @@ function ChatPane({
   const direct = chat.kind === "direct";
   const canThread = direct || chat.kind === "topic";
   const { open: guide, steps } = useFirstMission();
+  const [backup, setBackup] = useState<string | null>(null);
   return (
     <>
       <header className={`chat-header chat-header-${chat.kind}`}>
@@ -352,7 +353,15 @@ function ChatPane({
         </button>
       </header>
       {list && !list.available ? (
-        <output className="bridge-note bridge-note-warning">{t.bridge.migration}</output>
+        <LogbookUpdate
+          updatable={list.updatable}
+          onUpdated={(path) => {
+            setBackup(path);
+            reload();
+          }}
+        />
+      ) : backup ? (
+        <output className="bridge-note">{t.bridge.updated(backup)}</output>
       ) : chat.kind === "decisions" ? (
         <p className="bridge-note bridge-note-alert">{t.bridge.decisionsNote}</p>
       ) : null}
@@ -403,6 +412,55 @@ function ChatPane({
         }}
       />
     </>
+  );
+}
+
+/**
+ * An older logbook without the bridge chat (Milestone 15 Amendment 1): the captain updates it
+ * with one click. The server writes a backup copy of the logbook folder first and says where.
+ */
+function LogbookUpdate({
+  updatable,
+  onUpdated,
+}: {
+  updatable: boolean;
+  onUpdated: (backupPath: string) => void;
+}) {
+  const t = useLabels();
+  const { language } = useLanguage();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const update = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await post<{ backupPath: string }>("/api/workspace/update", { language });
+      onUpdated(result.backupPath);
+    } catch (value) {
+      setError(t.bridge.failed(value instanceof Error ? value.message : String(value)));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="bridge-note bridge-note-warning logbook-update">
+      <p>{updatable ? t.bridge.updateNeeded : t.bridge.migration}</p>
+      {updatable ? (
+        <>
+          <p className="muted">{t.bridge.updateWhy}</p>
+          <div className="action-row">
+            <button type="button" className="button" disabled={busy} onClick={update}>
+              {busy ? t.bridge.updating : t.bridge.update}
+            </button>
+          </div>
+        </>
+      ) : null}
+      {error ? (
+        <p className="action-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

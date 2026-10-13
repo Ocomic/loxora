@@ -167,6 +167,8 @@ export class BridgeReader {
     return {
       available: this.context.available,
       writable: this.context.available && this.context.actor !== null,
+      // Milestone 15 Amendment 1: the captain can update an older logbook from the bridge.
+      updatable: !this.context.available && this.context.actor !== null,
       decisions: { address: DECISIONS_ADDRESS, count: (await this.openRequests()).length },
       channels: [
         {

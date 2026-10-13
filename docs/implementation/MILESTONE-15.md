@@ -150,7 +150,22 @@ These follow from Amendment 2 and ADR-007 but were not decided there. The decisi
 | Existing behavior is unchanged with `--workspace` | `npm run check`, existing tests |
 | Windows check: the bridge in both languages | recorded in the pull request |
 
+## Amendment 1 — Updating an older logbook from the bridge (October 13, 2026)
+
+Decided by Ocomic on October 13, 2026, after the Windows check: on a logbook created before the bridge chat, the hint to make a backup copy and run a `loxora` command was not understandable for a person who does not program. The hint becomes a button.
+
+**What changes**
+
+- On a workspace without `008_chat`, and when the app runs with the captain as actor, the bridge shows "Update logbook" instead of the CLI hint, with one sentence on why and that a backup copy comes first.
+- `POST /api/workspace/update` (`{ language? }`, request protection of the write API, captain only) first copies the whole logbook folder next to it, as "<folder> Sicherung <date time>" or "<folder> backup <date time>" in local time; the database is copied with SQLite `VACUUM INTO`, so the copy is consistent. Only when the copy is complete it applies the pending migrations, the same ones every CLI command applies. It answers `{ updated, backupPath }`, which the bridge shows; 409 `UpToDate` when nothing is pending; 403 without the captain.
+- The rule of Milestones 11 to 13 still holds otherwise: the app never migrates on its own, on reads, or on other writes. Without a captain the bridge keeps the CLI hint.
+
+**Direction recorded with this amendment**
+
+The decision owner wants the app to make such changes itself in the long run, guided by Xora and without programming knowledge, so people can adapt Loxora to their needs. This amendment is a first step: a change to the logbook only after the person's click and with a backup copy. Broader self-changes are recorded in `docs/planning/open-questions.md` and need their own RFC.
+
 ## Knowledge, navigation, and documentation effects
 
 - New: this document. RFC-011 links it from its Decision section and Amendment 2; ADR-007 links it from its Implementation section.
 - On implementation: the documents listed in section 8.
+- Amendment 1: `APP.md` (the update route and the bridge button) and `open-questions.md`.
