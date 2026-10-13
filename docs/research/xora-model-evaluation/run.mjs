@@ -31,6 +31,7 @@ const { values: options } = parseArgs({
     out: { type: "string", default: "var/xora-eval" },
     timeout: { type: "string", default: "120" },
     "dry-run": { type: "boolean", default: false },
+    "wait-ready": { type: "boolean", default: false },
   },
 });
 
@@ -357,12 +358,12 @@ function includes(haystack, needle) {
   return typeof haystack === "string" && haystack.toLowerCase().includes(needle.toLowerCase());
 }
 
-/** Rough language guess from frequent words; null when the text is too short to tell. */
+/** Rough language guess from frequent words; null when it cannot tell. */
 function guessLanguage(text) {
   const found = lowerWords(text);
   const de = found.filter((word) => STOP_WORDS.de.includes(word)).length;
   const en = found.filter((word) => STOP_WORDS.en.includes(word)).length;
-  if (de + en < 2 || de === en) return null;
+  if (de === en) return null;
   return de > en ? "de" : "en";
 }
 
@@ -403,7 +404,8 @@ function check(testCase, message) {
   }
   checks.hasText = text.length > 0;
   const language = text ? guessLanguage(text) : null;
-  checks.language = language === null ? null : language === testCase.language;
+  // A reply whose language cannot be told counts as failed, not as passed.
+  checks.language = text ? language === testCase.language : null;
   checks.length = text ? lowerWords(text).length <= MAX_WORDS : null;
   const terms = lowerWords(text).filter((word) => TECHNICAL_TERMS.includes(word));
   checks.noTechnicalTerms = text ? terms.length === 0 : null;
@@ -426,6 +428,8 @@ async function ask(body) {
   try {
     const response = await fetch(new URL("/v1/chat/completions", options.url), {
       method: "POST",
+      // A redirect could send the sentences to another host; never follow one.
+      redirect: "error",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
       signal: controller.signal,
@@ -479,6 +483,8 @@ function report(meta, results) {
     `- Date: ${meta.date}`,
     `- Runtime: ${meta.url}, model \`${meta.model}\`, temperature ${meta.temperature}, ${meta.runs} run(s) per case`,
     `- Cases: ${meta.caseCount}, answers: ${answered.length}, errors: ${results.length - answered.length}`,
+    `- Cold start until the runtime was ready: ${meta.readyMs === null ? "not measured (run with --wait-ready, then start the runtime)" : `${meta.readyMs} ms`}`,
+    "- Response times below are measured with the model already loaded.",
     "",
     "## Summary",
     "",
@@ -534,6 +540,25 @@ function report(meta, results) {
   return `${lines.join("\n")}\n`;
 }
 
+/**
+ * Polls the runtime's health route until it answers, for at most ten minutes. Started before
+ * the runtime, this measures the cold start that the wait before script mode must cover.
+ */
+async function waitReady() {
+  const started = performance.now();
+  const deadline = started + 600_000;
+  while (performance.now() < deadline) {
+    try {
+      const response = await fetch(new URL("/health", options.url), { redirect: "error" });
+      if (response.ok) return Math.round(performance.now() - started);
+    } catch {
+      // Not listening yet.
+    }
+    await new Promise((done) => setTimeout(done, 250));
+  }
+  throw new Error("The runtime did not become ready within ten minutes.");
+}
+
 function assertLocal(url) {
   const host = new URL(url).hostname;
   if (!["127.0.0.1", "localhost", "[::1]", "::1"].includes(host)) {
@@ -545,6 +570,10 @@ async function main() {
   const file = JSON.parse(await readFile(join(HERE, "cases.json"), "utf8"));
   const wanted = options.cases ? new Set(options.cases.split(",")) : null;
   const cases = file.cases.filter((testCase) => !wanted || wanted.has(testCase.id));
+  const unknown = [...(wanted ?? [])].filter(
+    (id) => !file.cases.some((testCase) => testCase.id === id),
+  );
+  if (unknown.length > 0) throw new Error(`Unknown case id(s): ${unknown.join(", ")}`);
   if (options["dry-run"]) {
     for (const testCase of cases) {
       console.log(`--- ${testCase.id}`);
@@ -553,6 +582,7 @@ async function main() {
     return;
   }
   assertLocal(options.url);
+  const readyMs = options["wait-ready"] ? await waitReady() : null;
   const runs = Math.max(1, Number(options.runs));
   const results = [];
   for (let run = 1; run <= runs; run += 1) {
@@ -581,6 +611,7 @@ async function main() {
     temperature: Number(options.temperature),
     runs,
     caseCount: cases.length,
+    readyMs,
     date,
   };
   const outDir = resolve(options.out);
