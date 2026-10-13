@@ -332,6 +332,11 @@ export interface Labels {
     readonly archivedNote: string;
     readonly decisionsNote: string;
     readonly migration: string;
+    readonly updateNeeded: string;
+    readonly updateWhy: string;
+    readonly update: string;
+    readonly updating: string;
+    readonly updated: (backupPath: string) => string;
     readonly empty: Record<ChatKind, string>;
     readonly emptyThread: string;
     readonly events: Record<
@@ -789,6 +794,13 @@ const de: Labels = {
       "Rot heißt: Hier wartet etwas auf dich. Jeder Eintrag führt zum passenden Thread.",
     migration:
       "Das Logbuch ist noch nicht auf dem Stand für den Brücken-Chat. Mach eine Sicherungskopie des Logbuch-Ordners und führe dann einmal einen beliebigen loxora-Befehl aus. Bis dahin ist die Brücke nur lesbar.",
+    updateNeeded:
+      "Dein Logbuch stammt aus einer älteren Version. Damit du hier schreiben kannst, muss es einmal aktualisiert werden. Bis dahin ist die Brücke nur lesbar.",
+    updateWhy:
+      "Vorher lege ich automatisch eine Sicherungskopie des ganzen Logbuch-Ordners daneben an. Geht etwas schief, ist nichts verloren.",
+    update: "Logbuch aktualisieren",
+    updating: "Sicherungskopie und Aktualisierung laufen …",
+    updated: (path) => `Das Logbuch ist aktualisiert. Die Sicherungskopie liegt unter: ${path}`,
     empty: {
       ship: "Noch keine Meldungen. Der Bordcomputer meldet hier, was an Bord passiert.",
       project: "Noch keine Missionen in diesem Projekt.",
@@ -1256,6 +1268,13 @@ const en: Labels = {
       "Red means: something here waits for you. Each entry takes you to the right thread.",
     migration:
       "The logbook is not up to date for the bridge chat yet. Make a backup copy of the logbook folder, then run any loxora command once. Until then the bridge is read-only.",
+    updateNeeded:
+      "Your logbook comes from an older version. It needs a one-time update before you can write here. Until then the bridge is read-only.",
+    updateWhy:
+      "First I automatically put a backup copy of the whole logbook folder next to it. If anything goes wrong, nothing is lost.",
+    update: "Update logbook",
+    updating: "Backup and update in progress …",
+    updated: (path) => `The logbook is updated. The backup copy is at: ${path}`,
     empty: {
       ship: "No reports yet. The ship computer reports here what happens on board.",
       project: "No missions in this project yet.",

@@ -24,6 +24,7 @@ import {
   StaleMissionError,
 } from "@loxora/core";
 import { openSqliteReadOnlyStore, openSqliteWritableStore } from "@loxora/sqlite";
+import { UpdateRejected, updateLogbook } from "./update.js";
 import { PROMPT_KEYS, PROMPTS, type PromptKey } from "../shared/conversation.js";
 import {
   BridgeReader,
@@ -518,16 +519,19 @@ async function api(
     const setupRoute = SETUP_ROUTES.find((route) => route === url.pathname);
     const assistantRoute = ASSISTANT_ROUTES.find((route) => route === url.pathname);
     const chatRoute = chatWriteRoute(url.pathname);
+    const updateRoute = url.pathname === UPDATE_ROUTE;
     if (
       request.method !== "POST" ||
-      (!(write && action) && !setupRoute && !assistantRoute && !chatRoute)
+      (!(write && action) && !setupRoute && !assistantRoute && !chatRoute && !updateRoute)
     ) {
       return json(response, 405, {
         error: "MethodNotAllowed",
-        message: "Only the Mission, chat, setup, assistant, and settings write routes accept POST.",
+        message:
+          "Only the Mission, chat, setup, assistant, settings, and logbook update write routes accept POST.",
       });
     }
     const body = await readWriteRequest(request, context);
+    if (updateRoute) return json(response, 200, await updateWrite(context, body));
     if (chatRoute) return json(response, 200, await chatWrite(context, chatRoute, body));
     if (setupRoute) return json(response, 200, await setupWrite(context, setupRoute, body));
     if (assistantRoute) {
@@ -762,6 +766,35 @@ const SETUP_ROUTES = [
 ] as const;
 
 const ASSISTANT_ROUTES = ["/api/assistant/message", "/api/assistant/confirm"] as const;
+
+const UPDATE_ROUTE = "/api/workspace/update";
+
+/**
+ * Updates an older logbook after the captain's click (Milestone 15 Amendment 1): a backup
+ * copy of the logbook folder first, then the pending migrations. Never runs on its own.
+ */
+async function updateWrite(context: ApiContext, body: Record<string, unknown>) {
+  if (!context.actor) {
+    throw new RequestRejected(
+      403,
+      "ReadOnly",
+      "The app runs read-only; only the captain updates the logbook.",
+    );
+  }
+  const directory = requireWorkspace(context);
+  const language = requestLanguage(context, body);
+  try {
+    return await context.serial(async () => ({
+      updated: true,
+      ...(await updateLogbook(directory, language)),
+    }));
+  } catch (error) {
+    if (error instanceof UpdateRejected) {
+      throw new RequestRejected(error.status, error.code, error.message);
+    }
+    throw error;
+  }
+}
 
 async function setupWrite(
   context: ApiContext,

@@ -239,7 +239,7 @@ test.describe("English", () => {
     await expect(page.getByText("Online · script mode")).toBeHidden();
   });
 
-  test("without migration 008_chat the bridge is read-only with the migration hint", async ({
+  test("an older logbook is read-only until the captain updates it after a backup copy", async ({
     page,
   }) => {
     const database = new DatabaseSync(join(workspace, "workspace.sqlite"));
@@ -247,9 +247,16 @@ test.describe("English", () => {
       DROP TABLE chats; DELETE FROM schema_migrations WHERE id = '008_chat';`);
     database.close();
     await page.goto(`${url}/bridge`);
-    await expect(page.getByText(/not up to date for the bridge chat/)).toBeVisible();
+    await expect(page.getByText(/comes from an older version/)).toBeVisible();
     await expect(page.getByText("Project “Spiel” created.")).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message" })).toHaveCount(0);
     await expect(side(page).getByRole("button", { name: "New channel" })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Update logbook" }).click();
+    await expect(page.getByText(/The backup copy is at: .*ws backup \d{4}-/)).toBeVisible();
+    await page.getByRole("textbox", { name: "Message" }).fill("Back on board");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(page.locator(".bridge-chat").getByText("Back on board")).toBeVisible();
+    await expect(side(page).getByRole("button", { name: "New channel" })).toBeVisible();
   });
 });

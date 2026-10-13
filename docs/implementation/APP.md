@@ -14,7 +14,7 @@ npm run app -- --actor <your-id>              # write mode as a human workspace 
 - **Workspace:**
   - With `--workspace` or `LOXORA_WORKSPACE`, the app uses that workspace and never runs the setup (Milestone 12 behavior).
   - Otherwise it reads the app settings file on every request. While the file has no workspace, or its folder holds none, the app shows the setup at `/setup`. As soon as the workspace exists, the bridge opens.
-- **Never migrates.** If the workspace needs a newer migration, the UI says so. Back up by copying the workspace directory, then run any `loxora` command once.
+- **Never migrates on its own.** If the workspace needs a newer migration, the UI says so. Back up by copying the workspace directory, then run any `loxora` command once. Since Milestone 15 Amendment 1 the captain can also do this from the bridge with "Update logbook" (below).
 - **Human actor** (RFC-010 section 9), in this order:
   1. `--actor`: the app refuses to start if the actor is an `agent:*` id or not listed in `workspace.json` `reviewers`;
   2. the `captain` from the settings file, checked on every request in the same way (Milestone 13).
@@ -133,7 +133,7 @@ The bridge (`/bridge`, `/bridge/:address?thread=&message=`) shows stored message
 
 - **Derived, never stored** (ADR-007 section 3): the ship channel reports projects created, Missions created, started, waiting for the captain (not for a provider limit), completed, failed, and cancelled, and knowledge accepted; a project channel has one card per Mission at its last activity; the decisions channel has one entry per open Attention Request. The entry texts are in `labels.ts`.
 - **Writers:** only the captain (a workspace reviewer acting as the app's actor) and Xora; Core enforces it (ADR-007 section 4). Writes use the request protection of the write API. Without an actor, chat writes answer 403 `ReadOnly`.
-- **Without `008_chat`** the bridge is read-only: reads show derived entries, writes answer 503 with the migration hint, and the app does not migrate. Mission Control keeps requiring only `007_missions`.
+- **Without `008_chat`** the bridge is read-only: reads show derived entries, writes answer 503 with the migration hint, and the app does not migrate on its own. Mission Control keeps requiring only `007_missions`. `GET /api/chats` then reports `updatable: true` when the app runs with the captain, and the bridge offers "Update logbook" (Milestone 15 Amendment 1): `POST /api/workspace/update` with `{ language? }` copies the logbook folder next to it ("<folder> Sicherung <date time>" or "<folder> backup <date time>", local time; the database via SQLite `VACUUM INTO`), then applies the pending migrations as any CLI command does, and answers `{ updated: true, backupPath }`. 409 `UpToDate` when nothing is pending, 403 without the captain or from another origin.
 - **Status codes:** 400 for a message Core refuses (empty, over 4,000 characters, an archived channel, a topic thread in a project channel, an unknown linked message, the decisions channel); 404 for an unknown chat or message.
 - **Polling:** the side list and the open chat poll every 5 seconds; there is no push.
 
