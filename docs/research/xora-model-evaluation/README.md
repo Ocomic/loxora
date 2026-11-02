@@ -36,6 +36,7 @@ The actions (`place_answer`, `propose_project`, `propose_first_mission`, `propos
 
 - `cases.json`: the 33 cases (18 German, 15 English): setup answers, plan descriptions, unclear answers, mixed languages, the first Mission, and requests Xora must decline.
 - `run.mjs`: the script. Node 24, no dependencies.
+- `FINDINGS.md`: results per model and prompt version.
 
 ## Running it on Windows
 
@@ -62,4 +63,4 @@ Options: `--runs 3` (default; each case runs three times to show how stable answ
 
 ## After the evaluation
 
-The results and the decision owner's ratings go into a short findings note (for example in `open-questions.md` or the runtime ADR). They feed the ADR for the bundled runtime (RFC-011 open question 2) and the C3 model decision.
+The results and the decision owner's ratings go into `FINDINGS.md`. They feed the ADR for the bundled runtime (RFC-011 open question 2) and the C3 model decision.
