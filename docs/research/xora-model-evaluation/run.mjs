@@ -417,9 +417,10 @@ function check(testCase, message) {
 
   const passed = Object.values(checks).every((value) => value !== false);
   // Whether the app could show a fixed sentence next to an action is still open, so the
-  // report also counts the answers that pass everything except the extra sentence.
+  // report also counts the answers that pass everything except the extra sentence. Without
+  // an action there is nothing to show a fixed sentence next to, so text stays required.
   const passedWithoutText = Object.entries(checks).every(
-    ([key, value]) => key === "hasText" || value !== false,
+    ([key, value]) => (key === "hasText" && calls.length > 0) || value !== false,
   );
   return {
     checks,
