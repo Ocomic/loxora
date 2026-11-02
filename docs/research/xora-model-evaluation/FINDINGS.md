@@ -2,6 +2,26 @@
 
 Results of the Xora model evaluation (RFC-011 section 10, stage 3), newest first. Each entry names the prompt version (`PROMPT_VERSION` in `run.mjs`) so runs stay comparable. The full reports stay on the decision owner's machine (`var/xora-eval/`).
 
+## Gemma 4 E2B and Qwen3.5-2B, prompt version 3 (November 2, 2026)
+
+Same PC and setup, temperature 0.2, 33 cases, 3 runs each (99 answers).
+
+| Check | Gemma 4 E2B, v2 → v3 | Qwen3.5-2B, v2 → v3 |
+|---|---|---|
+| All automatic checks | 41 → **42**/99 | 29 → 34/99 |
+| All except the extra sentence | 41 → 57/99 | 62 → 62/99 |
+| Right action (or none) | 43 → 59/99 | 66 → **69**/99 |
+| Wrote a sentence to the person | 99 → 84/99 | 66 → 71/99 |
+| Asked back when unclear | **6/6** | 3/6 |
+| Response time, median | 217 ms | 273 ms |
+| Cold start | **17.5 s** | not measured (the server was already running) |
+
+- **Gemma** now proposes projects in German too (game 3 of 3, club app 2 of 3), still declines the limit cases cleanly, and stays in role. In the German setup steps it still writes the choice as text ("fits: Das passt …") instead of calling `place_answer`. It never proposes the goal in German.
+- **Qwen3.5-2B** uses actions most often but sometimes refuses the first Mission ("I cannot start the mission"), names "ChatGPT" and "Python" in replies, and asks back in only half of the unclear cases.
+- **Fixed choices do not need the model.** The setup steps with fixed answers show buttons anyway, so the app can record a tapped answer, or match a typed one, itself. The model matters most for free sentences: describing a plan, wording the goal, asking back and declining. Gemma is clearly better at those.
+
+**Decision (decision owner, November 2, 2026):** Gemma 4 E2B (`unsloth/gemma-4-E2B-it-GGUF:Q4_K_M`) is the working candidate for Xora. This is not the final C3 model decision. The license check stays deferred until there are real users. Next: the runtime ADR (RFC-011 open question 2), and in the Xora milestone the app records fixed setup choices itself.
+
 ## Gemma 4 E2B, Q4_K_M, prompt version 2 (November 2, 2026)
 
 Same PC and setup, `unsloth/gemma-4-E2B-it-GGUF:Q4_K_M`, temperature 0.2, 33 cases, 3 runs each (99 answers). Compared with Qwen3.5-2B at 0.2:
