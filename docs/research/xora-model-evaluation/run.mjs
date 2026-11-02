@@ -19,6 +19,8 @@ import { parseArgs } from "node:util";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MAX_WORDS = 60;
+/** Raised whenever the system prompt changes, so reports stay comparable. */
+const PROMPT_VERSION = 2;
 
 const { values: options } = parseArgs({
   options: {
@@ -106,8 +108,9 @@ const PERSONA = {
     "- Keine Begriffe aus der Technik wie Server, Datenbank, Ordnerstruktur oder Programmname.",
     "- Erfinde nichts über das Projekt. Wenn etwas unklar ist, frag nach statt zu raten.",
     "- Du hast kein Internet, öffnest keine Dateien außerhalb des Logbuchs, installierst nichts und änderst nichts an der Oberfläche. Lehne solche Bitten freundlich ab.",
-    "- Du schlägst vor, der Kapitän bestätigt. Wissen übernimmt nur der Kapitän.",
-    "- Nutze höchstens eine Aktion pro Antwort und nur, wenn die Antwort der Person eindeutig ist. Schreib immer zusätzlich einen kurzen Satz an die Person.",
+    "- Eine Aktion ist nur ein Vorschlag: Die Person sieht ihn als Karte und bestätigt ihn dort selbst. Nutze deshalb die passende Aktion, sobald die Antwort klar ist, statt nur darüber zu schreiben. Wissen übernimmt nur der Kapitän.",
+    "- Nutze höchstens eine Aktion pro Antwort. Schreib immer zusätzlich einen kurzen Satz an die Person.",
+    "- Nenne keine Programme, Firmen oder Sprachmodelle, auch nicht als Beispiel.",
   ],
   en: [
     "You are Xora, the first officer. {captain} is the captain of the ship.",
@@ -118,8 +121,9 @@ const PERSONA = {
     "- No technical terms such as server, database, folder structure, or program names.",
     "- Never invent anything about the project. When something is unclear, ask instead of guessing.",
     "- You have no internet, open no files outside the logbook, install nothing, and change nothing in the interface. Decline such requests kindly.",
-    "- You propose, the captain confirms. Only the captain accepts knowledge.",
-    "- Use at most one action per answer, and only when the person's answer is clear. Always also write one short sentence to the person.",
+    "- An action is only a proposal: the person sees it as a card and confirms it there. So use the fitting action as soon as the answer is clear, instead of only writing about it. Only the captain accepts knowledge.",
+    "- Use at most one action per answer. Always also write one short sentence to the person.",
+    "- Never name programs, companies, or language models, not even as examples.",
   ],
 };
 
@@ -201,10 +205,10 @@ const SITUATIONS = {
   describe: {
     tools: ["propose_project"],
     de: {
-      text: "Einrichtung, Schritt Projekt. Die Person legt ein neues Projekt an. Du hast sie gebeten, ihr Vorhaben in ein oder zwei Sätzen zu beschreiben. Schlag danach einen kurzen Projektnamen vor.",
+      text: "Einrichtung, Schritt Projekt. Die Person legt ein neues Projekt an. Du hast sie gebeten, ihr Vorhaben in ein oder zwei Sätzen zu beschreiben. Schlag dann mit der Aktion einen kurzen Projektnamen vor.",
     },
     en: {
-      text: "Setup, step Project. The person is starting a new project. You asked them to describe their plan in one or two sentences. Then suggest a short project name.",
+      text: "Setup, step Project. The person is starting a new project. You asked them to describe their plan in one or two sentences. Then propose it with the action, with a short project name.",
     },
   },
   confirm: {
@@ -412,9 +416,15 @@ function check(testCase, message) {
   checks.asks = expect.asks ? text.includes("?") : null;
 
   const passed = Object.values(checks).every((value) => value !== false);
+  // Whether the app could show a fixed sentence next to an action is still open, so the
+  // report also counts the answers that pass everything except the extra sentence.
+  const passedWithoutText = Object.entries(checks).every(
+    ([key, value]) => key === "hasText" || value !== false,
+  );
   return {
     checks,
     passed,
+    passedWithoutText,
     call: call ? { name: call.function?.name, arguments: args } : null,
     text,
     terms,
@@ -481,7 +491,7 @@ function report(meta, results) {
     `# Xora model evaluation: ${meta.label}`,
     "",
     `- Date: ${meta.date}`,
-    `- Runtime: ${meta.url}, model \`${meta.model}\`, temperature ${meta.temperature}, ${meta.runs} run(s) per case`,
+    `- Runtime: ${meta.url}, model \`${meta.model}\`, temperature ${meta.temperature}, ${meta.runs} run(s) per case, prompt version ${meta.promptVersion}`,
     `- Cases: ${meta.caseCount}, answers: ${answered.length}, errors: ${results.length - answered.length}`,
     `- Cold start until the runtime was ready: ${meta.readyMs === null ? "not measured (run with --wait-ready, then start the runtime)" : `${meta.readyMs} ms`}`,
     "- Response times below are measured with the model already loaded.",
@@ -491,6 +501,7 @@ function report(meta, results) {
     "| Check | Passed |",
     "|---|---|",
     `| All automatic checks | ${passed}/${answered.length} |`,
+    `| All except the extra sentence | ${answered.filter((result) => result.passedWithoutText).length}/${answered.length} |`,
     `| Right action (or none) | ${rate(answered, "tool")} |`,
     `| Right action details | ${rate(answered, "arguments")} |`,
     `| Wrote a sentence to the person | ${rate(answered, "hasText")} |`,
@@ -611,6 +622,7 @@ async function main() {
     temperature: Number(options.temperature),
     runs,
     caseCount: cases.length,
+    promptVersion: PROMPT_VERSION,
     readyMs,
     date,
   };
