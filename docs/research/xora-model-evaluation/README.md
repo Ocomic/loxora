@@ -47,7 +47,7 @@ The actions (`place_answer`, `propose_project`, `propose_first_mission`, `propos
    .\llama-server.exe -hf unsloth/Qwen3.5-2B-GGUF:Q4_K_M --jinja --host 127.0.0.1 --port 8080 -c 8192
    ```
 
-   `-hf` downloads the model file from Hugging Face on the first start; check the repository name there. `--jinja` is needed for actions (tool calls).
+   `-hf` downloads the model file from Hugging Face on the first start; check the repository name there. `--jinja` is needed for actions (tool calls). Some model repositories also bring an image part, and the server then warns about image tokens; the test sends only text, so add `--no-mmproj` to skip that part and save memory.
 3. In a second window, from the repository folder:
 
    ```powershell

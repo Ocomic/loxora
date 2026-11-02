@@ -2,6 +2,27 @@
 
 Results of the Xora model evaluation (RFC-011 section 10, stage 3), newest first. Each entry names the prompt version (`PROMPT_VERSION` in `run.mjs`) so runs stay comparable. The full reports stay on the decision owner's machine (`var/xora-eval/`).
 
+## Gemma 4 E2B, Q4_K_M, prompt version 2 (November 2, 2026)
+
+Same PC and setup, `unsloth/gemma-4-E2B-it-GGUF:Q4_K_M`, temperature 0.2, 33 cases, 3 runs each (99 answers). Compared with Qwen3.5-2B at 0.2:
+
+| Check | Gemma 4 E2B | Qwen3.5-2B |
+|---|---|---|
+| All automatic checks | **41/99** | 29/99 |
+| All except the extra sentence | 41/99 | **62/99** |
+| Right action (or none) | 43/99 | **66/99** |
+| Wrote a sentence to the person | **99/99** | 66/99 |
+| Asked back when unclear | **6/6** | 3/6 |
+| All checks, German / English | 12/54 / 29/45 | 14/54 / 15/45 |
+| Response time, median | 240 ms (155 tokens per second) | 258 ms |
+| Answers with more than one action call | 0/99 | not counted yet |
+
+- **Best conversation so far.** Every answer has a sentence in the right language, it asks back in all unclear cases, declines the limit cases without any action, and stays in role. Its German is clean, with one slip ("Was soll dieses Schiff nennen?").
+- **It rarely acts in German.** In the German setup steps it almost never called `place_answer` and wrote "Der Vorschlag Sternenwind ist notiert" instead. In English it acted more often (`propose_project` 3 of 3 for the blog, `propose_goal` 3 of 3). In the German description cases it asked for details instead of proposing.
+- **Cold start not measured:** the report shows 25 ms, so the server was already running when the script started.
+
+Changes for prompt version 3: each situation now ends with one sentence that says when to use the action and when to answer with text only. The description situation says that one or two sentences are enough for a proposal. Next: rerun Gemma 4 E2B and Qwen3.5-2B with prompt version 3.
+
 ## Qwen3.5-2B and Qwen3.5-4B, Q4_K_M, prompt version 2 (November 2, 2026)
 
 Same PC and setup, 33 cases, 3 runs each (99 answers), each model at temperature 0.7 and at 0.2.
