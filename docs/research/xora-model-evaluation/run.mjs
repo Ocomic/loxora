@@ -136,12 +136,12 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Schiff. Auf diesem Computer gibt es schon ein Schiff namens Nova. Du hast gefragt, ob die Person es öffnen oder ein neues anlegen möchte.",
-      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Auch eine Frage wie „Kann ich …?“ kann eine klare Antwort sein. Ist die Antwort unklar oder will die Person nur etwas wissen, antworte nur mit Text.",
       choices: { open: "das vorhandene Schiff öffnen", new: "ein neues Schiff anlegen" },
     },
     en: {
       text: "Setup, step Ship. This computer already has a ship called Nova. You asked whether the person wants to open it or create a new one.",
-      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. A question like “Can I …?” can still be a clear answer. If the answer is unclear or the person only wants to know something, answer with text only.",
       choices: { open: "open the existing ship", new: "create a new ship" },
     },
   },
@@ -149,7 +149,7 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Schiff. Du hast nach dem Namen des Schiffs gefragt und Nova, Aurora und Kepler vorgeschlagen.",
-      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Auch eine Frage wie „Kann ich …?“ kann eine klare Antwort sein. Ist die Antwort unklar oder will die Person nur etwas wissen, antworte nur mit Text.",
       choices: {
         nova: "der Vorschlag Nova",
         aurora: "der Vorschlag Aurora",
@@ -159,7 +159,7 @@ const SITUATIONS = {
     },
     en: {
       text: "Setup, step Ship. You asked for the ship's name and suggested Nova, Aurora, and Kepler.",
-      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. A question like “Can I …?” can still be a clear answer. If the answer is unclear or the person only wants to know something, answer with text only.",
       choices: {
         nova: "the suggestion Nova",
         aurora: "the suggestion Aurora",
@@ -172,7 +172,7 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Logbuch. Du hast vorgeschlagen, das Logbuch unter Dokumente › Loxora anzulegen, und gefragt, ob das passt.",
-      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Auch eine Frage wie „Kann ich …?“ kann eine klare Antwort sein. Ist die Antwort unklar oder will die Person nur etwas wissen, antworte nur mit Text.",
       choices: {
         fits: "der vorgeschlagene Ort passt",
         other: "die Person möchte einen anderen Ordner wählen, nennt aber keinen",
@@ -181,7 +181,7 @@ const SITUATIONS = {
     },
     en: {
       text: "Setup, step Logbook. You suggested creating the logbook under Documents › Loxora and asked whether that is fine.",
-      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. A question like “Can I …?” can still be a clear answer. If the answer is unclear or the person only wants to know something, answer with text only.",
       choices: {
         fits: "the suggested place is fine",
         other: "the person wants to choose another folder but names none",
@@ -193,7 +193,7 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Projekt. Du hast gefragt, ob die Person ein neues Projekt anlegen, ein bestehendes hinzufügen oder sich erst umsehen möchte.",
-      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Auch eine Frage wie „Kann ich …?“ kann eine klare Antwort sein. Ist die Antwort unklar oder will die Person nur etwas wissen, antworte nur mit Text.",
       choices: {
         new: "ein neues Projekt anlegen",
         existing: "ein bestehendes Projekt hinzufügen",
@@ -202,7 +202,7 @@ const SITUATIONS = {
     },
     en: {
       text: "Setup, step Project. You asked whether the person wants to start a new project, add an existing one, or look around first.",
-      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. A question like “Can I …?” can still be a clear answer. If the answer is unclear or the person only wants to know something, answer with text only.",
       choices: {
         new: "start a new project",
         existing: "add an existing project",
@@ -225,12 +225,12 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Projekt. Du hast das Projekt „Sternenhüpfer“ mit den Bereichen Ideen, Aufgaben und Entscheidungen vorgeschlagen und gefragt, ob du es so anlegen sollst.",
-      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Auch eine Frage wie „Kann ich …?“ kann eine klare Antwort sein. Ist die Antwort unklar oder will die Person nur etwas wissen, antworte nur mit Text.",
       choices: { create: "so anlegen", rename: "den Namen ändern" },
     },
     en: {
       text: "Setup, step Project. You proposed the project “Star Hopper” with the spaces Ideas, Tasks, and Decisions and asked whether to create it like this.",
-      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. A question like “Can I …?” can still be a clear answer. If the answer is unclear or the person only wants to know something, answer with text only.",
       choices: { create: "create it like this", rename: "change the name" },
     },
   },
@@ -238,12 +238,12 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, letzter Schritt. Du hast die Brücke, Missionen und die Crew erklärt und angeboten, auf die Brücke zu gehen.",
-      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Auch eine Frage wie „Kann ich …?“ kann eine klare Antwort sein. Ist die Antwort unklar oder will die Person nur etwas wissen, antworte nur mit Text.",
       choices: { toBridge: "auf die Brücke gehen" },
     },
     en: {
       text: "Setup, last step. You explained the bridge, Missions, and the crew and offered to go to the bridge.",
-      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. A question like “Can I …?” can still be a clear answer. If the answer is unclear or the person only wants to know something, answer with text only.",
       choices: { toBridge: "go to the bridge" },
     },
   },
