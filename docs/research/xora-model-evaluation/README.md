@@ -59,7 +59,7 @@ The actions (`place_answer`, `propose_project`, `propose_first_mission`, `propos
 
 The report lands in `var/xora-eval/` (ignored by Git) as Markdown and JSON. Note the computer (processor, memory, graphics card) and the memory the server used, from the Task Manager, next to the report.
 
-Options: `--runs 3` (default; each case runs three times to show how stable answers are), `--temperature 0.7`, `--cases id1,id2`, `--url http://127.0.0.1:8080`, `--out <folder>`, `--timeout 120` (seconds), `--dry-run` (prints the requests without a server), `--wait-ready` (measures the cold start). Unknown case ids stop the script. The script refuses a runtime that is not on this computer and never follows a redirect, so no sentence leaves the machine.
+Options: `--runs 3` (default; each case runs three times to show how stable answers are), `--temperature 0.2` (default; 0.2 gave clearly better actions than 0.7, see FINDINGS.md), `--cases id1,id2`, `--url http://127.0.0.1:8080`, `--out <folder>`, `--timeout 120` (seconds), `--dry-run` (prints the requests without a server), `--wait-ready` (measures the cold start). Unknown case ids stop the script. The script refuses a runtime that is not on this computer and never follows a redirect, so no sentence leaves the machine.
 
 ## After the evaluation
 
