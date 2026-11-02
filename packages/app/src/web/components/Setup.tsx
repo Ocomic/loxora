@@ -10,7 +10,7 @@ import {
 import { ApiError, api, post } from "../api.js";
 import { useLabels, useLanguage } from "../i18n.js";
 import type { Labels } from "../labels.js";
-import type { AssistantReply, ProposedAction, SetupInfo, XoraState } from "../types.js";
+import type { AssistantReply, ProposedAction, SetupInfo, XoraInfo, XoraState } from "../types.js";
 import { XoraPortrait } from "./XoraPortrait.js";
 
 /**
@@ -55,6 +55,9 @@ const MAX_LENGTH: Partial<Record<PromptKey, number>> = {
 };
 
 /** The start screen stays this long; no pause when reduced motion is preferred. */
+/** How often the setup asks for Xora's model state. */
+const XORA_POLL_MS = 2_000;
+
 function bootDelay(): number {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : 900;
 }
@@ -82,8 +85,13 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
   const termsId = useId();
   const inputId = useId();
   const [info, setInfo] = useState(initial);
+  /**
+   * Xora's model state. The runtime starts and may fail in the background, so it is polled
+   * on its own instead of only with the setup answers (Milestone 16 section 5).
+   */
+  const [xora, setXora] = useState<XoraInfo | undefined>(initial.xora);
   /** The model label while Xora runs on a model; null in script mode. */
-  const model = info.xora?.state === "ready" ? (info.xora.modelLabel ?? null) : null;
+  const model = xora?.state === "ready" ? (xora.modelLabel ?? null) : null;
   const [booted, setBooted] = useState(false);
   const [messages, setMessages] = useState<readonly Message[]>([]);
   const [asking, setAsking] = useState<Asking | null>(null);
@@ -119,8 +127,27 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
   const update = (next: SetupInfo): SetupInfo => {
     const merged = { ...info, ...next };
     setInfo(merged);
+    if (next.xora) setXora(next.xora);
     return merged;
   };
+
+  useEffect(() => {
+    let active = true;
+    const timer = window.setInterval(() => {
+      api<XoraInfo>("/api/xora").then(
+        (next) => {
+          if (active) setXora(next);
+        },
+        () => {
+          // The start screen already reports an unreachable ship computer.
+        },
+      );
+    }, XORA_POLL_MS);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   /** Asks a prompt: Xora's message, the terms it introduces, and its answer buttons. */
   const ask = (
@@ -499,7 +526,7 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
           })}
         </ol>
         <div className="chat-log" ref={log}>
-          <Boot info={initial} />
+          <Boot info={initial} xora={xora} />
           <div className="chat-messages" role="log" aria-live="polite" aria-label={t.setup.title}>
             {messages.map((message) => (
               <div
@@ -571,14 +598,14 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
 }
 
 /** The start screen (section 2): one line per state the server reported. */
-function Boot({ info }: { info: SetupInfo }) {
+function Boot({ info, xora }: { info: SetupInfo; xora: XoraInfo | undefined }) {
   const t = useLabels();
   const boot = info.boot;
   if (!boot) return null;
   const lines: readonly (readonly [string, string])[] = [
     [t.setup.boot.shipComputer, t.setup.boot.ready],
     [t.setup.boot.logbook, boot.logbook === "found" ? t.setup.boot.found : t.setup.boot.notCreated],
-    [t.setup.boot.xora, xoraLine(t, boot.xora, info.xora?.modelLabel ?? null)],
+    [t.setup.boot.xora, xoraLine(t, xora?.state ?? boot.xora, xora?.modelLabel ?? null)],
   ];
   return (
     <section className="boot" aria-label={t.setup.connecting}>
