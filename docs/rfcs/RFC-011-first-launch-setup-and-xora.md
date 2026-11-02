@@ -1,8 +1,8 @@
 # RFC-011 — First Launch, Setup, and Xora
 
 **Status:** Accepted
-**Version:** 1.2 (Amendments 1 and 2)
-**Last Updated:** October 6, 2026
+**Version:** 1.3 (Amendments 1 and 2; Amendment 3 proposed)
+**Last Updated:** November 2, 2026
 **Decision Date:** October 4, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (new UI surfaces, new HTTP routes, workspace discovery, an assistant capability), with C3 parts that only the decision owner decides (section 11)
@@ -277,6 +277,8 @@ Amendment 1 (October 5, 2026) changes the shape of the setup to a conversation w
 
 Amendment 2 (October 6, 2026) replaces the 2D bridge visualizer (section 8 and milestone 4 in section 12) with the bridge as the ship's chat. It authorizes no code by itself: the chat needs an ADR for storing chat history and its own milestone document. The ADR is [ADR-007](../adr/ADR-007-bridge-chat-history-and-threads.md) (accepted October 10, 2026); the milestone document is [Milestone 15](../implementation/MILESTONE-15.md) (authorized October 10, 2026). Milestone 4, the bridge as the ship's chat, is implemented by Milestone 15 in three deliveries (pull requests #42, #44, and #45); the decision owner checked it on Windows on October 13, 2026. With it, open question 8 (bridge tutorial) is answered for script mode: the first Mission is pinned in Xora's direct chat as her guide and runs in its thread in the project channel. Open question 10 (chat history storage) is decided by ADR-007; 11 (group chats) and 12 (voice) remain open.
 
+Amendment 3 (proposed November 2, 2026) lets Xora introduce herself and her model at the start of the setup, has the app record fixed choices itself, and allows switching Xora to another local model or, as a proof of concept, to a cloud model. It is accepted only by the decision owner, because its cloud part is C3. Its runtime is proposed in [ADR-008](../adr/ADR-008-xora-model-runtime.md), which answers open questions 2 and 5. Together they authorize the milestone document for milestone 3 (Xora).
+
 ## Amendments
 
 ### Amendment 1 — Setup as a conversation with Xora (October 5, 2026)
@@ -347,3 +349,80 @@ Decided by Ocomic on October 6, 2026, after comparing two clickable prototypes o
   10. **Chat history storage.** Where messages are stored, whether they are part of the workspace export, how long they are kept, and how they are deleted. Decided in an ADR before the chat milestone.
   11. **Group chats.** When and how several agents take part in one chat. Needs a multi-agent RFC.
   12. **Voice.** Whether and how the captain steers by voice, and on which runtime.
+
+### Amendment 3 — Xora introduces herself and her model, fixed choices without the model, and switching the model (proposed November 2, 2026)
+
+**Status:** Proposed. The decision owner asked for it on November 2, 2026, after choosing Gemma 4 E2B as Xora's working candidate ([FINDINGS.md](../research/xora-model-evaluation/FINDINGS.md)). Section 3 is C3 (data leaves the machine) and only the decision owner accepts it. The runtime is proposed in [ADR-008](../adr/ADR-008-xora-model-runtime.md).
+
+**Why**
+
+- A small local model is good enough to explain Loxora and to help with questions, but weak at harder tasks. The person should know this from the start and know that a stronger model is possible, now or later, with Xora's help.
+- The evaluation showed that small models often fail to choose an action for fixed choices, while the setup shows buttons for those steps anyway. The app can record them itself.
+
+#### 1. Xora introduces herself and her model at the start
+
+- **First message.** After the start screen, Xora's first message says who she is and which model she runs on, before she asks for the name. Proposed text (final wording in the label module):
+  - German: „Hallo, ich bin Xora, deine Erste Offizierin. Ich erkläre dir Loxora, beantworte deine Fragen und schlage dir Schritte vor. Entscheiden tust immer du. Gerade arbeite ich mit Gemma 4 E2B, einem kleinen Modell, das direkt auf deinem Computer läuft. Es reicht, um dir alles zu zeigen. Für schwierigere Aufgaben ist ein stärkeres Modell besser. Du kannst gleich oder später wechseln, ich helfe dir dabei. Wie heißt du?“
+  - English: "Hello, I'm Xora, your first officer. I explain Loxora, answer your questions, and suggest next steps. You always decide. Right now I run on Gemma 4 E2B, a small model that runs right on your computer. It is enough to show you everything. For harder tasks a stronger model is better. You can switch now or later, and I'll help you. What's your name?"
+  - In script mode the second half says instead that Xora is not fully on board yet and answers with fixed texts, and why (no model configured, not enough free memory, or the start failed).
+  - The model name comes from the settings (ADR-008 section 7), never from the model's own answer.
+- **The choice right after the name.** A new setup step "Xora" follows the name, so the progress bar shows six steps: Name, Xora, Ship, Logbook, Project, Bridge. Xora asks: "Do you want to keep me like this for now, or choose a different model?" with three buttons:
+  - **"Keep it for now"** (default): nothing changes.
+  - **"Choose a different model"**: opens the model choice (below).
+  - **"What does that mean?"**: Xora explains in two or three sentences what a model is ("the part of me that understands and writes text"), what local and cloud mean, and that the setup works the same either way. The question is asked again afterwards.
+- **"Model" in the ship terms.** The ship terms list (Amendment 1) gets the term "model", explained in one sentence.
+- **Always reachable later.** Xora's details panel on the bridge shows her model and "Change model". Asking Xora (for example "Can you use a better model?") opens the same choice. In script mode the keyword list recognizes this request.
+
+#### 2. The app records fixed choices itself
+
+The rule for every setup step with answer buttons (Milestone 14 section 6), when a model runs:
+
+1. A **tapped button** is recorded directly. The model is not asked.
+2. A **typed answer** is placed with the keyword list first. If it fits exactly one button, the app records it.
+3. If the keyword list cannot place it, the app asks the model one narrow question: the only allowed action is `place_answer`, whose value must be one of this step's buttons or "unclear". The app checks the value against the buttons. It records only a valid button; on "unclear", an invalid value, a timeout, or no model, Xora asks back and shows the buttons again.
+4. **Typed values are never rewritten by the model:** the name, a typed ship name, and a folder path are stored exactly as typed.
+5. **The sentence next to a recorded answer or a confirmation card is a fixed text** from the label module, not written by the model. (The evaluation showed that small models often leave it out.)
+
+The model is used where free text matters: turning the plan description into a project proposal (name and purpose; the knowledge spaces still come from the goal templates), answering questions in the input bar, asking back, declining requests outside her limits, and explaining ship terms and Loxora. Confirmation cards (section 6) are unchanged: nothing is written before the person confirms.
+
+#### 3. Choosing a different model
+
+"Choose a different model" offers:
+
+| Choice | What happens | In this amendment |
+|---|---|---|
+| **Another local model** | The person names a model file (`.gguf`) on this computer, or a local model program that already runs (ADR-008, attached mode). Xora restarts on it; while it loads she is in script mode. | yes |
+| **A model recommended for this computer** | After the hardware check, Xora recommends a larger tested local model and downloads it with the person's consent. | no: the download is C3 and follows with the installer and the hardware check |
+| **A cloud model (for example Claude or GPT)** | Xora runs on a provider's model over the internet. | only as the proof of concept below |
+| **Later** | Xora says where to change it later (her details panel, or simply asking her). | yes |
+
+Every change is shown on a confirmation card and written to the settings file only after confirmation. If the new model does not start or answer, Xora says so and goes back to the previous model.
+
+**Cloud models as a proof of concept (C3, decided by the decision owner only)**
+
+The decision owner wants to try Xora on Claude or GPT. Allowed only under these limits:
+
+- **Opt-in and visible.** The cloud choice appears only when the app was started with a provider and an API key in the window's environment (`LOXORA_XORA_PROVIDER`, `LOXORA_XORA_API_KEY`; ADR-008 section 6). Otherwise the choice says that cloud models come in a later version.
+- **Consent card.** Before switching, a card names the provider, says what leaves the computer (Xora's conversation in the setup and in her chats, the setup answers she uses, and the ship and captain names), says that the provider may charge for it, and offers "Switch" and "Stay local". In this amendment Xora reads no project content (section 6), so no logbook content is sent.
+- **Always visible while active.** Xora's status line shows "Online · Cloud · <provider>" instead of "Online · local".
+- **Switching back** to the local model is one button in Xora's details panel and always possible.
+- **No key in files.** Loxora never writes the API key to the settings file, the logbook, or a log.
+- **Providers in the proof of concept:** one OpenAI-compatible provider and Anthropic. Whether Anthropic is reached through its own interface or a compatible route is decided in the milestone document.
+- **Comparable.** The evaluation script gets an explicit `--allow-cloud` option, so cloud models can run the same 33 cases. The cases are invented sentences without personal data.
+- **Connecting through a coding tool ("harness").** Using an installed coding agent (for example Claude Code or Codex) with the person's own subscription instead of an API key is tried only as an experiment in the evaluation script, not in the app. The provider's terms for using a personal subscription from another product, tool calls through the tool's own system, and its start time are checked first.
+- **Not included:** a cloud model as the default, storing keys, paid features, cloud compute, and sending project content.
+
+#### 4. What stays
+
+- Script mode, the confirmation cards, Xora's rights and limits (section 6), the settings file without secrets, and the local model as the default.
+- Sections 1 to 11 except the non-goal "Model upgrade, cloud models": switching to another local model is now in scope, and a cloud model only as the proof of concept above. Downloads after installation stay out.
+
+#### 5. Milestone
+
+Milestone 3 (Xora) in section 12 gets its milestone document after this amendment and ADR-008 are accepted. It covers ADR-008, sections 1 to 3 of this amendment, and the decision owner's Windows check with Gemma 4 E2B. The cloud proof of concept is its last delivery, so the local part does not wait for it.
+
+#### Open questions added
+
+13. **Where the model choice sits.** Right after the name (this proposal) or before it. To be confirmed with the decision owner's walkthrough.
+14. **Storing cloud API keys** after the proof of concept (ADR-008 open question 3).
+15. **Recommending a model from the hardware check** during the setup or first on the bridge (`open-questions.md`, "Hardware check at installation").
