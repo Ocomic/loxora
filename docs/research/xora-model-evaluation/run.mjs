@@ -20,7 +20,7 @@ import { parseArgs } from "node:util";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MAX_WORDS = 60;
 /** Raised whenever the system prompt changes, so reports stay comparable. */
-const PROMPT_VERSION = 2;
+const PROMPT_VERSION = 3;
 
 const { values: options } = parseArgs({
   options: {
@@ -136,10 +136,12 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Schiff. Auf diesem Computer gibt es schon ein Schiff namens Nova. Du hast gefragt, ob die Person es öffnen oder ein neues anlegen möchte.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
       choices: { open: "das vorhandene Schiff öffnen", new: "ein neues Schiff anlegen" },
     },
     en: {
       text: "Setup, step Ship. This computer already has a ship called Nova. You asked whether the person wants to open it or create a new one.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
       choices: { open: "open the existing ship", new: "create a new ship" },
     },
   },
@@ -147,6 +149,7 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Schiff. Du hast nach dem Namen des Schiffs gefragt und Nova, Aurora und Kepler vorgeschlagen.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
       choices: {
         nova: "der Vorschlag Nova",
         aurora: "der Vorschlag Aurora",
@@ -156,6 +159,7 @@ const SITUATIONS = {
     },
     en: {
       text: "Setup, step Ship. You asked for the ship's name and suggested Nova, Aurora, and Kepler.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
       choices: {
         nova: "the suggestion Nova",
         aurora: "the suggestion Aurora",
@@ -168,6 +172,7 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Logbuch. Du hast vorgeschlagen, das Logbuch unter Dokumente › Loxora anzulegen, und gefragt, ob das passt.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
       choices: {
         fits: "der vorgeschlagene Ort passt",
         other: "die Person möchte einen anderen Ordner wählen, nennt aber keinen",
@@ -176,6 +181,7 @@ const SITUATIONS = {
     },
     en: {
       text: "Setup, step Logbook. You suggested creating the logbook under Documents › Loxora and asked whether that is fine.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
       choices: {
         fits: "the suggested place is fine",
         other: "the person wants to choose another folder but names none",
@@ -187,6 +193,7 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Projekt. Du hast gefragt, ob die Person ein neues Projekt anlegen, ein bestehendes hinzufügen oder sich erst umsehen möchte.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
       choices: {
         new: "ein neues Projekt anlegen",
         existing: "ein bestehendes Projekt hinzufügen",
@@ -195,6 +202,7 @@ const SITUATIONS = {
     },
     en: {
       text: "Setup, step Project. You asked whether the person wants to start a new project, add an existing one, or look around first.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
       choices: {
         new: "start a new project",
         existing: "add an existing project",
@@ -206,19 +214,23 @@ const SITUATIONS = {
     tools: ["propose_project"],
     de: {
       text: "Einrichtung, Schritt Projekt. Die Person legt ein neues Projekt an. Du hast sie gebeten, ihr Vorhaben in ein oder zwei Sätzen zu beschreiben. Schlag dann mit der Aktion einen kurzen Projektnamen vor.",
+      act: "Ein oder zwei Sätze reichen für den Vorschlag: Frag nicht nach weiteren Einzelheiten, sondern nutze gleich die Aktion. Der Zweck steht in den Worten der Person.",
     },
     en: {
       text: "Setup, step Project. The person is starting a new project. You asked them to describe their plan in one or two sentences. Then propose it with the action, with a short project name.",
+      act: "One or two sentences are enough for the proposal: do not ask for more details, use the action right away. The purpose uses the person's own words.",
     },
   },
   confirm: {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, Schritt Projekt. Du hast das Projekt „Sternenhüpfer“ mit den Bereichen Ideen, Aufgaben und Entscheidungen vorgeschlagen und gefragt, ob du es so anlegen sollst.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
       choices: { create: "so anlegen", rename: "den Namen ändern" },
     },
     en: {
       text: "Setup, step Project. You proposed the project “Star Hopper” with the spaces Ideas, Tasks, and Decisions and asked whether to create it like this.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
       choices: { create: "create it like this", rename: "change the name" },
     },
   },
@@ -226,10 +238,12 @@ const SITUATIONS = {
     tools: ["place_answer"],
     de: {
       text: "Einrichtung, letzter Schritt. Du hast die Brücke, Missionen und die Crew erklärt und angeboten, auf die Brücke zu gehen.",
+      act: "Sobald die Antwort klar ist, trag sie mit der Aktion ein und schreib einen kurzen Satz dazu. Ist sie unklar oder fragt die Person etwas, antworte nur mit Text.",
       choices: { toBridge: "auf die Brücke gehen" },
     },
     en: {
       text: "Setup, last step. You explained the bridge, Missions, and the crew and offered to go to the bridge.",
+      act: "As soon as the answer is clear, record it with the action and add one short sentence. If it is unclear or the person asks something, answer with text only.",
       choices: { toBridge: "go to the bridge" },
     },
   },
@@ -237,18 +251,22 @@ const SITUATIONS = {
     tools: ["propose_first_mission"],
     de: {
       text: "Auf der Brücke, nach der Einrichtung. Das Projekt „Gartenplan“ ist angelegt. Die erste Mission „Projektziel festhalten“ ist noch nicht gestartet. Sonst ist noch nichts über das Projekt festgehalten.",
+      act: "Wenn die Person loslegen oder das Ziel festhalten will, schlag die erste Mission mit der Aktion vor. Bei allem anderen antworte nur mit Text.",
     },
     en: {
       text: "On the bridge, after the setup. The project “Garden plan” exists. The first Mission “Record the project goal” has not started yet. Nothing else about the project is recorded yet.",
+      act: "If the person wants to get started or record the goal, propose the first Mission with the action. For anything else, answer with text only.",
     },
   },
   goalQuestion: {
     tools: ["propose_goal"],
     de: {
       text: "Auf der Brücke. Die Mission „Projektziel festhalten“ läuft und hat gefragt: „Für wen ist das Projekt?“. Aus der Antwort schlägst du das Projektziel in ein bis zwei Sätzen vor; der Kapitän übernimmt es danach selbst.",
+      act: "Wenn die Person die Frage beantwortet, schlag das Ziel mit der Aktion vor, statt es nur zu schreiben. Nutze dabei ihre Worte. Ohne Antwort auf die Frage antworte nur mit Text.",
     },
     en: {
       text: "On the bridge. The Mission “Record the project goal” is running and asked: “Who is the project for?”. From the answer you propose the project goal in one or two sentences; the captain then accepts it.",
+      act: "If the person answers the question, propose the goal with the action instead of only writing it, using their words. Without an answer to the question, reply with text only.",
     },
   },
 };
@@ -333,6 +351,7 @@ function systemPrompt(situation, language) {
     lines.push(language === "de" ? "Mögliche Antworten:" : "Possible answers:");
     for (const [key, meaning] of Object.entries(view.choices)) lines.push(`- ${key}: ${meaning}`);
   }
+  if (view.act) lines.push(view.act);
   return lines.join("\n");
 }
 
