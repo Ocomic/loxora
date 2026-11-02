@@ -1,7 +1,7 @@
 # RFC-011 — First Launch, Setup, and Xora
 
 **Status:** Accepted
-**Version:** 1.3 (Amendments 1 and 2; Amendment 3 proposed)
+**Version:** 1.3 (Amendments 1, 2, and 3)
 **Last Updated:** November 2, 2026
 **Decision Date:** October 4, 2026
 **Decision Owner:** Ocomic
@@ -277,7 +277,7 @@ Amendment 1 (October 5, 2026) changes the shape of the setup to a conversation w
 
 Amendment 2 (October 6, 2026) replaces the 2D bridge visualizer (section 8 and milestone 4 in section 12) with the bridge as the ship's chat. It authorizes no code by itself: the chat needs an ADR for storing chat history and its own milestone document. The ADR is [ADR-007](../adr/ADR-007-bridge-chat-history-and-threads.md) (accepted October 10, 2026); the milestone document is [Milestone 15](../implementation/MILESTONE-15.md) (authorized October 10, 2026). Milestone 4, the bridge as the ship's chat, is implemented by Milestone 15 in three deliveries (pull requests #42, #44, and #45); the decision owner checked it on Windows on October 13, 2026. With it, open question 8 (bridge tutorial) is answered for script mode: the first Mission is pinned in Xora's direct chat as her guide and runs in its thread in the project channel. Open question 10 (chat history storage) is decided by ADR-007; 11 (group chats) and 12 (voice) remain open.
 
-Amendment 3 (proposed November 2, 2026) lets Xora introduce herself and her model at the start of the setup, has the app record fixed choices itself, and allows switching Xora to another local model or, as a proof of concept, to a cloud model. It is accepted only by the decision owner, because its cloud part is C3. Its runtime is proposed in [ADR-008](../adr/ADR-008-xora-model-runtime.md), which answers open questions 2 and 5. Together they authorize the milestone document for milestone 3 (Xora).
+Amendment 3 (November 2, 2026) lets Xora introduce herself and her model at the start of the setup, has the app record fixed choices itself, and allows switching Xora to another local model or, as a proof of concept, to a cloud model. Its cloud part is C3. The decision owner accepted it together with [ADR-008](../adr/ADR-008-xora-model-runtime.md) (the runtime, which answers open questions 2 and 5) on November 2, 2026, by merging pull request #53. Together they authorize the milestone document for milestone 3 (Xora), [Milestone 16](../implementation/MILESTONE-16.md).
 
 ## Amendments
 
@@ -350,9 +350,9 @@ Decided by Ocomic on October 6, 2026, after comparing two clickable prototypes o
   11. **Group chats.** When and how several agents take part in one chat. Needs a multi-agent RFC.
   12. **Voice.** Whether and how the captain steers by voice, and on which runtime.
 
-### Amendment 3 — Xora introduces herself and her model, fixed choices without the model, and switching the model (proposed November 2, 2026)
+### Amendment 3 — Xora introduces herself and her model, fixed choices without the model, and switching the model (November 2, 2026)
 
-**Status:** Proposed. The decision owner asked for it on November 2, 2026, after choosing Gemma 4 E2B as Xora's working candidate ([FINDINGS.md](../research/xora-model-evaluation/FINDINGS.md)). Section 3 is C3 (data leaves the machine) and only the decision owner accepts it. The runtime is proposed in [ADR-008](../adr/ADR-008-xora-model-runtime.md).
+**Status:** Accepted by Ocomic on November 2, 2026 (pull request #53). The decision owner asked for it on November 2, 2026, after choosing Gemma 4 E2B as Xora's working candidate ([FINDINGS.md](../research/xora-model-evaluation/FINDINGS.md)). Section 3 is C3 (data leaves the machine) and only the decision owner accepts it. The runtime is proposed in [ADR-008](../adr/ADR-008-xora-model-runtime.md).
 
 **Why**
 
