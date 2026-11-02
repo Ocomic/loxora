@@ -201,6 +201,30 @@ export interface XoraInfo {
   readonly provider: "local";
   readonly modelLabel: string | null;
   readonly mode?: "managed" | "attached";
+  /** A confirmed model that did not start; Xora went back to the previous one. */
+  readonly failedChange?: string;
+  /** Whether the model can be changed here (settings file and runtime). */
+  readonly canChange?: boolean;
+  /** Whether the server opens the file window of the operating system. */
+  readonly picker?: boolean;
+  readonly cloudAvailable?: boolean;
+}
+
+/** The model a change writes to the settings file (Milestone 16 section 7). */
+export type LocalModel =
+  | {
+      readonly mode: "managed";
+      readonly runtimePath: string;
+      readonly modelPath: string;
+      readonly modelLabel: string;
+    }
+  | { readonly mode: "attached"; readonly url: string; readonly modelLabel: string };
+
+/** `POST /api/xora/model`: the proposed change; nothing is written before confirm. */
+export interface ModelChangeAction {
+  readonly id: string;
+  readonly kind: "changeModel";
+  readonly writes: { readonly provider: "local"; readonly local: LocalModel };
 }
 
 export interface AssistantReply extends Interpretation {
@@ -209,7 +233,7 @@ export interface AssistantReply extends Interpretation {
   /** Who placed a setup answer (Milestone 16 section 4). */
   readonly by?: "button" | "keywords" | "model";
   /** A fixed reply key; the text is in the labels. */
-  readonly reply?: "notOnBoard" | "missions" | "notUnderstood";
+  readonly reply?: "notOnBoard" | "missions" | "notUnderstood" | "model";
   readonly action?: ProposedAction;
   /** For a setup answer: the prompt, its answer buttons, and the terms it introduces. */
   readonly prompt?: PromptKey;

@@ -10,7 +10,15 @@ import {
 import { ApiError, api, post } from "../api.js";
 import { useLabels, useLanguage } from "../i18n.js";
 import type { Labels } from "../labels.js";
-import type { AssistantReply, ProposedAction, SetupInfo, XoraInfo, XoraState } from "../types.js";
+import type {
+  AssistantReply,
+  LocalModel,
+  ModelChangeAction,
+  ProposedAction,
+  SetupInfo,
+  XoraInfo,
+  XoraState,
+} from "../types.js";
 import { XoraPortrait } from "./XoraPortrait.js";
 
 /**
@@ -43,12 +51,33 @@ interface Draft {
 
 type Answer = { readonly choice: string; readonly label: string } | { readonly text: string };
 
+/** The model choice so far: typed paths or the address, before the card (Milestone 16). */
+interface ModelDraft {
+  readonly runtimePath?: string;
+  readonly url?: string;
+}
+
+/** What Xora's messages show besides the stored answers. */
+interface Shown {
+  readonly proposed: ProposedAction | null;
+  readonly change: ModelChangeAction | null;
+  readonly xora: XoraInfo | undefined;
+  readonly suggestion: string;
+}
+
+const DEFAULT_MODEL_URL = "http://127.0.0.1:8080";
+
 const MAX_LENGTH: Partial<Record<PromptKey, number>> = {
   name: 80,
   shortName: 80,
   reviewer: 80,
   ship: 80,
   rename: 80,
+  projectName: 80,
+  modelName: 60,
+  modelUrl: 200,
+  runtimePath: 1024,
+  modelPath: 1024,
   folder: 1024,
   describe: 500,
   purpose: 500,
@@ -70,6 +99,10 @@ const PRIMARY: Partial<Record<PromptKey, readonly string[]>> = {
   existing: ["open"],
   logbook: ["fits", "open"],
   confirm: ["create"],
+  xora: ["keep"],
+  restart: ["again"],
+  modelConfirm: ["switch"],
+  projectName: ["suggest"],
 };
 
 /** The ship terms the conversation has used, and which of them are unfolded. */
@@ -100,6 +133,11 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
   const [text, setText] = useState("");
   const draft = useRef<Draft | null>(null);
   const action = useRef<ProposedAction | null>(null);
+  const change = useRef<ModelChangeAction | null>(null);
+  const modelDraft = useRef<ModelDraft>({});
+  const suggestion = useRef("");
+  /** Xora's model state at the last message, to say when it changes (Milestone 16). */
+  const seen = useRef<{ state: XoraState; failedChange: string | undefined } | null>(null);
   const nextId = useRef(0);
   const started = useRef(false);
   const log = useRef<HTMLDivElement>(null);
@@ -153,16 +191,106 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
   const ask = (
     key: PromptKey,
     current: SetupInfo,
-    options: { silent?: boolean; buttons?: readonly string[] } = {},
+    options: {
+      silent?: boolean;
+      buttons?: readonly string[];
+      labels?: Readonly<Record<string, string>>;
+    } = {},
   ) => {
     const choices = options.buttons ?? PROMPTS[key].choices;
     const label = choiceLabel(t, key);
     if (!options.silent) {
-      const [line, detail] = promptMessage(t, key, current, action.current);
+      const [line, detail] = promptMessage(t, key, current, {
+        proposed: action.current,
+        change: change.current,
+        xora,
+        suggestion: suggestion.current,
+      });
       say(line, detail);
       learn(key);
     }
-    setAsking({ key, buttons: choices.map((choice) => ({ key: choice, label: label(choice) })) });
+    setAsking({
+      key,
+      buttons: choices.map((choice) => ({
+        key: choice,
+        label: options.labels?.[choice] ?? label(choice),
+      })),
+    });
+  };
+
+  const askName = (current: SetupInfo) => {
+    say(t.setup.askName);
+    learn("name");
+    ask("name", current, { silent: true });
+  };
+
+  /** The step "Xora"; "change" only where the model can be changed. */
+  const askXora = (current: SetupInfo, silent = false) =>
+    ask("xora", current, {
+      silent,
+      buttons: xora?.canChange ? ["keep", "change", "explain"] : ["keep", "explain"],
+    });
+
+  /** The step "Xora" is answered: it is stored, and the conversation goes on to the ship. */
+  const modelDone = async (line: string) => {
+    say(line);
+    const next = update(await post<SetupInfo>("/api/setup/answers", { modelChosen: true }));
+    return next.answers?.shipName ? askLogbook(next) : askShip(next);
+  };
+
+  /** Checks the chosen model on the server and shows its card; nothing is written yet. */
+  const proposeModel = async (body: { mode: "managed" | "attached" } & Partial<LocalModel>) => {
+    try {
+      const result = await post<{ action: ModelChangeAction }>("/api/xora/model", {
+        provider: "local",
+        ...body,
+      });
+      change.current = result.action;
+      return ask("modelConfirm", info);
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 400)) throw error;
+      say(t.setup.modelErrors[error.kind ?? ""] ?? t.setup.failed(error.message));
+      return ask("model", info, { silent: true });
+    }
+  };
+
+  /** A model file: in the file window of the operating system when it opens, else typed. */
+  const chooseFiles = async () => {
+    if (!xora?.picker) return ask("runtimePath", info);
+    const pick = async (kind: "runtime" | "model", title: string) => {
+      const result = await post<{ path?: string; cancelled?: boolean }>("/api/xora/pick", {
+        kind,
+        title,
+      });
+      return result.path ?? null;
+    };
+    let runtimePath: string | null;
+    let modelPath: string | null;
+    try {
+      say(t.setup.pickRuntime);
+      runtimePath = await pick("runtime", t.setup.pickRuntimeTitle);
+      if (!runtimePath) {
+        say(t.setup.fileNotPicked);
+        return ask("model", info, { silent: true });
+      }
+      say(t.setup.pickModel);
+      modelPath = await pick("model", t.setup.pickModelTitle);
+    } catch {
+      say(t.setup.filePickFailed);
+      return ask("runtimePath", info);
+    }
+    if (!modelPath) {
+      say(t.setup.fileNotPicked);
+      return ask("model", info, { silent: true });
+    }
+    return proposeModel({ mode: "managed", runtimePath, modelPath });
+  };
+
+  /** The project name: typed by the captain, or Xora's suggestion from the description. */
+  const askProjectName = (next: Draft, name: string) => {
+    draft.current = next;
+    suggestion.current = name;
+    ask("projectName", info, { labels: { suggest: t.setup.takeSuggestion(name) } });
   };
 
   const askShip = (current: SetupInfo) =>
@@ -210,10 +338,15 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
   /** Rebuilds the conversation from the stored answers (section 3, Resume). */
   const rebuild = (current: SetupInfo) => {
     const answers = current.answers;
-    if (current.step === "name" || !answers?.name) return ask("name", current);
-    say(t.setup.intro);
+    seen.current = xora ? { state: xora.state, failedChange: xora.failedChange } : null;
+    if (current.step === "name" || !answers?.name) {
+      // After a failed start Xora asks once whether to try again (Milestone 16 section 5).
+      return ask(xora?.reason === "failedBefore" ? "restart" : "name", current);
+    }
+    say(`${introText(t, xora)} ${t.setup.askName}`);
     learn("name");
     reply(answers.name);
+    if (current.mode === "setup" && current.step === "xora") return askXora(current);
     if (current.mode === "setup" && current.step === "ship") return askShip(current);
     if (answers.shipName) {
       say(t.setup.ship(answers.name));
@@ -240,6 +373,23 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
     }, bootDelay());
     return () => window.clearTimeout(timer);
   });
+
+  // Xora says when her model gets ready, stops, or a confirmed model did not start.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs only when the state changes.
+  useEffect(() => {
+    if (!started.current || !xora) return;
+    const before = seen.current;
+    seen.current = { state: xora.state, failedChange: xora.failedChange };
+    if (!before) return;
+    const label = xora.modelLabel;
+    if (xora.failedChange && xora.failedChange !== before.failedChange) {
+      say(t.setup.changeFailed(xora.failedChange));
+    } else if (xora.state === "ready" && before.state !== "ready" && label) {
+      say(t.setup.nowOnline(label));
+    } else if (xora.state === "scriptMode" && before.state === "ready") {
+      say(t.setup.nowScript(reasonText(t, xora.reason)));
+    }
+  }, [xora]);
 
   useEffect(() => {
     if (!messages.length) return;
@@ -298,7 +448,7 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
       const next = update(
         await post<SetupInfo>("/api/setup/answers", { name, ...(captain ? { captain } : {}) }),
       );
-      return askShip(next);
+      return askXora(next);
     } catch (error) {
       if (!(error instanceof ApiError && error.kind === "CaptainNeeded")) throw error;
       const answers = { name, captain: null, shipName: null, logbookPath: null };
@@ -310,6 +460,55 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
     const value = result.value ?? "";
     const choice = result.choice;
     switch (key) {
+      case "restart":
+        if (choice === "again") {
+          await post("/api/xora/restart", {});
+          say(t.setup.restarting);
+        } else say(t.setup.withoutXora);
+        return askName(info);
+      case "xora":
+        if (choice === "change") return ask("model", info);
+        if (choice === "explain") {
+          say(t.setup.explainModel);
+          return askXora(info, true);
+        }
+        return modelDone(t.setup.kept);
+      case "model":
+        if (choice === "localFile") return chooseFiles();
+        if (choice === "attached") return ask("modelUrl", info);
+        if (choice === "cloud") {
+          say(t.setup.cloudLater);
+          return ask("model", info, { silent: true });
+        }
+        return modelDone(t.setup.laterHint);
+      case "runtimePath":
+        modelDraft.current = { runtimePath: value };
+        return ask("modelPath", info);
+      case "modelPath":
+        return proposeModel({
+          mode: "managed",
+          runtimePath: modelDraft.current.runtimePath ?? "",
+          modelPath: value,
+        });
+      case "modelUrl":
+        modelDraft.current = { url: choice === "default" ? DEFAULT_MODEL_URL : value };
+        return ask("modelName", info);
+      case "modelName":
+        return proposeModel({
+          mode: "attached",
+          url: modelDraft.current.url ?? DEFAULT_MODEL_URL,
+          modelLabel: value,
+        });
+      case "modelConfirm": {
+        const proposed = change.current;
+        change.current = null;
+        if (!proposed) return ask("model", info);
+        const confirm = choice === "switch";
+        await post("/api/assistant/confirm", { actionId: proposed.id, confirm });
+        return modelDone(
+          confirm ? t.setup.switching(proposed.writes.local.modelLabel) : t.setup.stayed,
+        );
+      }
       case "name":
         return storeName(value);
       case "shortName":
@@ -381,15 +580,23 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
         if (choice === "other") return ask("purpose", info);
         if (choice) {
           const goal = choice as ProjectGoal;
-          return propose({ goal }, t.setup.projectNames[goal]);
+          return askProjectName({ goal }, t.setup.projectNames[goal]);
         }
         const goal = result.goal ?? "other";
-        // With a model, Xora proposes the name (Milestone 16); otherwise the template's.
+        // With a model, Xora suggests a name that fits the description (Milestone 16).
         if (result.text) say(result.text);
-        return propose({ goal, purpose: value }, result.projectName ?? t.setup.projectNames[goal]);
+        return askProjectName(
+          { goal, purpose: value },
+          result.projectName ?? t.setup.projectNames[goal],
+        );
       }
       case "purpose":
-        return propose({ goal: "other", purpose: value }, t.setup.projectNames.other);
+        return askProjectName({ goal: "other", purpose: value }, t.setup.projectNames.other);
+      case "projectName":
+        return propose(
+          draft.current ?? { goal: "other", purpose: value },
+          choice === "suggest" ? suggestion.current : value,
+        );
       case "confirm": {
         const proposed = action.current;
         action.current = null;
@@ -545,7 +752,9 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
           {asking && !busy && asking.buttons.length ? (
             <div className="chat-choices">
               {asking.buttons.map((button) => {
-                const later = asking.key === "project" && button.key === "existing";
+                const later =
+                  (asking.key === "project" && button.key === "existing") ||
+                  (asking.key === "model" && button.key === "cloud");
                 const primary = PRIMARY[asking.key];
                 const secondary = primary !== undefined && !primary.includes(button.key);
                 return (
@@ -622,6 +831,44 @@ function Boot({ info, xora }: { info: SetupInfo; xora: XoraInfo | undefined }) {
   );
 }
 
+/** Xora's first message: who she is, then her model or why she runs in script mode. */
+function introText(t: Labels, xora: XoraInfo | undefined): string {
+  const label = xora?.modelLabel ?? null;
+  let part: string;
+  if (xora?.state === "ready" && label) part = t.setup.introModel(label);
+  else if (xora?.state === "starting" && label) part = t.setup.introStarting(label);
+  else {
+    part = t.setup.introScript(
+      reasonText(t, xora?.state === "starting" ? "starting" : xora?.reason),
+    );
+  }
+  return `${t.setup.introStart} ${part}`;
+}
+
+function reasonText(t: Labels, reason: string | undefined): string {
+  return t.setup.reasons[reason ?? "notConfigured"] ?? t.setup.reasons.notConfigured ?? "";
+}
+
+/** The model change card: exactly what is written to the settings file. */
+export function ModelCard({ t, change }: { t: Labels; change: ModelChangeAction }) {
+  const local = change.writes.local;
+  return (
+    <section className="confirm-card" aria-label={t.setup.modelCard}>
+      <h2>{t.setup.modelCard}</h2>
+      {local.mode === "managed" ? (
+        <>
+          <p>{t.setup.modelCardRuntime(local.runtimePath)}</p>
+          <p>{t.setup.modelCardFile(local.modelPath)}</p>
+        </>
+      ) : (
+        <p>{t.setup.modelCardUrl(local.url)}</p>
+      )}
+      <p>{t.setup.modelCardName(local.modelLabel)}</p>
+      <p className="muted">{t.setup.modelCardLocal}</p>
+    </section>
+  );
+}
+
 /** Xora's start line: only what the server reported (Milestone 16 section 5). */
 function xoraLine(t: Labels, state: XoraState, model: string | null): string {
   if (state === "ready" && model) return t.setup.boot.online(model);
@@ -639,13 +886,32 @@ function promptMessage(
   t: Labels,
   key: PromptKey,
   info: SetupInfo,
-  proposed: ProposedAction | null,
+  shown: Shown,
 ): readonly [string, ReactNode?] {
   const name = info.answers?.name ?? "";
   const ship = info.answers?.shipName ?? "";
+  const { proposed, change, xora } = shown;
   switch (key) {
     case "name":
-      return [t.setup.intro];
+      return [`${introText(t, xora)} ${t.setup.askName}`];
+    case "restart":
+      return [`${introText(t, xora)} ${t.setup.restartQuestion}`];
+    case "xora":
+      return [t.setup.xoraQuestion(xora?.state === "ready" ? (xora.modelLabel ?? null) : null)];
+    case "model":
+      return [t.setup.modelQuestion];
+    case "runtimePath":
+      return [t.setup.runtimePath];
+    case "modelPath":
+      return [t.setup.modelPath];
+    case "modelUrl":
+      return [t.setup.modelUrl];
+    case "modelName":
+      return [t.setup.modelName];
+    case "modelConfirm":
+      return [t.setup.proposal, change ? <ModelCard key="card" t={t} change={change} /> : null];
+    case "projectName":
+      return [t.setup.projectName(shown.suggestion)];
     case "shortName":
       return [t.setup.shortName];
     case "existing":

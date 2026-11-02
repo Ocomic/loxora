@@ -123,6 +123,9 @@ test("without a workspace the app runs the setup, then Mission Control with the 
     reason: "notConfigured",
     provider: "local",
     modelLabel: null,
+    canChange: false,
+    picker: false,
+    cloudAvailable: false,
   });
   assert.equal(first.body.step, "name");
   assert.deepEqual(first.body.boot, {
@@ -140,7 +143,12 @@ test("without a workspace the app runs the setup, then Mission Control with the 
   const named = await post(server.url, "/api/setup/answers", { name: "Alex Müller" });
   assert.equal(named.status, 200);
   assert.deepEqual((named.body.answers as Record<string, unknown>).captain, "alex-mueller");
-  assert.equal((named.body as { step: string }).step, "ship");
+  // The step "Xora" follows the name (Milestone 16 section 5).
+  assert.equal((named.body as { step: string }).step, "xora");
+  const invalidChoice = await post(server.url, "/api/setup/answers", { modelChosen: "yes" });
+  assert.equal(invalidChoice.status, 400);
+  const kept = await post(server.url, "/api/setup/answers", { modelChosen: true });
+  assert.equal((kept.body as { step: string }).step, "ship");
   const removed = await post(server.url, "/api/setup/intro", {});
   assert.equal(removed.status, 405, "the intro route of Milestone 13 is removed");
   const early = await post(server.url, "/api/setup/workspace", { action: "create" });
@@ -175,7 +183,15 @@ test("without a workspace the app runs the setup, then Mission Control with the 
       logbookPath: logbook,
     },
     boot: { shipComputer: "ready", logbook: "found", xora: "scriptMode" },
-    xora: { state: "scriptMode", reason: "notConfigured", provider: "local", modelLabel: null },
+    xora: {
+      state: "scriptMode",
+      reason: "notConfigured",
+      provider: "local",
+      modelLabel: null,
+      canChange: false,
+      picker: false,
+      cloudAvailable: false,
+    },
     firstSteps: {
       pending: false,
       stage: "goal",

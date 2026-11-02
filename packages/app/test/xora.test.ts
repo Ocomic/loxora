@@ -460,7 +460,15 @@ test("the server: Xora's state, a typed setup answer by the model, and her chat 
   });
   t.after(() => server.close());
   const state = (await fetch(`${server.url}/api/xora`).then((response) => response.json())) as Body;
-  assert.deepEqual(state, { state: "ready", provider: "local", modelLabel: "Gemma 4 E2B" });
+  assert.deepEqual(state, {
+    state: "ready",
+    provider: "local",
+    modelLabel: "Gemma 4 E2B",
+    // A fixed workspace has no settings file: the model cannot be changed there.
+    canChange: false,
+    picker: false,
+    cloudAvailable: false,
+  });
 
   const typed = await send(server.url, "/api/assistant/message", {
     prompt: "project",

@@ -7,14 +7,15 @@
 
 export type Language = "de" | "en";
 
-/** The five steps of the progress bar. */
-export const SETUP_STEPS = ["name", "ship", "logbook", "project", "bridge"] as const;
+/** The six steps of the progress bar (Milestone 16 adds "xora"). */
+export const SETUP_STEPS = ["name", "xora", "ship", "logbook", "project", "bridge"] as const;
 export type SetupStep = (typeof SETUP_STEPS)[number];
 
 /** The ship terms, in the order the conversation introduces them (section 5). */
 export const TERMS = [
   "captain",
   "firstOfficer",
+  "model",
   "ship",
   "logbook",
   "project",
@@ -45,6 +46,31 @@ export const PROMPTS = {
   name: { step: "name", choices: [], accepts: "text", terms: ["captain", "firstOfficer"] },
   /** A short name, when no captain id can be derived from the name. */
   shortName: { step: "name", choices: [], accepts: "text", terms: [] },
+  /** Xora's last start failed: start her again, or go on without her (Milestone 16). */
+  restart: { step: "name", choices: ["again", "without"], accepts: "choices", terms: [] },
+  /** Keep Xora's model, choose another one, or hear what that means (Milestone 16). */
+  xora: {
+    step: "xora",
+    choices: ["keep", "change", "explain"],
+    accepts: "choices",
+    terms: ["model"],
+  },
+  /** Which other model; "cloud" is shown inactive until the cloud proof of concept. */
+  model: {
+    step: "xora",
+    choices: ["localFile", "attached", "cloud", "later"],
+    accepts: "choices",
+    terms: [],
+  },
+  /** Without a file window: the typed path of the model program and of the model file. */
+  runtimePath: { step: "xora", choices: [], accepts: "text", terms: [] },
+  modelPath: { step: "xora", choices: [], accepts: "text", terms: [] },
+  /** The address of a model program that already runs; "default" is http://127.0.0.1:8080. */
+  modelUrl: { step: "xora", choices: ["default"], accepts: "choicesOrText", terms: [] },
+  /** A name for that model, shown in Xora's status. */
+  modelName: { step: "xora", choices: [], accepts: "text", terms: [] },
+  /** The confirmation card of the model change. */
+  modelConfirm: { step: "xora", choices: ["switch", "stay"], accepts: "choices", terms: [] },
   /** A workspace already exists on this computer (Milestone 13 scene B0). */
   existing: { step: "ship", choices: ["open", "new"], accepts: "choices", terms: ["ship"] },
   /** Which reviewer of the existing ship the person is; buttons are the reviewer ids. */
@@ -83,6 +109,11 @@ export const PROMPTS = {
   describe: { step: "project", choices: PROJECT_GOALS, accepts: "choicesOrText", terms: [] },
   /** The purpose after "Something else". */
   purpose: { step: "project", choices: [], accepts: "text", terms: [] },
+  /**
+   * The project name: the captain types it, or takes Xora's suggestion, which fits the
+   * description (decided by the decision owner on November 2, 2026).
+   */
+  projectName: { step: "project", choices: ["suggest"], accepts: "choicesOrText", terms: [] },
   /** The confirmation card of the new project. */
   confirm: { step: "project", choices: ["create", "rename"], accepts: "choices", terms: [] },
   rename: { step: "project", choices: [], accepts: "text", terms: [] },
@@ -106,6 +137,27 @@ type Keywords = Readonly<Record<string, readonly string[]>>;
 
 const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = {
   de: {
+    restart: {
+      again: ["nochmal", "noch", "erneut", "wieder*", "start*", "ja", "versuch*"],
+      without: ["ohne", "nein", "skript*"],
+    },
+    xora: {
+      keep: ["lass*", "behalt*", "passt", "so", "ok", "okay", "ja", "gut", "bleib*"],
+      change: ["wechsel*", "ander*", "besser*", "staerker*", "aender*", "neu*"],
+      explain: ["was", "erklaer*", "bedeut*", "heisst", "warum", "wieso"],
+    },
+    model: {
+      localFile: ["datei*", "gguf"],
+      attached: ["laeuft", "laufend*", "adresse", "url", "programm*", "server"],
+      cloud: ["cloud", "claude", "gpt", "openai", "anthropic", "internet"],
+      later: ["spaeter", "nein", "abbrech*", "zurueck", "nichts"],
+    },
+    modelUrl: { default: ["standard*", "vorschlag*", "passt", "ja", "ok", "okay"] },
+    modelConfirm: {
+      switch: ["wechsel*", "ja", "ok", "okay", "los", "passt", "umstell*"],
+      stay: ["bleib*", "nein", "abbrech*", "nicht"],
+    },
+    projectName: { suggest: ["vorschlag*", "schlag*", "egal"] },
     existing: {
       open: ["oeffn*", "weiter*", "ja", "behalt*", "dieses", "nehm*"],
       new: ["neu*", "nein", "anleg*"],
@@ -136,6 +188,27 @@ const CHOICE_KEYWORDS: Record<Language, Partial<Record<PromptKey, Keywords>>> = 
     bridge: { toBridge: ["bruecke", "los", "ja", "ok", "okay", "weiter", "gehen", "auf"] },
   },
   en: {
+    restart: {
+      again: ["again", "restart", "start*", "yes", "retry", "try"],
+      without: ["without", "no", "skip", "script*"],
+    },
+    xora: {
+      keep: ["keep", "fine", "ok", "okay", "yes", "good", "stay"],
+      change: ["change", "switch", "better", "other", "another", "different", "stronger"],
+      explain: ["what", "explain", "mean*", "why"],
+    },
+    model: {
+      localFile: ["file*", "gguf"],
+      attached: ["running", "address", "url", "program*", "server"],
+      cloud: ["cloud", "claude", "gpt", "openai", "anthropic", "internet"],
+      later: ["later", "no", "cancel", "back", "nothing"],
+    },
+    modelUrl: { default: ["default", "suggested", "fine", "yes", "ok", "okay"] },
+    modelConfirm: {
+      switch: ["switch", "yes", "ok", "okay", "go", "sure"],
+      stay: ["stay", "no", "cancel", "keep"],
+    },
+    projectName: { suggest: ["suggest*", "whatever", "dunno"] },
     existing: {
       open: ["open*", "keep", "yes", "continue", "this"],
       new: ["new", "no", "create"],
@@ -269,8 +342,26 @@ export function interpret(
   return null;
 }
 
+const MODEL_WORDS: Record<Language, readonly string[]> = {
+  de: ["modell*", "model*", "ki", "sprachmodell*"],
+  en: ["model*", "ai", "llm*"],
+};
+const CHANGE_WORDS: Record<Language, readonly string[]> = {
+  de: ["wechsel*", "ander*", "besser*", "staerker*", "aender*", "neu*", "tausch*", "upgrade*"],
+  en: ["change*", "switch*", "better", "stronger", "other", "another", "different", "upgrade*"],
+};
+
+/**
+ * True when a message asks Xora for another model, for example "Kannst du ein besseres
+ * Modell nehmen?" (Milestone 16 section 6). The keyword list decides, with or without model.
+ */
+export function asksForModelChange(text: string, language: Language): boolean {
+  const found = words(text);
+  return matches(MODEL_WORDS[language], found) && matches(CHANGE_WORDS[language], found);
+}
+
 /** Xora's fixed replies in script mode (Milestone 13 section 6). */
-export const XORA_REPLY_KEYS = ["notOnBoard", "missions", "notUnderstood"] as const;
+export const XORA_REPLY_KEYS = ["notOnBoard", "missions", "notUnderstood", "model"] as const;
 export type XoraReply = (typeof XORA_REPLY_KEYS)[number];
 
 /**
@@ -285,6 +376,8 @@ export const XORA_REPLIES: Record<Language, Record<XoraReply, string>> = {
       "Missionen legen heute Agenten über die Kommandozeile an, mit „loxora mission create“. Sobald ich an Bord bin, kannst du mich direkt darum bitten.",
     notUnderstood:
       "Das verstehe ich noch nicht, ich bin noch im Skriptmodus. Tipp einfach eine der Antworten an.",
+    model:
+      "Mein Modell wechselst du in meinen Details: Öffne rechts „Details“ und wähle „Modell wechseln“. Nichts ändert sich, bevor du die Karte bestätigst.",
   },
   en: {
     notOnBoard:
@@ -293,5 +386,7 @@ export const XORA_REPLIES: Record<Language, Record<XoraReply, string>> = {
       "Today agents create missions on the command line, with “loxora mission create”. Once I'm on board, you can simply ask me.",
     notUnderstood:
       "I don't understand that yet, I'm still in script mode. Just tap one of the answers.",
+    model:
+      "You change my model in my details: open “Details” on the right and choose “Change model”. Nothing changes before you confirm the card.",
   },
 };

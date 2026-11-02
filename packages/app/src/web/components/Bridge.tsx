@@ -26,6 +26,7 @@ import { FirstSteps } from "./FirstSteps.js";
 import { eventText, StatePanel } from "./MissionDetailView.js";
 import { StatusBadge } from "./StatusBadge.js";
 import { useXoraStatus } from "./useXora.js";
+import { XoraModel } from "./XoraModel.js";
 
 /**
  * The bridge as the ship's chat (RFC-011 Amendment 2, Milestone 15 section 3): the side list,
@@ -1102,7 +1103,7 @@ function Composer({
 function DetailsPanel({ view, onClose }: { view: ChatView; onClose: () => void }) {
   const t = useLabels();
   const { details } = view;
-  const xora = useXoraStatus();
+  const { status: xora, reload } = useXoraStatus();
   const model = xora?.state === "ready" ? xora.modelLabel : null;
   return (
     <aside className="bridge-details" aria-label={t.bridge.details}>
@@ -1119,10 +1120,7 @@ function DetailsPanel({ view, onClose }: { view: ChatView; onClose: () => void }
             height={900}
           />
           <h2>Xora</h2>
-          <p className="presence-line">
-            <span className="presence" aria-hidden="true" />{" "}
-            {model ? t.setup.statusModel(model) : t.bridge.xoraStatus}
-          </p>
+          <XoraModel xora={xora} onChanged={reload} />
           <ul className="plain">
             {(model ? t.bridge.xoraCanModel : t.bridge.xoraCan).map((line) => (
               <li key={line}>{line}</li>

@@ -49,6 +49,8 @@ export interface AppSettings {
     /** Answers of part B kept until the workspace exists. */
     readonly shipName?: string;
     readonly logbookPath?: string;
+    /** When the captain answered the setup step "Xora" (Milestone 16): keep, change, later. */
+    readonly modelChosenAt?: string;
     /**
      * When the Milestone 13 orientation was shown to the end. No longer written since
      * Milestone 14; kept so older settings files still load.
@@ -191,6 +193,7 @@ function validateSettings(path: string, value: unknown): AppSettings {
   const setupValue = {
     ...optionalField("shipName", text("shipName", setupRecord)),
     ...optionalField("logbookPath", absolute("logbookPath", setupRecord)),
+    ...optionalField("modelChosenAt", text("modelChosenAt", setupRecord)),
     ...optionalField("introducedAt", text("introducedAt", setupRecord)),
     ...optionalField("purpose", text("purpose", setupRecord)),
     ...optionalField("projectId", text("projectId", setupRecord)),

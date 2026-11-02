@@ -1,6 +1,6 @@
 # Milestone 16: Xora with a local model
 
-**Status:** Authorized (this document merged in pull request #54, November 2, 2026); delivery 1 (section 11) implemented.
+**Status:** Authorized (this document merged in pull request #54, November 2, 2026); delivery 1 (section 11) implemented (pull request #55); delivery 2 implemented.
 **Decision Owner:** Ocomic
 **Change class:** C2 (RFC-008): a new external runtime started by the app, a new assistant implementation, settings file version 2, new HTTP routes, a changed setup flow. Delivery 3 (cloud proof of concept) is C3 and is covered by the decision owner's acceptance of RFC-011 Amendment 3 section 3.
 **Implements:** RFC-011 milestone 3 (Xora), [ADR-008](../adr/ADR-008-xora-model-runtime.md), and RFC-011 Amendment 3, on top of [Milestone 15](./MILESTONE-15.md)
@@ -123,6 +123,15 @@ Three pull requests:
 1. Settings version 2, the runtime manager, the adapter, `ModelAssistant`, the fixed-choice rule, the start-screen states, the `--xora-url` flag, and their tests. With this delivery the decision owner can attach his running `llama-server` and use Xora in the setup and in her direct chat.
 2. The setup changes (first message, `xora`, `model`, and `restart` prompts, six steps, the ship term), the file windows, Xora's details panel, the `changeModel` card, the routes, the Playwright test, and the documentation.
 3. The cloud proof of concept and the `run.mjs` cloud option.
+
+## Delivery 2: decisions and deviations
+
+- **Project name (decided by the decision owner on November 2, 2026, during the Windows check of delivery 1):** the captain names the project. After the plan description (or a tapped goal template) Xora asks "What should the project be called?" with her suggestion as a button. With a model the suggestion fits the description; if the model skipped the proposal action, the app asks it once more for the name alone (`namePrompt`, no tools, checked like the action's name). Without a model the suggestion is the template's name. "Change name" on the card stays.
+- **Model change on the bridge:** "Change model" in Xora's details panel opens the same choice as a small form that ends on the same card, instead of cards in her direct chat (section 6). Cards in the chat would need a new kind of chat message (ADR-007); the form keeps the chat store unchanged.
+- **Asking Xora for another model:** the keyword list decides, with or without a model, and Xora answers with a fixed text that points to the panel. No `propose_model_change` action is given to the model, which keeps the fixed-choice rule of section 4.
+- **"Continue without Xora"** writes nothing: the restart question comes again on the next app start. `xora.enabled: false` is still read ("declined") and is cleared by "Restart Xora".
+- **Back to the previous model:** if a confirmed model does not get ready, the runtime writes the previous `xora` entry back and starts it again; `GET /api/xora` reports `failedChange` until the next change or restart.
+- **Bridge facts:** with a model, Xora's chat prompt says where her model is changed and, while the first Mission is offered, that it waits at the top of her direct chat.
 
 ## Choices made in this document
 

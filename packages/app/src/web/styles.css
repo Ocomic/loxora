@@ -1013,7 +1013,7 @@ a.button {
 
 .setup-progress {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -1376,6 +1376,35 @@ a.button {
 }
 .bridge-details {
   border-left: 1px solid var(--border);
+}
+/* Xora's model in her details panel (Milestone 16 section 6). */
+.xora-model,
+.xora-model-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.xora-model-form fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.xora-model-form legend {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.xora-model-actions,
+.xora-model-file {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.xora-model-file input {
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 .side-title {
   margin: 14px 0 2px;
