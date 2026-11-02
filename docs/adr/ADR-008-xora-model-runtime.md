@@ -1,7 +1,8 @@
 # ADR-008 — Xora's Model Runtime
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** November 2, 2026
+**Decision Date:** November 2, 2026
 **Decision Owner:** Ocomic
 **Change class:** C2 (a new external runtime started by the app, a new assistant implementation, a new settings file version; see RFC-008). The parts that send data off the machine are C3 and are decided in RFC-011 Amendment 3, not here.
 
@@ -152,6 +153,10 @@ Implemented by the Xora milestone document (RFC-011 milestone 3), which follows 
 2. **Graphics card or CPU build** in the installer, and how the hardware check chooses (installer milestone).
 3. **Storing cloud API keys** beyond the proof of concept (Windows Credential Manager or similar).
 4. **Context length.** `-c 8192` fits the setup; longer chats on the bridge may need more or a summary of older messages.
+
+## Acceptance
+
+Accepted by Ocomic on November 2, 2026, by merging pull request #53, together with RFC-011 Amendment 3. The acceptance authorizes the milestone document for RFC-011 milestone 3 (Xora), [Milestone 16](../implementation/MILESTONE-16.md). Open questions 1 to 4 remain open.
 
 ## Related documents
 
