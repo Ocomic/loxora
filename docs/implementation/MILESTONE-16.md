@@ -1,6 +1,6 @@
 # Milestone 16: Xora with a local model
 
-**Status:** Proposed. Merging this document authorizes the implementation described here.
+**Status:** Authorized (this document merged in pull request #54, November 2, 2026); delivery 1 (section 11) implemented.
 **Decision Owner:** Ocomic
 **Change class:** C2 (RFC-008): a new external runtime started by the app, a new assistant implementation, settings file version 2, new HTTP routes, a changed setup flow. Delivery 3 (cloud proof of concept) is C3 and is covered by the decision owner's acceptance of RFC-011 Amendment 3 section 3.
 **Implements:** RFC-011 milestone 3 (Xora), [ADR-008](../adr/ADR-008-xora-model-runtime.md), and RFC-011 Amendment 3, on top of [Milestone 15](./MILESTONE-15.md)

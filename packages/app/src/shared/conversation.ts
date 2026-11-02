@@ -235,6 +235,8 @@ export interface Interpretation {
   readonly value?: string;
   /** For a plan description: the goal template it fits. */
   readonly goal?: ProjectGoal;
+  /** For a plan description: the project name Xora's model proposed (Milestone 16). */
+  readonly projectName?: string;
 }
 
 /**

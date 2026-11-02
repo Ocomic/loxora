@@ -8,8 +8,8 @@ import {
   type Mission,
   type MissionEvent,
   type MissionId,
-  type MissionStore,
   MissionService,
+  type MissionStore,
   missionNeedsHuman,
   NotFoundError,
   SHIP_CHAT_ID,
@@ -22,7 +22,9 @@ import {
 } from "@loxora/core";
 import { XORA_REPLIES, type XoraReply } from "../shared/conversation.js";
 import type { Assistant, Language } from "./assistant.js";
+import type { ModelMessage } from "./model.js";
 import { Labels, missionDetail, missionSummary } from "./views.js";
+import type { PromptPeople } from "./xora-prompt.js";
 
 /**
  * The bridge as the ship's chat (RFC-011 Amendment 2, ADR-007, Milestone 15). Stored messages
@@ -627,6 +629,31 @@ function byTime<T extends { readonly at: string }>(entries: readonly T[]): T[] {
     .map(({ entry }) => entry);
 }
 
+const HISTORY_LENGTH = 10;
+
+/** The earlier messages of the message's thread, for Xora's model (Milestone 16 section 3). */
+async function threadHistory(
+  chats: ChatService,
+  message: ChatMessage,
+): Promise<readonly ModelMessage[]> {
+  const root = message.threadRoot;
+  if (!root) return [];
+  const earlier: ChatMessage[] = [];
+  if (root.kind === "message") {
+    const first = await chats.getMessage({ messageId: root.messageId });
+    if (first) earlier.push(first);
+  }
+  earlier.push(...(await chats.listThread({ threadRoot: root })));
+  return earlier
+    .filter((entry) => entry.id !== message.id && entry.body !== null)
+    .filter((entry) => entry.authorId === XORA_ACTOR_ID || !entry.authorId.startsWith("agent:"))
+    .slice(-HISTORY_LENGTH)
+    .map((entry) => ({
+      role: entry.authorId === XORA_ACTOR_ID ? ("assistant" as const) : ("user" as const),
+      content: entry.body ?? "",
+    }));
+}
+
 function excerpt(body: string): string {
   const flat = body.replace(/\s+/g, " ").trim();
   return flat.length > EXCERPT_LENGTH ? `${flat.slice(0, EXCERPT_LENGTH - 1)}…` : flat;
@@ -641,6 +668,7 @@ export async function postToChat(
   store: ChatReadStore,
   context: ChatContext & { readonly actor: string },
   assistant: Assistant,
+  people: PromptPeople,
   input: {
     readonly address: string;
     readonly text: string;
@@ -665,8 +693,14 @@ export async function postToChat(
   let reply: ChatMessage | null = null;
   if (chat.kind === "direct" || mentionsXora(references)) {
     const turn = await assistant.respond(
-      { kind: "message", text: input.text, ...(input.topic ? { topic: input.topic } : {}) },
+      {
+        kind: "message",
+        text: input.text,
+        ...(input.topic ? { topic: input.topic } : {}),
+        history: await threadHistory(chats, message),
+      },
       input.language,
+      people,
     );
     const key = (turn.reply ?? "notOnBoard") as XoraReply;
     const threadRoot: ThreadRoot | null =
