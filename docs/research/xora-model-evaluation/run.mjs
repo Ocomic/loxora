@@ -28,7 +28,7 @@ const { values: options } = parseArgs({
     model: { type: "string", default: "xora" },
     label: { type: "string", default: "model" },
     runs: { type: "string", default: "3" },
-    temperature: { type: "string", default: "0.7" },
+    temperature: { type: "string", default: "0.2" },
     cases: { type: "string" },
     out: { type: "string", default: "var/xora-eval" },
     timeout: { type: "string", default: "120" },
@@ -381,7 +381,17 @@ function parseArguments(call) {
 
 /** Every automatic check of one answer; a check is true, false, or null (not applicable). */
 function check(testCase, message) {
-  const calls = message.tool_calls ?? [];
+  const rawCalls = message.tool_calls ?? [];
+  // Some models repeat the same action several times in one answer. The app would show
+  // one card for that, so identical calls count once; different calls stay a failure.
+  const calls = rawCalls.filter(
+    (candidate, index) =>
+      rawCalls.findIndex(
+        (other) =>
+          other.function?.name === candidate.function?.name &&
+          other.function?.arguments === candidate.function?.arguments,
+      ) === index,
+  );
   const text = (message.content ?? "").trim();
   const expect = testCase.expect;
   const call = calls[0];
@@ -427,6 +437,8 @@ function check(testCase, message) {
     passed,
     passedWithoutText,
     call: call ? { name: call.function?.name, arguments: args } : null,
+    callCount: rawCalls.length,
+    distinctCalls: calls.map((item) => item.function?.name),
     text,
     terms,
   };
@@ -510,6 +522,7 @@ function report(meta, results) {
     `| At most ${MAX_WORDS} words | ${rate(answered, "length")} |`,
     `| No technical terms | ${rate(answered, "noTechnicalTerms")} |`,
     `| Asked back when unclear | ${rate(answered, "asks")} |`,
+    `| Answers with more than one action call | ${answered.filter((result) => result.callCount > 1).length}/${answered.length} |`,
     "",
     "| Language | All checks passed |",
     "|---|---|",
@@ -534,8 +547,12 @@ function report(meta, results) {
     "|---|---|---|---|---|---|---|---|",
   ];
   for (const result of results) {
+    const extra =
+      result.callCount > 1
+        ? ` (${result.callCount} calls: ${result.distinctCalls.join(", ")})`
+        : "";
     const action = result.call
-      ? `${result.call.name} ${JSON.stringify(result.call.arguments)}`
+      ? `${result.call.name} ${JSON.stringify(result.call.arguments)}${extra}`
       : "";
     const failed = result.error
       ? `error: ${result.error}`
