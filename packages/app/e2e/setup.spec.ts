@@ -66,6 +66,8 @@ const TEXT = {
     later: "kommt in einer späteren Version",
     look: "Erst umsehen",
     game: "Ein Spiel",
+    keep: "Erst mal so lassen",
+    suggestion: "„Mein Spiel“ nehmen",
     create: "Anlegen",
     toBridge: "Zur Brücke",
     projectCard: "Ich lege an: Projekt „Mein Spiel“.",
@@ -140,6 +142,9 @@ test.describe("German, by tapping", () => {
       .toBeGreaterThan(0);
     await say(page, text.answer, "Alex");
     await expect(page.getByRole("heading", { name: text.terms })).toBeVisible();
+    // Without a model the step "Xora" offers keeping script mode and an explanation.
+    await expect(page.getByText("noch kein Modell für mich eingerichtet ist")).toBeVisible();
+    await tap(page, text.keep);
     await tap(page, "Nova");
     // Only the newest ship term is unfolded; the others open on a click.
     const captain = page.getByRole("button", { name: "Kapitän" });
@@ -154,6 +159,8 @@ test.describe("German, by tapping", () => {
     await tap(page, text.fits);
     await tap(page, text.newProject);
     await tap(page, text.game);
+    // The captain names the project, or takes the suggestion (decided November 2, 2026).
+    await tap(page, text.suggestion);
     await expect(page.getByText(text.projectCard)).toBeVisible();
     await tap(page, text.create);
     await tap(page, text.toBridge);
@@ -209,6 +216,7 @@ test.describe("German, by tapping", () => {
     const text = TEXT.de;
     await start(page, text.answer);
     await say(page, text.answer, "Alex");
+    await tap(page, text.keep);
     await tap(page, "Kepler");
     await tap(page, text.fits);
     // Shown, but not active: the button carries a "coming later" note.
@@ -227,6 +235,7 @@ test.describe("German, by tapping", () => {
     const text = TEXT.de;
     await start(page, text.answer);
     await say(page, text.answer, "Alex");
+    await say(page, text.answer, "passt so");
     await say(page, text.answer, "Sternenfalke");
     await say(page, text.answer, "Banane");
     await expect(page.getByText(text.notUnderstood)).toBeVisible();
@@ -251,6 +260,7 @@ test.describe("German, by tapping", () => {
     await start(page, text.answer);
     await expect(page.getByText("gefunden")).toBeVisible();
     await say(page, text.answer, "Alex");
+    await tap(page, text.keep);
     await tap(page, text.openShip);
     await expect(page.getByText("Willkommen zurück auf der Kepler.")).toBeVisible();
     await tap(page, text.look);
@@ -269,10 +279,12 @@ test.describe("English, by typing", () => {
     const errors = watchErrors(page);
     await start(page, text.answer);
     await say(page, text.answer, "Alex Müller");
+    await say(page, text.answer, "keep it");
     await say(page, text.answer, "Enterprise");
     await say(page, text.answer, "Yes, that's fine");
     await say(page, text.answer, "I'd like to start a new project");
     await say(page, text.answer, "A small platform game for my kids.");
+    await say(page, text.answer, "whatever");
     await expect(page.getByText("I create: project “My game”.")).toBeVisible();
     await say(page, text.answer, "change the name");
     await say(page, text.answer, "Jumper");
@@ -297,6 +309,11 @@ test.describe("English, by typing", () => {
     await page.getByRole("textbox", { name: "Message" }).fill("Hello Xora");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(page.locator(".bridge-thread")).toContainText("Hello Xora");
+    // While the first Mission waits, "What now?" points to it (delivery 2, Check A).
+    const topic = page.getByRole("textbox", { name: "Message" }).first();
+    await topic.fill("What should I do now?");
+    await topic.press("Enter");
+    await expect(page.getByText("Best start your first Mission now").first()).toBeVisible();
     await page.locator(".bridge-chat").getByLabel("Channel menu").click();
     await page.getByRole("button", { name: text.clear }).click();
     await expect(page.locator(".bridge-chat")).not.toContainText("Hello Xora");
@@ -308,5 +325,80 @@ test.describe("English, by typing", () => {
       "string",
     );
     expect(errors).toEqual([]);
+  });
+});
+
+test.describe("English, describing the plan right away", () => {
+  test.use({ locale: "en-US" });
+
+  test("a description typed at the project question is not asked for again", async ({ page }) => {
+    const text = TEXT.en;
+    await start(page, text.answer);
+    await say(page, text.answer, "Alex");
+    await say(page, text.answer, "keep it");
+    await say(page, text.answer, "Enterprise");
+    await say(page, text.answer, "Yes, that's fine");
+    await say(page, text.answer, "Create a small platform game for my kids.");
+    await expect(page.getByRole("button", { name: "Use “My game”" })).toBeVisible();
+    await say(page, text.answer, "whatever");
+    await expect(page.getByText(text.projectCard)).toBeVisible();
+    await say(page, text.answer, "yes");
+    await say(page, text.answer, "to the bridge");
+    await expect(page).toHaveURL(/\/bridge\/direct%3Axora$/);
+    const setup = settings().setup as Record<string, unknown>;
+    expect(setup.purpose).toBe("Create a small platform game for my kids.");
+  });
+});
+
+test.describe("German, with Xora's model", () => {
+  test.use({ locale: "de-DE" });
+
+  test("the start screen and Xora's first message name the model; the step Xora", async ({
+    page,
+  }) => {
+    // A runtime double: ready with Gemma 4 E2B. Answers it cannot give fall back to script mode.
+    const server = await startAppServer({
+      port: 0,
+      settings: {
+        path: settingsPath(ship.env),
+        defaultWorkspace: defaultWorkspaceDirectory(ship.env),
+        documents: () => join(ship.home, "Documents"),
+        env: {},
+      },
+      xora: {
+        url: () => null,
+        fail: () => undefined,
+        status: () => ({ state: "ready", modelLabel: "Gemma 4 E2B", mode: "attached" }),
+      },
+    });
+    try {
+      const errors = watchErrors(page);
+      await page.goto(server.url);
+      await expect(page.getByLabel(TEXT.de.answer)).toBeEnabled();
+      await expect(page.getByText("online (Gemma 4 E2B)")).toBeVisible();
+      await expect(page.getByText("Gerade arbeite ich mit Gemma 4 E2B")).toBeVisible();
+      const steps = page.getByRole("list", { name: "Fortschritt der Einrichtung" });
+      await expect(steps.getByRole("listitem")).toHaveText([
+        "Name",
+        "Xora",
+        "Schiff",
+        "Logbuch",
+        "Projekt",
+        "Brücke",
+      ]);
+      await say(page, TEXT.de.answer, "Alex");
+      await expect(
+        page.getByText("Mit Gemma 4 E2B kommst du gut durch die Einrichtung."),
+      ).toBeVisible();
+      await tap(page, "Was heißt das?");
+      await expect(page.getByText("Ein Modell ist der Teil von mir")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Modell", exact: true })).toBeVisible();
+      await tap(page, TEXT.de.keep);
+      await expect(page.getByRole("button", { name: "Nova", exact: true })).toBeVisible();
+      expect(typeof (settings().setup as Record<string, unknown>).modelChosenAt).toBe("string");
+      expect(errors).toEqual([]);
+    } finally {
+      await server.close();
+    }
   });
 });

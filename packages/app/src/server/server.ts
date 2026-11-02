@@ -10,6 +10,7 @@ import {
   loadWorkspaceConfig,
   SettingsUnreadable,
   WORKSPACE_CONFIG_FILE,
+  type XoraLocalModel,
 } from "@loxora/cli";
 import {
   type ChatId,
@@ -51,6 +52,7 @@ import {
   finishFirstSteps,
   firstStepsState,
 } from "./first-steps.js";
+import { type ModelChange, pickModelFile, proposeModelChange } from "./model-choice.js";
 import type { XoraStatus } from "./runtime.js";
 import {
   createOrOpenWorkspace,
@@ -107,9 +109,15 @@ export interface AppServerOptions {
   readonly xora?: XoraSource;
 }
 
-/** The runtime as the server sees it: its address, its state, and failure reports. */
+/**
+ * The runtime as the server sees it: its address, its state, and failure reports; a real
+ * runtime can also restart and switch to a confirmed model (Milestone 16 section 7).
+ */
 export interface XoraSource extends ModelSource {
   status(): XoraStatus;
+  restart?(): Promise<XoraStatus>;
+  switchTo?(local: XoraLocalModel): Promise<XoraStatus>;
+  canChange?(): boolean;
 }
 
 const SCRIPT_ONLY: XoraSource = {
@@ -160,13 +168,22 @@ export async function startAppServer(options: AppServerOptions): Promise<AppServ
   const xora = options.xora ?? SCRIPT_ONLY;
   const assistant: Assistant = options.xora ? new ModelAssistant(xora) : new ScriptedAssistant();
   const pending = new PendingActions();
+  const models = new PendingActions<ModelChange>();
   const serial = serialQueue();
   const server = createServer(async (request, response) => {
     const requestId = crypto.randomUUID();
     try {
       if (request.url?.startsWith("/api/")) {
         await api(
-          { ...resolveRequest(options, flagActor), origins, assistant, xora, pending, serial },
+          {
+            ...resolveRequest(options, flagActor),
+            origins,
+            assistant,
+            xora,
+            pending,
+            models,
+            serial,
+          },
           request,
           response,
         );
@@ -374,6 +391,8 @@ interface ApiContext extends RequestState {
   readonly assistant: Assistant;
   readonly xora: XoraSource;
   readonly pending: PendingActions;
+  /** Model changes waiting for the card (Milestone 16 section 7). */
+  readonly models: PendingActions<ModelChange>;
   /** Runs confirmed actions one at a time, so two confirmations never pass the same step. */
   readonly serial: <T>(work: () => Promise<T>) => Promise<T>;
 }
@@ -485,10 +504,14 @@ async function setupInfo(context: ApiContext) {
     mode: context.mode,
     ...(context.settingsError ? { settingsError: context.settingsError.message } : {}),
     ...(context.mode === "setup" && context.environment && context.settings
-      ? withBoot(setupState(context.environment, context.settings), context.xora)
+      ? withBoot(
+          setupState(context.environment, context.settings),
+          context.xora,
+          context.environment,
+        )
       : {}),
     ...(context.mode === "ready" && workspaceDirectory && settings
-      ? readyConversation(workspaceDirectory, settings, context.xora)
+      ? readyConversation(workspaceDirectory, settings, context)
       : {}),
     ...(firstSteps ? { firstSteps } : {}),
   };
@@ -508,7 +531,7 @@ function boot(logbookFound: boolean, xora: XoraSource) {
 }
 
 /** Xora's state for `GET /api/xora` and the setup (Milestone 16 section 7). */
-function xoraInfo(xora: XoraSource) {
+function xoraInfo(xora: XoraSource, environment: SetupEnvironment | null) {
   const status = xora.status();
   return {
     state: status.state === "off" ? "starting" : status.state,
@@ -516,14 +539,24 @@ function xoraInfo(xora: XoraSource) {
     provider: "local" as const,
     modelLabel: status.modelLabel ?? null,
     ...(status.mode ? { mode: status.mode } : {}),
+    ...(status.failedChange ? { failedChange: status.failedChange } : {}),
+    /** Whether the model can be changed here: a settings file and a real runtime. */
+    canChange: environment !== null && xora.switchTo !== undefined && xora.canChange?.() !== false,
+    /** Whether the server opens the file window of the operating system. */
+    picker: environment?.pickFile !== undefined,
+    cloudAvailable: false,
   };
 }
 
-function withBoot<T extends ReturnType<typeof setupState>>(state: T, xora: XoraSource) {
+function withBoot<T extends ReturnType<typeof setupState>>(
+  state: T,
+  xora: XoraSource,
+  environment: SetupEnvironment,
+) {
   return {
     ...state,
     boot: boot(state.existing !== null || state.logbook.hasWorkspace, xora),
-    xora: xoraInfo(xora),
+    xora: xoraInfo(xora, environment),
   };
 }
 
@@ -545,7 +578,7 @@ function promptPeople(context: ApiContext): PromptPeople {
 }
 
 /** The conversation after the logbook exists: its step and the answers to rebuild it from. */
-function readyConversation(workspaceDirectory: string, settings: AppSettings, xora: XoraSource) {
+function readyConversation(workspaceDirectory: string, settings: AppSettings, context: ApiContext) {
   const step = conversationStep(settings);
   if (!step) return { step: null };
   let shipName: string | null = null;
@@ -562,8 +595,8 @@ function readyConversation(workspaceDirectory: string, settings: AppSettings, xo
       shipName,
       logbookPath: workspaceDirectory,
     },
-    boot: boot(true, xora),
-    xora: xoraInfo(xora),
+    boot: boot(true, context.xora),
+    xora: xoraInfo(context.xora, context.environment),
   };
 }
 
@@ -579,22 +612,29 @@ async function api(
     const action = MISSION_ACTIONS.find((name) => name === write?.[2]);
     const setupRoute = SETUP_ROUTES.find((route) => route === url.pathname);
     const assistantRoute = ASSISTANT_ROUTES.find((route) => route === url.pathname);
+    const xoraRoute = XORA_ROUTES.find((route) => route === url.pathname);
     const chatRoute = chatWriteRoute(url.pathname);
     const updateRoute = url.pathname === UPDATE_ROUTE;
     if (
       request.method !== "POST" ||
-      (!(write && action) && !setupRoute && !assistantRoute && !chatRoute && !updateRoute)
+      (!(write && action) &&
+        !setupRoute &&
+        !assistantRoute &&
+        !xoraRoute &&
+        !chatRoute &&
+        !updateRoute)
     ) {
       return json(response, 405, {
         error: "MethodNotAllowed",
         message:
-          "Only the Mission, chat, setup, assistant, settings, and logbook update write routes accept POST.",
+          "Only the Mission, chat, setup, assistant, Xora, settings, and logbook update write routes accept POST.",
       });
     }
     const body = await readWriteRequest(request, context);
     if (updateRoute) return json(response, 200, await updateWrite(context, body));
     if (chatRoute) return json(response, 200, await chatWrite(context, chatRoute, body));
     if (setupRoute) return json(response, 200, await setupWrite(context, setupRoute, body));
+    if (xoraRoute) return json(response, 200, await xoraWrite(context, xoraRoute, body));
     if (assistantRoute) {
       return json(response, 200, await assistantWrite(context, assistantRoute, body));
     }
@@ -615,7 +655,9 @@ async function api(
     );
   }
   if (url.pathname === "/api/setup") return json(response, 200, await setupInfo(context));
-  if (url.pathname === "/api/xora") return json(response, 200, xoraInfo(context.xora));
+  if (url.pathname === "/api/xora") {
+    return json(response, 200, xoraInfo(context.xora, context.environment));
+  }
   if (url.pathname === "/api/settings") {
     return json(response, 200, {
       available: context.environment !== null && context.settingsError === null,
@@ -758,7 +800,18 @@ async function chatWrite(
         }
         const threadRoot = parseThreadKey(body.threadRoot);
         const topic = typeof body.topic === "string" ? body.topic : undefined;
-        return postToChat(store, chat, context.assistant, promptPeople(context), {
+        // Xora knows whether the first Mission waits at the top of her chat (section 3).
+        const settings = context.settings;
+        const firstMission =
+          settings && context.workspaceDirectory
+            ? (
+                await withStore(context.workspaceDirectory, (read) =>
+                  firstStepsState(read, settings),
+                )
+              ).pending
+            : false;
+        const people = { ...promptPeople(context), ...(firstMission ? { firstMission } : {}) };
+        return postToChat(store, chat, context.assistant, people, {
           address: route.address,
           text: body.text,
           language: requestLanguage(context, body),
@@ -828,6 +881,56 @@ const SETUP_ROUTES = [
 ] as const;
 
 const ASSISTANT_ROUTES = ["/api/assistant/message", "/api/assistant/confirm"] as const;
+
+const XORA_ROUTES = ["/api/xora/model", "/api/xora/pick", "/api/xora/restart"] as const;
+
+/**
+ * Xora's model routes (Milestone 16 section 7), in setup mode and in ready mode. They need
+ * the settings file; in ready mode only the captain uses them.
+ */
+async function xoraWrite(
+  context: ApiContext,
+  route: (typeof XORA_ROUTES)[number],
+  body: Record<string, unknown>,
+) {
+  const environment = requireModelWrites(context);
+  if (route === "/api/xora/pick") return pickModelFile(environment, body);
+  if (route === "/api/xora/restart") {
+    const restart = context.xora.restart;
+    if (!restart) throw new RequestRejected(409, "NoRuntime", "Xora has no model runtime here");
+    // The runtime gets ready in the background; the browser asks GET /api/xora.
+    void restart.call(context.xora).catch(() => undefined);
+    return xoraInfo(context.xora, context.environment);
+  }
+  if (!xoraInfo(context.xora, environment).canChange) {
+    throw new RequestRejected(409, "NoRuntime", "Xora's model cannot be changed here");
+  }
+  const change = proposeModelChange(body);
+  return { action: { id: context.models.add(change), ...change } };
+}
+
+/** Model writes need the settings file and, once the logbook exists, the captain. */
+function requireModelWrites(context: ApiContext): SetupEnvironment {
+  requireSettings(context);
+  const environment = context.environment;
+  if (!environment || context.mode === "fixed") {
+    throw new RequestRejected(409, "NoSettings", "This app runs with a fixed workspace");
+  }
+  if (context.mode === "ready" && !context.actor) {
+    throw new RequestRejected(403, "ReadOnly", "Only the captain changes Xora's model.");
+  }
+  return environment;
+}
+
+/** Confirms or drops a model change; a confirmed one starts in the background. */
+function confirmModelChange(context: ApiContext, change: ModelChange, confirm: boolean) {
+  if (confirm) {
+    const switchTo = context.xora.switchTo;
+    if (!switchTo) throw new RequestRejected(409, "NoRuntime", "Xora has no model runtime here");
+    void switchTo.call(context.xora, change.writes.local).catch(() => undefined);
+  }
+  return { confirmed: confirm, xora: xoraInfo(context.xora, context.environment) };
+}
 
 const UPDATE_ROUTE = "/api/workspace/update";
 
@@ -1131,6 +1234,14 @@ async function assistantWrite(
   }
   if (typeof body.actionId !== "string" || typeof body.confirm !== "boolean") {
     throw new RequestRejected(400, "Invalid", "Send actionId and confirm: true or false");
+  }
+  const change = context.models.take(body.actionId);
+  if (change) {
+    requireModelWrites(context);
+    return confirmModelChange(context, change, body.confirm);
+  }
+  if (context.mode === "setup") {
+    throw new RequestRejected(404, "UnknownAction", "This proposal is unknown or has expired");
   }
   const { settingsPath, workspaceDirectory, captain } = await requireFirstSteps(context);
   const action = context.pending.take(body.actionId);

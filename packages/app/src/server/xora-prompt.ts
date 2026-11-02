@@ -45,6 +45,10 @@ const ACT_CHOICE: Record<Language, string> = {
 
 /** The setup steps with answer buttons whose typed answers may reach the model (section 4). */
 export const CHOICE_SITUATIONS = [
+  "restart",
+  "xora",
+  "model",
+  "modelConfirm",
   "existing",
   "logbook",
   "place",
@@ -62,6 +66,31 @@ interface View {
 
 const CHOICE_VIEWS: Record<Language, Record<ChoiceSituation, View>> = {
   de: {
+    restart: {
+      text: "Einrichtung, Anfang. Dein Modell ist beim letzten Mal nicht gestartet. Du hast gefragt, ob du es noch einmal versuchen sollst.",
+      choices: { again: "noch einmal starten", without: "ohne Modell weitermachen" },
+    },
+    xora: {
+      text: "Einrichtung, Schritt Xora. Du hast erklärt, mit welchem Modell du arbeitest, und gefragt, ob die Person es erst einmal so lassen oder ein anderes Modell wählen möchte.",
+      choices: {
+        keep: "erst einmal so lassen",
+        change: "ein anderes Modell wählen",
+        explain: "die Person möchte wissen, was das bedeutet",
+      },
+    },
+    model: {
+      text: "Einrichtung, Schritt Xora. Die Person möchte ein anderes Modell. Du hast gefragt, welches.",
+      choices: {
+        localFile: "eine Modelldatei auf diesem Computer",
+        attached: "ein Modellprogramm, das schon auf diesem Computer läuft",
+        cloud: "ein Cloud-Modell",
+        later: "später entscheiden",
+      },
+    },
+    modelConfirm: {
+      text: "Einrichtung, Schritt Xora. Du hast den Modellwechsel auf einer Karte gezeigt und gefragt, ob du wechseln sollst.",
+      choices: { switch: "wechseln", stay: "beim bisherigen Modell bleiben" },
+    },
     existing: {
       text: "Einrichtung, Schritt Schiff. Auf diesem Computer gibt es schon ein Schiff. Du hast gefragt, ob die Person es öffnen oder ein neues anlegen möchte.",
       choices: { open: "das vorhandene Schiff öffnen", new: "ein neues Schiff anlegen" },
@@ -100,6 +129,31 @@ const CHOICE_VIEWS: Record<Language, Record<ChoiceSituation, View>> = {
     },
   },
   en: {
+    restart: {
+      text: "Setup, start. Your model did not start last time. You asked whether to try again.",
+      choices: { again: "start again", without: "continue without the model" },
+    },
+    xora: {
+      text: "Setup, step Xora. You explained which model you run on and asked whether the person wants to keep it for now or choose a different model.",
+      choices: {
+        keep: "keep it for now",
+        change: "choose a different model",
+        explain: "the person wants to know what that means",
+      },
+    },
+    model: {
+      text: "Setup, step Xora. The person wants a different model. You asked which one.",
+      choices: {
+        localFile: "a model file on this computer",
+        attached: "a model program that already runs on this computer",
+        cloud: "a cloud model",
+        later: "decide later",
+      },
+    },
+    modelConfirm: {
+      text: "Setup, step Xora. You showed the model change on a card and asked whether to switch.",
+      choices: { switch: "switch", stay: "stay with the current model" },
+    },
     existing: {
       text: "Setup, step Ship. This computer already has a ship. You asked whether the person wants to open it or create a new one.",
       choices: { open: "open the existing ship", new: "create a new ship" },
@@ -158,6 +212,8 @@ const CHAT: Record<Language, string> = {
 export interface PromptPeople {
   readonly captain: string;
   readonly ship?: string;
+  /** On the bridge: the first Mission is offered at the top of Xora's direct chat. */
+  readonly firstMission?: boolean;
 }
 
 function persona(language: Language, people: PromptPeople): string[] {
@@ -224,7 +280,46 @@ export function describePrompt(
   };
 }
 
+/** What Xora knows about the bridge as it is now; app facts only, never project content. */
+const BRIDGE_FACTS: Record<
+  Language,
+  { readonly always: readonly string[]; readonly firstMission: string }
+> = {
+  de: {
+    always: [
+      "Dein Modell wechselt der Kapitän in deinen Details: rechts „Details“ öffnen und „Modell wechseln“ wählen. Nichts ändert sich, bevor er die Karte bestätigt.",
+    ],
+    firstMission:
+      "Oben in deinem Chat mit dem Kapitän liegt seine erste Mission bereit: das Projektziel festhalten. Er startet sie dort mit dem Knopf. Wenn er fragt, was er jetzt tun kann, empfiehl ihm das.",
+  },
+  en: {
+    always: [
+      "The captain changes your model in your details: open “Details” on the right and choose “Change model”. Nothing changes before the captain confirms the card.",
+    ],
+    firstMission:
+      "At the top of your chat with the captain, the first Mission is ready: recording the project goal. The captain starts it there with the button. When asked what to do now, recommend that.",
+  },
+};
+
 /** Xora's direct chat and `@Xora` on the bridge: text only. */
 export function chatPrompt(language: Language, people: PromptPeople): string {
-  return [...persona(language, people), "", CHAT[language]].join("\n");
+  const facts = BRIDGE_FACTS[language];
+  return [
+    ...persona(language, people),
+    "",
+    CHAT[language],
+    ...facts.always,
+    ...(people.firstMission ? [facts.firstMission] : []),
+  ].join("\n");
+}
+
+/** A project name for a plan description, when the proposal action did not give one. */
+export function namePrompt(language: Language, people: PromptPeople): string {
+  return [
+    ...persona(language, people),
+    "",
+    language === "de"
+      ? "Einrichtung, Schritt Projekt. Die Person hat ihr Vorhaben beschrieben. Schlag einen kurzen Projektnamen mit ein bis vier Wörtern vor, der zur Beschreibung passt. Antworte nur mit dem Namen, ohne Anführungszeichen und ohne Satz."
+      : "Setup, step Project. The person described their plan. Suggest a short project name of one to four words that fits the description. Answer with the name only, without quotes and without a sentence.",
+  ].join("\n");
 }

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
+  asksForModelChange,
+  asksWhatNow,
   type Interpretation,
   interpret,
   PROMPTS,
@@ -20,6 +22,7 @@ import {
   chatPrompt,
   choicePrompt,
   describePrompt,
+  namePrompt,
   type PromptPeople,
   UNCLEAR,
 } from "./xora-prompt.js";
@@ -210,7 +213,11 @@ const CONTENT: Record<Language, Content> = {
 
 /** Script mode (RFC-011 section 2): fixed content and fixed choices, deterministic. */
 export class ScriptedAssistant implements Assistant {
-  public async respond(input: AssistantInput, language: Language): Promise<AssistantTurn> {
+  public async respond(
+    input: AssistantInput,
+    language: Language,
+    people?: PromptPeople,
+  ): Promise<AssistantTurn> {
     const content = CONTENT[language];
     switch (input.kind) {
       case "goal": {
@@ -240,7 +247,12 @@ export class ScriptedAssistant implements Assistant {
           },
         };
       case "message":
-        return { reply: input.topic === "missions" ? "missions" : "notOnBoard" };
+        if (input.topic === "missions") return { reply: "missions" };
+        if (asksForModelChange(input.text, language)) return { reply: "model" };
+        if (people?.firstMission && asksWhatNow(input.text, language)) {
+          return { reply: "firstMission" };
+        }
+        return { reply: "notOnBoard" };
       case "setup": {
         if (input.choice !== undefined) {
           return PROMPTS[input.prompt].choices.some((choice) => choice === input.choice)
@@ -296,6 +308,12 @@ export class ModelAssistant implements Assistant {
         return await this.setupText(base, input.prompt, input.text ?? "", language, people);
       }
       if (input.kind === "message" && input.topic === undefined) {
+        // Changing her model is a fixed answer, with or without a model (section 6).
+        if (asksForModelChange(input.text, language)) return { reply: "model" };
+        // So is "What now?" while the first Mission waits (delivery 2, Check A).
+        if (people.firstMission && asksWhatNow(input.text, language)) {
+          return { reply: "firstMission" };
+        }
         const turn = await this.complete(base, {
           system: chatPrompt(language, people),
           messages: [...(input.history ?? []).slice(-10), { role: "user", content: input.text }],
@@ -328,7 +346,17 @@ export class ModelAssistant implements Assistant {
         messages: [{ role: "user", content: text }],
         tools: [tool],
       });
-      const proposal = validProject(turn);
+      let proposal = validProject(turn);
+      if (!proposal) {
+        // Small models often skip the action: ask once more for the name alone.
+        const named = await this.complete(base, {
+          system: namePrompt(language, people),
+          messages: [{ role: "user", content: text }],
+          tools: [],
+        });
+        const projectName = validName(named.text);
+        if (projectName) proposal = { projectName, goal: placed.goal ?? "other" };
+      }
       if (!proposal) return { answer: placed, by: "keywords" };
       return {
         answer: { value: placed.value ?? text.trim(), ...proposal },
@@ -357,22 +385,31 @@ export class ModelAssistant implements Assistant {
 function validProject(turn: ModelTurn): { projectName: string; goal: Goal } | null {
   if (turn.call?.name !== "propose_project") return null;
   const { name, goal } = turn.call.arguments;
-  if (typeof name !== "string" || typeof goal !== "string") return null;
-  const projectName = name.trim();
-  const count = words(projectName).length;
-  if (!projectName || projectName.length > MAX_PROJECT_NAME_LENGTH) return null;
-  if (count < 1 || count > MAX_PROJECT_NAME_WORDS) return null;
+  if (typeof goal !== "string") return null;
+  const projectName = validName(name);
   const template = GOALS.find((one) => one === goal);
-  return template ? { projectName, goal: template } : null;
+  return projectName && template ? { projectName, goal: template } : null;
+}
+
+/** A project name of 1 to 4 words and at most 80 characters, without quotes around it. */
+function validName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value
+    .trim()
+    .replace(/^["'„“”«»‚‘’]+|["'„“”«»‚‘’.!]+$/g, "")
+    .trim();
+  const count = words(name).length;
+  if (!name || name.includes("\n") || name.length > MAX_PROJECT_NAME_LENGTH) return null;
+  return count >= 1 && count <= MAX_PROJECT_NAME_WORDS ? name : null;
 }
 
 const PENDING_LIFETIME_MS = 30 * 60 * 1000;
 
 /** Proposed actions waiting for the person's confirmation; kept in memory only. */
-export class PendingActions {
-  private readonly actions = new Map<string, { action: ActionPayload; createdAt: number }>();
+export class PendingActions<T = ActionPayload> {
+  private readonly actions = new Map<string, { action: T; createdAt: number }>();
 
-  public add(action: ActionPayload, now = Date.now()): string {
+  public add(action: T, now = Date.now()): string {
     for (const [id, entry] of this.actions) {
       if (now - entry.createdAt > PENDING_LIFETIME_MS) this.actions.delete(id);
     }
@@ -382,7 +419,7 @@ export class PendingActions {
   }
 
   /** Removes and returns the action; null when unknown or expired. */
-  public take(id: string, now = Date.now()): ActionPayload | null {
+  public take(id: string, now = Date.now()): T | null {
     const entry = this.actions.get(id);
     this.actions.delete(id);
     if (!entry || now - entry.createdAt > PENDING_LIFETIME_MS) return null;

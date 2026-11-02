@@ -29,10 +29,13 @@ const XORA_POLL_MS = 5_000;
 
 /**
  * Xora's model state from `GET /api/xora` (Milestone 16), asked again every few seconds,
- * because the runtime gets ready or fails in the background. Undefined until the first answer.
+ * because the runtime gets ready or fails in the background. Undefined until the first
+ * answer; `reload` asks at once, for example after a model change.
  */
-export function useXoraStatus(): XoraInfo | undefined {
+export function useXoraStatus(): { status: XoraInfo | undefined; reload: () => void } {
   const [status, setStatus] = useState<XoraInfo>();
+  const [tick, setTick] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new tick asks again at once.
   useEffect(() => {
     let active = true;
     const load = () =>
@@ -50,6 +53,6 @@ export function useXoraStatus(): XoraInfo | undefined {
       active = false;
       window.clearInterval(timer);
     };
-  }, []);
-  return status;
+  }, [tick]);
+  return { status, reload: () => setTick((count) => count + 1) };
 }

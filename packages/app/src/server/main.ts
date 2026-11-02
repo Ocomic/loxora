@@ -8,7 +8,12 @@ import {
 } from "@loxora/cli";
 import { XoraRuntime } from "./runtime.js";
 import { ActorRejected, startAppServer } from "./server.js";
-import { defaultHome, documentsDirectory, windowsFolderPicker } from "./setup.js";
+import {
+  defaultHome,
+  documentsDirectory,
+  windowsFilePicker,
+  windowsFolderPicker,
+} from "./setup.js";
 
 const { values } = parseArgs({
   options: {
@@ -63,7 +68,9 @@ try {
         return documents;
       },
       home: defaultHome(process.env),
-      ...(process.platform === "win32" ? { pickFolder: windowsFolderPicker } : {}),
+      ...(process.platform === "win32"
+        ? { pickFolder: windowsFolderPicker, pickFile: windowsFilePicker }
+        : {}),
     },
     port,
     xora,

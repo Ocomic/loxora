@@ -162,6 +162,70 @@ export const windowsFolderPicker: FolderPicker = (start, title) =>
     );
   });
 
+/** What a file window is for: the model program (`llama-server.exe`) or the model file. */
+export type FileKind = "runtime" | "model";
+
+/**
+ * Asks the person for a file in a window of the operating system (Milestone 16 section 5);
+ * resolves to the chosen file, or null when the window was closed without a choice.
+ */
+export type FilePicker = (
+  kind: FileKind,
+  start: string | null,
+  title: string,
+) => Promise<string | null>;
+
+const FILE_FILTERS: Record<FileKind, string> = {
+  runtime: "llama-server (llama-server.exe)|llama-server.exe|Programme (*.exe)|*.exe",
+  model: "GGUF (*.gguf)|*.gguf",
+};
+
+/** The Windows file window, opened like the folder window; inputs travel as environment. */
+export const windowsFilePicker: FilePicker = (kind, start, title) =>
+  new Promise((resolve, reject) => {
+    const script = [
+      "Add-Type -AssemblyName System.Windows.Forms, System.Drawing",
+      "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+      "$owner = New-Object System.Windows.Forms.Form",
+      "$owner.Text = $env:LOXORA_PICK_TITLE",
+      "$owner.TopMost = $true",
+      "$owner.ShowInTaskbar = $true",
+      "$owner.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None",
+      "$owner.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen",
+      "$owner.Size = New-Object System.Drawing.Size(1, 1)",
+      "$owner.Opacity = 0",
+      "$owner.Show()",
+      "$owner.Activate()",
+      "$dialog = New-Object System.Windows.Forms.OpenFileDialog",
+      "$dialog.Title = $env:LOXORA_PICK_TITLE",
+      "$dialog.Filter = $env:LOXORA_PICK_FILTER",
+      "$dialog.CheckFileExists = $true",
+      "if ($env:LOXORA_PICK_START) { $dialog.InitialDirectory = $env:LOXORA_PICK_START }",
+      "if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.FileName }",
+      "$owner.Dispose()",
+    ].join("; ");
+    execFile(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-STA", "-Command", script],
+      {
+        encoding: "utf8",
+        timeout: 15 * 60_000,
+        windowsHide: false,
+        env: {
+          ...process.env,
+          LOXORA_PICK_START: start ?? "",
+          LOXORA_PICK_TITLE: title,
+          LOXORA_PICK_FILTER: FILE_FILTERS[kind],
+        },
+      },
+      (error, stdout) => {
+        if (error) return reject(error);
+        const path = stdout.trim();
+        resolve(path && isAbsolute(path) ? path : null);
+      },
+    );
+  });
+
 function isInside(parent: string, path: string): boolean {
   const between = relative(parent.toLowerCase(), path.toLowerCase());
   return between === "" || (!between.startsWith("..") && !isAbsolute(between));
@@ -177,6 +241,8 @@ export interface SetupEnvironment {
   readonly home?: string;
   /** The folder window of the operating system; without it, a folder is typed as a path. */
   readonly pickFolder?: FolderPicker;
+  /** The file window for Xora's model files (Milestone 16); without it, paths are typed. */
+  readonly pickFile?: FilePicker;
 }
 
 export function loadSettings(path: string): AppSettings {
@@ -224,8 +290,9 @@ export function setupState(environment: SetupEnvironment, settings: AppSettings)
       }
     })
     .find((candidate) => candidate !== null);
-  let step: "name" | "ship" | "logbook" = "logbook";
+  let step: "name" | "xora" | "ship" | "logbook" = "logbook";
   if (!settings.captain) step = "name";
+  else if (!settings.setup?.modelChosenAt) step = "xora";
   else if (!settings.setup?.shipName) step = "ship";
   return {
     step,
@@ -263,8 +330,14 @@ function text(body: Record<string, unknown>, key: string, max: number): string |
   return value.trim();
 }
 
-/** `POST /api/setup/answers`: stores the answers of part B (B1 to B3). */
+/**
+ * `POST /api/setup/answers`: stores the answers of part B (B1 to B3) and, with
+ * `modelChosen: true`, that the step "Xora" is answered (Milestone 16).
+ */
 export function storeAnswers(environment: SetupEnvironment, body: Record<string, unknown>): void {
+  if (body.modelChosen !== undefined && body.modelChosen !== true) {
+    throw new SetupRejected(400, "Invalid", "modelChosen must be true");
+  }
   const name = text(body, "name", MAX_NAME);
   const shortName = text(body, "captain", MAX_NAME);
   const shipName = text(body, "shipName", MAX_NAME);
@@ -286,6 +359,7 @@ export function storeAnswers(environment: SetupEnvironment, body: Record<string,
       ...settings.setup,
       ...(shipName !== undefined ? { shipName } : {}),
       ...(logbookPath !== undefined ? { logbookPath } : {}),
+      ...(body.modelChosen === true ? { modelChosenAt: new Date().toISOString() } : {}),
     },
   }));
 }

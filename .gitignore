@@ -6,6 +6,7 @@ dist/
 *.sqlite-wal
 var/
 output/playwright/
+output/xora-live/
 test-results/
 playwright-report/
 .DS_Store

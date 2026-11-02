@@ -38,6 +38,8 @@ export interface XoraStatus {
   readonly reason?: ScriptReason;
   readonly modelLabel?: string;
   readonly mode?: XoraLocalModel["mode"];
+  /** A confirmed model that did not start; Xora went back to the previous one. */
+  readonly failedChange?: string;
 }
 
 export interface RuntimeOptions {
@@ -81,16 +83,71 @@ export class XoraRuntime {
   private child: ChildProcess | null = null;
   private base: string | null = null;
   private stopping = false;
+  /** Counts starts, so a start that was replaced by a restart stops waiting. */
+  private generation = 0;
+  /** `--xora-url` until the captain confirms another model in this session. */
+  private attach: string | undefined;
+  private failedChange: string | undefined;
   private readonly fetch: typeof fetch;
   private readonly now: () => number;
 
   public constructor(private readonly options: RuntimeOptions) {
     this.fetch = options.fetch ?? fetch;
     this.now = options.now ?? Date.now;
+    this.attach = options.attachUrl;
   }
 
   public status(): XoraStatus {
-    return this.current;
+    return this.failedChange ? { ...this.current, failedChange: this.failedChange } : this.current;
+  }
+
+  /** True when the server can write a model change (not with a fixed workspace). */
+  public canChange(): boolean {
+    return this.options.settingsPath !== null;
+  }
+
+  /**
+   * "Start Xora again" (Milestone 16 sections 5 and 6): stops the runtime this session
+   * started, forgets the failed start and a "Continue without Xora", and starts again.
+   */
+  public restart(options: { readonly keepLastStart?: boolean } = {}): Promise<XoraStatus> {
+    this.stop();
+    this.stopping = false;
+    this.base = null;
+    this.current = { state: "off" };
+    if (!options.keepLastStart) {
+      this.forgetLastStart();
+      this.failedChange = undefined;
+    }
+    return this.start();
+  }
+
+  /**
+   * Switches to a model the captain confirmed on the card (Milestone 16 section 7): writes
+   * the `xora` entry, starts it, and goes back to the previous model if it does not start
+   * (RFC-011 Amendment 3 section 3). Resolves when Xora is ready or back.
+   */
+  public async switchTo(local: XoraLocalModel): Promise<XoraStatus> {
+    const path = this.options.settingsPath;
+    const before = this.settings();
+    if (!path || !before) throw new Error("A model change needs a usable settings file");
+    const previous = before.xora;
+    const previousAttach = this.attach;
+    writeSettings(path, { ...before, xora: { provider: "local", local } });
+    this.attach = undefined;
+    this.failedChange = undefined;
+    const starting = this.restart({ keepLastStart: true });
+    // A later switch or restart supersedes this one: it must not roll the newer choice back.
+    const mine = this.generation;
+    const result = await starting;
+    if (result.state === "ready" || this.generation !== mine) return this.status();
+    const latest = this.settings() ?? before;
+    const { xora: _failed, ...rest } = latest;
+    writeSettings(path, previous ? { ...rest, xora: previous } : rest);
+    this.attach = previousAttach;
+    await this.restart({ keepLastStart: true });
+    this.failedChange = local.modelLabel;
+    return this.status();
   }
 
   /** The runtime's address while Xora is ready; null otherwise. */
@@ -103,8 +160,9 @@ export class XoraRuntime {
    * The setup does not wait for it (RFC-011 part B).
    */
   public async start(): Promise<XoraStatus> {
-    const settings = this.options.attachUrl === undefined ? this.settings() : null;
-    const model = configuredModel(settings, this.options.attachUrl);
+    const generation = ++this.generation;
+    const settings = this.attach === undefined ? this.settings() : null;
+    const model = configuredModel(settings, this.attach);
     if (!model) {
       return this.set({
         state: "scriptMode",
@@ -113,7 +171,7 @@ export class XoraRuntime {
     }
     const label = { modelLabel: model.modelLabel, mode: model.mode };
     const last = settings?.xora?.lastStart;
-    if (this.options.attachUrl === undefined && last && last.result !== "ready") {
+    if (this.attach === undefined && last && last.result !== "ready") {
       // No automatic retry after a failed start (RFC-011 section 2).
       return this.set({ state: "scriptMode", reason: "failedBefore", ...label });
     }
@@ -122,7 +180,7 @@ export class XoraRuntime {
         return this.set({ state: "scriptMode", reason: "notLocal", ...label });
       this.base = model.url.replace(/\/$/, "");
       this.set({ state: "starting", ...label });
-      return this.waitReady(label, false);
+      return this.waitReady(label, false, generation);
     }
     if (!existsSync(model.runtimePath) || !existsSync(model.modelPath)) {
       return this.set({ state: "scriptMode", reason: "missingFile", ...label });
@@ -133,13 +191,15 @@ export class XoraRuntime {
       return this.set({ state: "scriptMode", reason: "lowMemory", ...label });
     }
     const port = await freePort();
+    if (generation !== this.generation) return this.current;
     this.base = `http://127.0.0.1:${port}`;
     this.set({ state: "starting", ...label });
     const log = this.options.settingsPath
       ? openSync(join(dirname(this.options.settingsPath), "xora-runtime.log"), "w")
       : "ignore";
+    let child: ChildProcess;
     try {
-      this.child = (this.options.spawn ?? spawn)(
+      child = (this.options.spawn ?? spawn)(
         model.runtimePath,
         [
           "-m",
@@ -158,9 +218,11 @@ export class XoraRuntime {
     } finally {
       if (typeof log === "number") closeSync(log);
     }
-    this.child.on("error", () => this.exited(label));
-    this.child.on("exit", () => this.exited(label));
-    return this.waitReady(label, true);
+    this.child = child;
+    // Only the current child counts: an old one ending after a restart changes nothing.
+    child.on("error", () => this.child === child && this.exited(label));
+    child.on("exit", () => this.child === child && this.exited(label));
+    return this.waitReady(label, true, generation);
   }
 
   /** A failed answer during a session: Xora stays in script mode until a restart. */
@@ -195,18 +257,21 @@ export class XoraRuntime {
   private async waitReady(
     label: Pick<XoraStatus, "modelLabel" | "mode">,
     managed: boolean,
+    generation: number,
   ): Promise<XoraStatus> {
     const started = this.now();
     const timeout = this.options.readyTimeoutMs ?? READY_TIMEOUT_MS;
     const poll = this.options.pollMs ?? POLL_MS;
-    while (this.current.state === "starting") {
-      if (await this.healthy()) {
+    while (this.current.state === "starting" && generation === this.generation) {
+      const healthy = await this.healthy();
+      if (generation !== this.generation) break;
+      if (healthy) {
         const seconds = Math.round((this.now() - started) / 100) / 10;
-        if (managed || this.options.attachUrl === undefined) this.record("ready", seconds);
+        if (managed || this.attach === undefined) this.record("ready", seconds);
         return this.set({ state: "ready", ...label });
       }
       if (this.now() - started >= timeout) {
-        if (managed || this.options.attachUrl === undefined) this.record("timeout");
+        if (managed || this.attach === undefined) this.record("timeout");
         this.stop();
         this.stopping = false;
         return this.set({ state: "scriptMode", reason: "timeout", ...label });
@@ -243,10 +308,20 @@ export class XoraRuntime {
     }
   }
 
+  /** Drops `lastStart` and `enabled: false`, so the next start is not blocked. */
+  private forgetLastStart(): void {
+    const path = this.options.settingsPath;
+    if (!path || this.attach !== undefined) return;
+    const settings = this.settings();
+    if (!settings?.xora) return;
+    const { lastStart: _last, enabled: _enabled, ...xora } = settings.xora;
+    writeSettings(path, { ...settings, xora });
+  }
+
   /** Records the start result (`xora.lastStart`); an unusable settings file stays untouched. */
   private record(result: XoraStartResult, seconds?: number): void {
     const path = this.options.settingsPath;
-    if (!path || this.options.attachUrl !== undefined) return;
+    if (!path || this.attach !== undefined) return;
     const settings = this.settings();
     if (!settings) return;
     writeSettings(path, {

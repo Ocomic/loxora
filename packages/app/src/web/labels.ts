@@ -194,6 +194,12 @@ export interface Labels {
     readonly send: string;
     readonly later: string;
     readonly choices: {
+      readonly restart: Record<"again" | "without", string>;
+      readonly xora: Record<"keep" | "change" | "explain", string>;
+      readonly model: Record<"localFile" | "attached" | "cloud" | "later", string>;
+      readonly modelUrl: Record<"default", string>;
+      readonly modelConfirm: Record<"switch" | "stay", string>;
+      readonly projectName: Record<"suggest", string>;
       readonly existing: Record<"open" | "new", string>;
       readonly ship: Record<"nova" | "aurora" | "kepler", string>;
       readonly logbook: Record<"fits" | "other" | "open", string>;
@@ -204,7 +210,46 @@ export interface Labels {
       readonly confirm: Record<"create" | "rename", string>;
       readonly bridge: Record<"toBridge", string>;
     };
-    readonly intro: string;
+    /** Xora's first message (RFC-011 Amendment 3 section 1): who she is, then her model. */
+    readonly introStart: string;
+    readonly introModel: (model: string) => string;
+    readonly introStarting: (model: string) => string;
+    readonly introScript: (reason: string) => string;
+    readonly askName: string;
+    readonly reasons: Record<string, string>;
+    readonly restartQuestion: string;
+    readonly restarting: string;
+    readonly withoutXora: string;
+    readonly xoraQuestion: (model: string | null) => string;
+    readonly explainModel: string;
+    readonly kept: string;
+    readonly modelQuestion: string;
+    readonly cloudLater: string;
+    readonly laterHint: string;
+    readonly pickRuntime: string;
+    readonly pickModel: string;
+    readonly pickRuntimeTitle: string;
+    readonly pickModelTitle: string;
+    readonly fileNotPicked: string;
+    readonly filePickFailed: string;
+    readonly runtimePath: string;
+    readonly modelPath: string;
+    readonly modelUrl: string;
+    readonly modelName: string;
+    readonly modelErrors: Record<string, string>;
+    readonly modelCard: string;
+    readonly modelCardRuntime: (path: string) => string;
+    readonly modelCardFile: (path: string) => string;
+    readonly modelCardUrl: (url: string) => string;
+    readonly modelCardName: (name: string) => string;
+    readonly modelCardLocal: string;
+    readonly switching: (model: string) => string;
+    readonly stayed: string;
+    readonly nowOnline: (model: string) => string;
+    readonly nowScript: (reason: string) => string;
+    readonly changeFailed: (model: string) => string;
+    readonly projectName: (suggestion: string) => string;
+    readonly takeSuggestion: (name: string) => string;
     readonly shortName: string;
     readonly existing: (ship: string) => string;
     readonly whoAreYou: string;
@@ -355,6 +400,19 @@ export interface Labels {
     readonly xoraStatus: string;
     readonly xoraCan: readonly string[];
     readonly xoraCanModel: readonly string[];
+    readonly xoraStarting: (model: string) => string;
+    readonly scriptReason: (reason: string) => string;
+    readonly changeModel: string;
+    readonly restartXora: string;
+    readonly restartingXora: string;
+    readonly modelChoice: string;
+    readonly runtimeField: string;
+    readonly modelField: string;
+    readonly urlField: string;
+    readonly nameField: string;
+    readonly choose: string;
+    readonly next: string;
+    readonly modelChanged: string;
     readonly purpose: string;
     readonly missionCount: (total: number, open: number) => string;
     readonly onBoard: string;
@@ -543,6 +601,7 @@ const de: Labels = {
     progress: "Fortschritt der Einrichtung",
     steps: {
       name: "Name",
+      xora: "Xora",
       ship: "Schiff",
       logbook: "Logbuch",
       project: "Projekt",
@@ -569,6 +628,10 @@ const de: Labels = {
       firstOfficer: {
         name: "Erste Offizierin",
         text: "Das bin ich, Xora. Ich kenne die Systeme des Schiffs, schlage vor und koordiniere die Crew.",
+      },
+      model: {
+        name: "Modell",
+        text: "Der Teil von mir, der Text versteht und schreibt. Es läuft auf deinem Computer oder bei einem Anbieter im Internet.",
       },
       ship: { name: "Schiff", text: "Dein Arbeitsbereich für alle deine Projekte." },
       logbook: {
@@ -603,10 +666,30 @@ const de: Labels = {
       describe: "Was hast du vor?",
       purpose: "Worum geht es?",
       rename: "Name des Projekts",
+      projectName: "Name des Projekts",
+      runtimePath: "Voller Pfad zu llama-server.exe",
+      modelPath: "Voller Pfad zur .gguf-Datei",
+      modelUrl: "http://127.0.0.1:8080",
+      modelName: "Name des Modells",
     },
     send: "Senden",
     later: "kommt später",
     choices: {
+      restart: { again: "Xora neu starten", without: "Ohne Xora weitermachen" },
+      xora: {
+        keep: "Erst mal so lassen",
+        change: "Anderes Modell wählen",
+        explain: "Was heißt das?",
+      },
+      model: {
+        localFile: "Eine Modelldatei auf diesem Computer",
+        attached: "Ein Modellprogramm, das schon läuft",
+        cloud: "Ein Cloud-Modell",
+        later: "Später",
+      },
+      modelUrl: { default: "http://127.0.0.1:8080" },
+      modelConfirm: { switch: "Wechseln", stay: "Beim bisherigen bleiben" },
+      projectName: { suggest: "Vorschlag nehmen" },
       existing: { open: "Dieses Schiff öffnen", new: "Neues Schiff anlegen" },
       ship: { nova: "Nova", aurora: "Aurora", kepler: "Kepler" },
       logbook: { fits: "Passt so", other: "Auswahl ändern", open: "Dieses Logbuch öffnen" },
@@ -626,8 +709,80 @@ const de: Labels = {
       confirm: { create: "Anlegen", rename: "Namen ändern" },
       bridge: { toBridge: "Zur Brücke" },
     },
-    intro:
-      "Willkommen an Bord. Ich bin Xora, deine Erste Offizierin: Ich kenne die Systeme dieses Schiffs und helfe dir. Du bist der Kapitän, also die Person, die an Bord entscheidet. Wie soll ich dich nennen?",
+    introStart:
+      "Hallo, ich bin Xora, deine Erste Offizierin. Ich erkläre dir Loxora, beantworte deine Fragen und schlage dir Schritte vor. Entscheiden tust immer du, du bist der Kapitän.",
+    introModel: (model) =>
+      `Gerade arbeite ich mit ${model}, einem kleinen Modell, das direkt auf deinem Computer läuft. Es reicht, um dir alles zu zeigen. Für schwierigere Aufgaben ist ein stärkeres Modell besser. Du kannst gleich oder später wechseln, ich helfe dir dabei.`,
+    introStarting: (model) =>
+      `Gerade starte ich mit ${model}, einem kleinen Modell, das direkt auf deinem Computer läuft. Bis es bereit ist, antworte ich mit festen Texten. Für schwierigere Aufgaben ist ein stärkeres Modell besser. Du kannst gleich oder später wechseln, ich helfe dir dabei.`,
+    introScript: (reason) =>
+      `Ich bin noch nicht ganz an Bord und antworte mit festen Texten, weil ${reason}. Du kannst mir gleich oder später ein Modell geben, ich helfe dir dabei.`,
+    askName: "Wie heißt du?",
+    reasons: {
+      notConfigured: "noch kein Modell für mich eingerichtet ist",
+      lowMemory: "gerade nicht genug freier Arbeitsspeicher da ist",
+      timeout: "mein Modell nicht rechtzeitig bereit war",
+      exited: "mein Modell sich beendet hat",
+      declined: "du ohne Modell weitermachen wolltest",
+      failedBefore: "mein Modell beim letzten Mal nicht gestartet ist",
+      missingFile: "ich die Dateien meines Modells nicht finde",
+      notLocal: "die Adresse meines Modells nicht auf diesem Computer liegt",
+      starting: "ich gerade noch starte",
+    },
+    restartQuestion: "Soll ich es noch einmal versuchen?",
+    restarting:
+      "Ich starte neu. Das dauert einen Moment; bis dahin antworte ich mit festen Texten.",
+    withoutXora:
+      "Gut, dann antworte ich heute mit festen Texten. Neu starten kannst du mich später in meinen Details auf der Brücke.",
+    xoraQuestion: (model) =>
+      model
+        ? `Mit ${model} kommst du gut durch die Einrichtung. Möchtest du mich erst einmal so lassen oder ein anderes Modell wählen?`
+        : "Möchtest du erst einmal so weitermachen oder mir ein Modell geben?",
+    explainModel:
+      "Ein Modell ist der Teil von mir, der Text versteht und schreibt. Ein lokales Modell läuft auf deinem Computer, und nichts verlässt ihn. Ein Cloud-Modell läuft bei einem Anbieter im Internet und ist meist stärker. Die Einrichtung funktioniert in beiden Fällen gleich.",
+    kept: "Gut, dann bleibt es so. Ändern kannst du das später in meinen Details auf der Brücke, oder du fragst mich einfach.",
+    modelQuestion: "Welches Modell soll ich nutzen?",
+    cloudLater:
+      "Cloud-Modelle kommen in einer späteren Version. Bis dahin kann ich ein Modell auf diesem Computer nutzen.",
+    laterHint:
+      "Gut, dann entscheiden wir später. Du findest die Auswahl in meinen Details auf der Brücke, oder du fragst mich einfach.",
+    pickRuntime:
+      "Ich öffne ein Fenster zur Dateiauswahl. Wähle dort das Programm llama-server.exe. Siehst du das Fenster nicht, findest du es in der Taskleiste.",
+    pickModel: "Jetzt wähle die Modelldatei, sie endet auf .gguf.",
+    pickRuntimeTitle: "Loxora: Wähle das Programm llama-server.exe",
+    pickModelTitle: "Loxora: Wähle die Modelldatei (.gguf)",
+    fileNotPicked: "Du hast keine Datei gewählt. Welches Modell soll ich nutzen?",
+    filePickFailed:
+      "Das Fenster zur Dateiauswahl ließ sich nicht öffnen. Gib mir den Pfad dann bitte als Text.",
+    runtimePath:
+      "Gib mir den vollen Pfad des Programms llama-server.exe, zum Beispiel F:\\Programme\\llama.cpp\\llama-server.exe.",
+    modelPath: "Und jetzt den vollen Pfad der Modelldatei, sie endet auf .gguf.",
+    modelUrl: "Unter welcher Adresse läuft das Modellprogramm? Meist ist es http://127.0.0.1:8080.",
+    modelName:
+      "Wie heißt das Modell? Den Namen zeige ich in meinem Status, zum Beispiel „Gemma 4 E2B“.",
+    modelErrors: {
+      MissingFile: "Unter diesem Pfad finde ich keine Datei.",
+      NotFullPath: "Das ist kein voller Pfad. Er beginnt zum Beispiel mit C:\\.",
+      NotGguf: "Die Modelldatei muss auf .gguf enden.",
+      NotLocal:
+        "Diese Adresse liegt nicht auf diesem Computer. Sie beginnt mit http://127.0.0.1 oder http://localhost.",
+    },
+    modelCard: "Das schreibe ich in deine Einstellungen",
+    modelCardRuntime: (path) => `Programm: ${path}`,
+    modelCardFile: (path) => `Modelldatei: ${path}`,
+    modelCardUrl: (url) => `Adresse: ${url}`,
+    modelCardName: (name) => `Name: ${name}`,
+    modelCardLocal:
+      "Alles bleibt auf diesem Computer. Startet das Modell nicht, gehe ich zurück zum bisherigen.",
+    switching: (model) =>
+      `Ich starte jetzt mit ${model}. Bis es bereit ist, antworte ich mit festen Texten. Machen wir so lange weiter.`,
+    stayed: "Gut, dann bleibt alles, wie es ist.",
+    nowOnline: (model) => `${model} ist bereit. Ab jetzt antworte ich damit.`,
+    nowScript: (reason) => `Ich antworte jetzt mit festen Texten, weil ${reason}.`,
+    changeFailed: (model) => `${model} ist nicht gestartet. Ich bin zurück beim bisherigen Modell.`,
+    projectName: (suggestion) =>
+      `Wie soll das Projekt heißen? Schreib den Namen unten, oder nimm meinen Vorschlag: „${suggestion}“.`,
+    takeSuggestion: (name) => `„${name}“ nehmen`,
     shortName:
       "Aus diesem Namen kann ich keine Kennung für deine Freigaben machen. Gib mir bitte einen kurzen Namen aus Buchstaben oder Ziffern, etwa „alex“.",
     existing: (ship) =>
@@ -846,6 +1001,20 @@ const de: Labels = {
       "Begleitet die erste Mission.",
       "Antwortet in Kanälen, wenn du @Xora schreibst.",
     ],
+    xoraStarting: (model) => `Startet · ${model}`,
+    scriptReason: (reason) => `Skriptmodus, weil ${reason}.`,
+    changeModel: "Modell wechseln",
+    restartXora: "Xora neu starten",
+    restartingXora: "Xora startet neu …",
+    modelChoice: "Welches Modell soll Xora nutzen?",
+    runtimeField: "Programm (llama-server.exe)",
+    modelField: "Modelldatei (.gguf)",
+    urlField: "Adresse",
+    nameField: "Name des Modells",
+    choose: "Auswählen …",
+    next: "Weiter",
+    modelChanged:
+      "Xora startet mit dem neuen Modell. Bis es bereit ist, antwortet sie mit festen Texten.",
     purpose: "Zweck",
     missionCount: (total, open) => `${total} Missionen, davon ${open} offen`,
     onBoard: "An Bord",
@@ -1032,6 +1201,7 @@ const en: Labels = {
     progress: "Setup progress",
     steps: {
       name: "Name",
+      xora: "Xora",
       ship: "Ship",
       logbook: "Logbook",
       project: "Project",
@@ -1057,6 +1227,10 @@ const en: Labels = {
       firstOfficer: {
         name: "First officer",
         text: "That's me, Xora. I know the ship's systems, make proposals, and coordinate the crew.",
+      },
+      model: {
+        name: "Model",
+        text: "The part of me that understands and writes text. It runs on your computer or at a provider on the internet.",
       },
       ship: { name: "Ship", text: "Your workspace for all your projects." },
       logbook: {
@@ -1091,10 +1265,30 @@ const en: Labels = {
       describe: "What do you have in mind?",
       purpose: "What is it about?",
       rename: "Project name",
+      projectName: "Project name",
+      runtimePath: "Full path to llama-server.exe",
+      modelPath: "Full path to the .gguf file",
+      modelUrl: "http://127.0.0.1:8080",
+      modelName: "Model name",
     },
     send: "Send",
     later: "coming later",
     choices: {
+      restart: { again: "Start Xora again", without: "Continue without Xora" },
+      xora: {
+        keep: "Keep it for now",
+        change: "Choose a different model",
+        explain: "What does that mean?",
+      },
+      model: {
+        localFile: "A model file on this computer",
+        attached: "A model program that is already running",
+        cloud: "A cloud model",
+        later: "Later",
+      },
+      modelUrl: { default: "http://127.0.0.1:8080" },
+      modelConfirm: { switch: "Switch", stay: "Stay with the current one" },
+      projectName: { suggest: "Take the suggestion" },
       existing: { open: "Open this ship", new: "Create a new ship" },
       ship: { nova: "Nova", aurora: "Aurora", kepler: "Kepler" },
       logbook: { fits: "That's fine", other: "Change", open: "Open this logbook" },
@@ -1114,8 +1308,77 @@ const en: Labels = {
       confirm: { create: "Create", rename: "Change name" },
       bridge: { toBridge: "To the bridge" },
     },
-    intro:
-      "Welcome aboard. I'm Xora, your first officer: I know this ship's systems and help you. You are the captain, the person who decides on board. What should I call you?",
+    introStart:
+      "Hello, I'm Xora, your first officer. I explain Loxora, answer your questions, and suggest next steps. You always decide; you are the captain.",
+    introModel: (model) =>
+      `Right now I run on ${model}, a small model that runs right on your computer. It is enough to show you everything. For harder tasks a stronger model is better. You can switch now or later, and I'll help you.`,
+    introStarting: (model) =>
+      `Right now I'm starting on ${model}, a small model that runs right on your computer. Until it is ready, I answer with fixed texts. For harder tasks a stronger model is better. You can switch now or later, and I'll help you.`,
+    introScript: (reason) =>
+      `I'm not fully on board yet and answer with fixed texts, because ${reason}. You can give me a model now or later, and I'll help you.`,
+    askName: "What's your name?",
+    reasons: {
+      notConfigured: "no model is set up for me yet",
+      lowMemory: "there is not enough free memory right now",
+      timeout: "my model was not ready in time",
+      exited: "my model stopped",
+      declined: "you chose to continue without a model",
+      failedBefore: "my model did not start last time",
+      missingFile: "I can't find my model's files",
+      notLocal: "my model's address is not on this computer",
+      starting: "I'm still starting",
+    },
+    restartQuestion: "Shall I try again?",
+    restarting: "I'm restarting. This takes a moment; until then I answer with fixed texts.",
+    withoutXora:
+      "All right, today I answer with fixed texts. You can restart me later in my details on the bridge.",
+    xoraQuestion: (model) =>
+      model
+        ? `${model} is enough for the setup. Do you want to keep me like this for now, or choose a different model?`
+        : "Do you want to continue like this for now, or give me a model?",
+    explainModel:
+      "A model is the part of me that understands and writes text. A local model runs on your computer, and nothing leaves it. A cloud model runs at a provider on the internet and is usually stronger. The setup works the same either way.",
+    kept: "Good, it stays like this. You can change it later in my details on the bridge, or simply ask me.",
+    modelQuestion: "Which model should I use?",
+    cloudLater:
+      "Cloud models come in a later version. Until then I can use a model on this computer.",
+    laterHint:
+      "Good, we decide later. You find the choice in my details on the bridge, or simply ask me.",
+    pickRuntime:
+      "I'm opening a file window. Choose the program llama-server.exe there. If you don't see the window, you find it in the taskbar.",
+    pickModel: "Now choose the model file; it ends in .gguf.",
+    pickRuntimeTitle: "Loxora: Choose the program llama-server.exe",
+    pickModelTitle: "Loxora: Choose the model file (.gguf)",
+    fileNotPicked: "You didn't choose a file. Which model should I use?",
+    filePickFailed: "The file window could not open. Please give me the path as text instead.",
+    runtimePath:
+      "Give me the full path of the program llama-server.exe, for example F:\\Programme\\llama.cpp\\llama-server.exe.",
+    modelPath: "And now the full path of the model file; it ends in .gguf.",
+    modelUrl: "At which address does the model program run? Usually it is http://127.0.0.1:8080.",
+    modelName: "What is the model called? I show the name in my status, for example “Gemma 4 E2B”.",
+    modelErrors: {
+      MissingFile: "I can't find a file at this path.",
+      NotFullPath: "That is not a full path. It starts with C:\\, for example.",
+      NotGguf: "The model file must end in .gguf.",
+      NotLocal:
+        "This address is not on this computer. It starts with http://127.0.0.1 or http://localhost.",
+    },
+    modelCard: "This is what I write to your settings",
+    modelCardRuntime: (path) => `Program: ${path}`,
+    modelCardFile: (path) => `Model file: ${path}`,
+    modelCardUrl: (url) => `Address: ${url}`,
+    modelCardName: (name) => `Name: ${name}`,
+    modelCardLocal:
+      "Everything stays on this computer. If the model does not start, I go back to the current one.",
+    switching: (model) =>
+      `I'm starting on ${model} now. Until it is ready, I answer with fixed texts. Let's carry on meanwhile.`,
+    stayed: "Good, everything stays as it is.",
+    nowOnline: (model) => `${model} is ready. From now on I answer with it.`,
+    nowScript: (reason) => `I answer with fixed texts now, because ${reason}.`,
+    changeFailed: (model) => `${model} did not start. I'm back on the previous model.`,
+    projectName: (suggestion) =>
+      `What should the project be called? Type the name below, or take my suggestion: “${suggestion}”.`,
+    takeSuggestion: (name) => `Use “${name}”`,
     shortName:
       "I can't make an id for your approvals from this name. Please give me a short name with letters or digits, such as “alex”.",
     existing: (ship) =>
@@ -1332,6 +1595,19 @@ const en: Labels = {
       "Guides you through the first mission.",
       "Answers in channels when you write @Xora.",
     ],
+    xoraStarting: (model) => `Starting · ${model}`,
+    scriptReason: (reason) => `Script mode, because ${reason}.`,
+    changeModel: "Change model",
+    restartXora: "Restart Xora",
+    restartingXora: "Xora is restarting …",
+    modelChoice: "Which model should Xora use?",
+    runtimeField: "Program (llama-server.exe)",
+    modelField: "Model file (.gguf)",
+    urlField: "Address",
+    nameField: "Model name",
+    choose: "Choose …",
+    next: "Next",
+    modelChanged: "Xora starts on the new model. Until it is ready, she answers with fixed texts.",
     purpose: "Purpose",
     missionCount: (total, open) => `${total} missions, ${open} open`,
     onBoard: "On board",
