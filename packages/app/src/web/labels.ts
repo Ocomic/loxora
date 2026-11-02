@@ -354,6 +354,7 @@ export interface Labels {
     readonly details: string;
     readonly xoraStatus: string;
     readonly xoraCan: readonly string[];
+    readonly xoraCanModel: readonly string[];
     readonly purpose: string;
     readonly missionCount: (total: number, open: number) => string;
     readonly onBoard: string;
@@ -840,6 +841,11 @@ const de: Labels = {
       "Begleitet die erste Mission.",
       "Antwortet in Kanälen, wenn du @Xora schreibst.",
     ],
+    xoraCanModel: [
+      "Erklärt dir Loxora und beantwortet deine Fragen.",
+      "Begleitet die erste Mission.",
+      "Antwortet in Kanälen, wenn du @Xora schreibst.",
+    ],
     purpose: "Zweck",
     missionCount: (total, open) => `${total} Missionen, davon ${open} offen`,
     onBoard: "An Bord",
@@ -1318,6 +1324,11 @@ const en: Labels = {
     xoraStatus: "Online · script mode",
     xoraCan: [
       "Answers with fixed texts; she cannot talk freely yet.",
+      "Guides you through the first mission.",
+      "Answers in channels when you write @Xora.",
+    ],
+    xoraCanModel: [
+      "Explains Loxora and answers your questions.",
       "Guides you through the first mission.",
       "Answers in channels when you write @Xora.",
     ],

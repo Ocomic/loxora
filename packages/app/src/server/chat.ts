@@ -8,8 +8,8 @@ import {
   type Mission,
   type MissionEvent,
   type MissionId,
-  type MissionStore,
   MissionService,
+  type MissionStore,
   missionNeedsHuman,
   NotFoundError,
   SHIP_CHAT_ID,
@@ -23,8 +23,8 @@ import {
 import { XORA_REPLIES, type XoraReply } from "../shared/conversation.js";
 import type { Assistant, Language } from "./assistant.js";
 import type { ModelMessage } from "./model.js";
-import type { PromptPeople } from "./xora-prompt.js";
 import { Labels, missionDetail, missionSummary } from "./views.js";
+import type { PromptPeople } from "./xora-prompt.js";
 
 /**
  * The bridge as the ship's chat (RFC-011 Amendment 2, ADR-007, Milestone 15). Stored messages

@@ -24,8 +24,18 @@ import {
   StaleMissionError,
 } from "@loxora/core";
 import { openSqliteReadOnlyStore, openSqliteWritableStore } from "@loxora/sqlite";
-import { UpdateRejected, updateLogbook } from "./update.js";
 import { PROMPT_KEYS, PROMPTS, type PromptKey } from "../shared/conversation.js";
+import {
+  type Assistant,
+  type AssistantInput,
+  describeAction,
+  GOALS,
+  type Language,
+  ModelAssistant,
+  type ModelSource,
+  PendingActions,
+  ScriptedAssistant,
+} from "./assistant.js";
 import {
   BridgeReader,
   CHAT_MIGRATION,
@@ -36,24 +46,12 @@ import {
   postToChat,
 } from "./chat.js";
 import {
-  type AssistantInput,
-  describeAction,
-  GOALS,
-  type Language,
-  PendingActions,
-  type Assistant,
-  ModelAssistant,
-  type ModelSource,
-  ScriptedAssistant,
-} from "./assistant.js";
-import type { XoraStatus } from "./runtime.js";
-import type { PromptPeople } from "./xora-prompt.js";
-import {
   conversationStep,
   executeAction,
   finishFirstSteps,
   firstStepsState,
 } from "./first-steps.js";
+import type { XoraStatus } from "./runtime.js";
 import {
   createOrOpenWorkspace,
   loadSettings,
@@ -64,6 +62,7 @@ import {
   storeAnswers,
   storeLanguage,
 } from "./setup.js";
+import { UpdateRejected, updateLogbook } from "./update.js";
 import {
   availableActions,
   Labels,
@@ -75,6 +74,7 @@ import {
   missionDetail,
   missionSummary,
 } from "./views.js";
+import type { PromptPeople } from "./xora-prompt.js";
 
 /** The migration the product UI needs; it never applies migrations itself (RFC-010). */
 export const REQUIRED_MIGRATION = "007_missions";

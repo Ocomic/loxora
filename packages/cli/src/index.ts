@@ -1,17 +1,4 @@
-export { runCli, USAGE, type CliIo } from "./cli.js";
-export {
-  WORKSPACE_CONFIG_FILE,
-  WORKSPACE_DATABASE_FILE,
-  CliUsageError,
-  databasePath,
-  defaultWorkspaceDirectory,
-  enclosingGitRoot,
-  initWorkspace,
-  isAgentActor,
-  loadWorkspaceConfig,
-  resolveWorkspaceDirectory,
-  type WorkspaceConfig,
-} from "./workspace.js";
+export { type CliIo, runCli, USAGE } from "./cli.js";
 export {
   type AppSettings,
   isLoopbackUrl,
@@ -27,3 +14,16 @@ export {
   type XoraSettings,
   type XoraStartResult,
 } from "./settings.js";
+export {
+  CliUsageError,
+  databasePath,
+  defaultWorkspaceDirectory,
+  enclosingGitRoot,
+  initWorkspace,
+  isAgentActor,
+  loadWorkspaceConfig,
+  resolveWorkspaceDirectory,
+  WORKSPACE_CONFIG_FILE,
+  WORKSPACE_DATABASE_FILE,
+  type WorkspaceConfig,
+} from "./workspace.js";

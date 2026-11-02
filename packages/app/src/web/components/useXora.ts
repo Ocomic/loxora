@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { post } from "../api.js";
+import { api, post } from "../api.js";
 import { useLanguage } from "../i18n.js";
-import type { PostedMessage } from "../types.js";
+import type { PostedMessage, XoraInfo } from "../types.js";
 import { bridgePath } from "./Bridge.js";
 
 /**
@@ -22,4 +23,33 @@ export function useXora() {
         .catch(() => navigate(bridgePath("direct:xora")));
     },
   };
+}
+
+const XORA_POLL_MS = 5_000;
+
+/**
+ * Xora's model state from `GET /api/xora` (Milestone 16), asked again every few seconds,
+ * because the runtime gets ready or fails in the background. Undefined until the first answer.
+ */
+export function useXoraStatus(): XoraInfo | undefined {
+  const [status, setStatus] = useState<XoraInfo>();
+  useEffect(() => {
+    let active = true;
+    const load = () =>
+      api<XoraInfo>("/api/xora").then(
+        (next) => {
+          if (active) setStatus(next);
+        },
+        () => {
+          // Without an answer the panel keeps its last state.
+        },
+      );
+    void load();
+    const timer = window.setInterval(load, XORA_POLL_MS);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+  return status;
 }
