@@ -136,8 +136,11 @@ export class XoraRuntime {
     writeSettings(path, { ...before, xora: { provider: "local", local } });
     this.attach = undefined;
     this.failedChange = undefined;
-    const result = await this.restart({ keepLastStart: true });
-    if (result.state === "ready") return result;
+    const starting = this.restart({ keepLastStart: true });
+    // A later switch or restart supersedes this one: it must not roll the newer choice back.
+    const mine = this.generation;
+    const result = await starting;
+    if (result.state === "ready" || this.generation !== mine) return this.status();
     const latest = this.settings() ?? before;
     const { xora: _failed, ...rest } = latest;
     writeSettings(path, previous ? { ...rest, xora: previous } : rest);

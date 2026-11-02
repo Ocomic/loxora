@@ -32,6 +32,19 @@ async function healthy(t: test.TestContext) {
   return `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}`;
 }
 
+/** A runtime that answers its health route only after `count` calls. */
+async function healthyAfter(t: test.TestContext, count: number) {
+  let calls = 0;
+  const server: Server = createServer((_request, response) => {
+    calls += 1;
+    response.writeHead(calls > count ? 200 : 503).end("{}");
+  });
+  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+  t.after(() => new Promise<void>((done) => server.close(() => done())));
+  const address = server.address();
+  return `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}`;
+}
+
 async function send(url: string, path: string, body: Body) {
   const response = await fetch(new URL(path, url), {
     method: "POST",
@@ -203,6 +216,21 @@ test("switching: a model that starts is kept; one that does not start goes back"
   assert.equal(back.modelLabel, "Qwen");
   assert.equal(back.failedChange, "Kaputt");
   assert.deepEqual(readSettings(path)?.xora?.local, other, "the previous model is written back");
+
+  // Two switches in a row: the newer choice wins, the older one never rolls it back.
+  const slow = await healthyAfter(t, 5);
+  const first: XoraLocalModel = { mode: "attached", url: slow, modelLabel: "A" };
+  const second: XoraLocalModel = {
+    mode: "attached",
+    url: await healthyAfter(t, 3),
+    modelLabel: "B",
+  };
+  const pending = xora.switchTo(first);
+  await new Promise((done) => setTimeout(done, 10));
+  await xora.switchTo(second);
+  await pending;
+  assert.equal(xora.status().modelLabel, "B");
+  assert.deepEqual(readSettings(path)?.xora?.local, second);
 
   // A failed start blocks the next start until the captain restarts Xora.
   writeSettings(path, {
