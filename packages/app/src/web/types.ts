@@ -233,7 +233,7 @@ export interface AssistantReply extends Interpretation {
   /** Who placed a setup answer (Milestone 16 section 4). */
   readonly by?: "button" | "keywords" | "model";
   /** A fixed reply key; the text is in the labels. */
-  readonly reply?: "notOnBoard" | "missions" | "notUnderstood" | "model";
+  readonly reply?: "notOnBoard" | "missions" | "notUnderstood" | "model" | "firstMission";
   readonly action?: ProposedAction;
   /** For a setup answer: the prompt, its answer buttons, and the terms it introduces. */
   readonly prompt?: PromptKey;

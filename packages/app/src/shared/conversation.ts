@@ -360,8 +360,119 @@ export function asksForModelChange(text: string, language: Language): boolean {
   return matches(MODEL_WORDS[language], found) && matches(CHANGE_WORDS[language], found);
 }
 
+const WHAT_NOW: Record<
+  Language,
+  {
+    readonly ask: readonly string[];
+    readonly now: readonly string[];
+    readonly doing: readonly string[];
+    readonly me: readonly string[];
+  }
+> = {
+  de: {
+    ask: ["was", "wie", "womit", "wo"],
+    now: ["jetzt", "nun", "zuerst", "weiter", "anfangen", "beginnen"],
+    doing: ["tun", "mach*", "start*"],
+    me: ["ich", "wir"],
+  },
+  en: {
+    ask: ["what", "how", "where"],
+    now: ["now", "next", "first", "begin"],
+    doing: ["do", "start"],
+    me: ["i", "we"],
+  },
+};
+
+/**
+ * True when a message on the bridge asks what to do now, for example "Was soll ich jetzt
+ * tun?" (Milestone 16, delivery 2). While the first Mission is offered, Xora answers with a
+ * fixed pointer to it instead of leaving the answer to the model.
+ */
+export function asksWhatNow(text: string, language: Language): boolean {
+  const found = words(text);
+  const list = WHAT_NOW[language];
+  if (found.length > 10 || !matches(list.ask, found)) return false;
+  return matches(list.now, found) || (matches(list.doing, found) && matches(list.me, found));
+}
+
+/** Words that only say "a new project", without telling what it is about. */
+const PROJECT_WORDS: Record<Language, readonly string[]> = {
+  de: [
+    "ich",
+    "wir",
+    "moechte",
+    "moechten",
+    "will",
+    "wollen",
+    "wuerde",
+    "gern",
+    "gerne",
+    "bitte",
+    "ein",
+    "eine",
+    "einen",
+    "neu*",
+    "projekt*",
+    "anleg*",
+    "erstell*",
+    "start*",
+    "mach*",
+    "beginn*",
+    "lass",
+    "lasst",
+    "uns",
+    "mal",
+    "jetzt",
+    "doch",
+    "ja",
+    "das",
+    "die",
+    "der",
+  ],
+  en: [
+    "i",
+    "we",
+    "want",
+    "would",
+    "like",
+    "to",
+    "please",
+    "a",
+    "an",
+    "the",
+    "new",
+    "project*",
+    "create*",
+    "start*",
+    "make",
+    "begin",
+    "let",
+    "lets",
+    "s",
+    "us",
+    "now",
+    "yes",
+  ],
+};
+
+/**
+ * True when an answer to "Which project?" already describes the plan, for example "Ein
+ * mobile Webgame online RPG mit Soulslike Elementen erstellen." Xora then takes it as the
+ * description instead of asking for it again (Milestone 16, delivery 2).
+ */
+export function carriesDescription(text: string, language: Language): boolean {
+  const rest = words(text).filter((word) => !matches(PROJECT_WORDS[language], [word]));
+  return rest.length >= 3;
+}
+
 /** Xora's fixed replies in script mode (Milestone 13 section 6). */
-export const XORA_REPLY_KEYS = ["notOnBoard", "missions", "notUnderstood", "model"] as const;
+export const XORA_REPLY_KEYS = [
+  "notOnBoard",
+  "missions",
+  "notUnderstood",
+  "model",
+  "firstMission",
+] as const;
 export type XoraReply = (typeof XORA_REPLY_KEYS)[number];
 
 /**
@@ -378,6 +489,8 @@ export const XORA_REPLIES: Record<Language, Record<XoraReply, string>> = {
       "Das verstehe ich noch nicht, ich bin noch im Skriptmodus. Tipp einfach eine der Antworten an.",
     model:
       "Mein Modell wechselst du in meinen Details: Öffne rechts „Details“ und wähle „Modell wechseln“. Nichts ändert sich, bevor du die Karte bestätigst.",
+    firstMission:
+      "Am besten startest du jetzt deine erste Mission: Sie liegt oben in unserem Chat bereit, unter „Erste Mission“. Gemeinsam halten wir das Ziel deines Projekts im Logbuch fest.",
   },
   en: {
     notOnBoard:
@@ -388,5 +501,7 @@ export const XORA_REPLIES: Record<Language, Record<XoraReply, string>> = {
       "I don't understand that yet, I'm still in script mode. Just tap one of the answers.",
     model:
       "You change my model in my details: open “Details” on the right and choose “Change model”. Nothing changes before you confirm the card.",
+    firstMission:
+      "Best start your first Mission now: it is ready at the top of our chat, under “First mission”. Together we record your project's goal in the logbook.",
   },
 };

@@ -1,3 +1,4 @@
+export { XoraRuntime } from "./server/runtime.js";
 export {
   ActorRejected,
   type AppServer,

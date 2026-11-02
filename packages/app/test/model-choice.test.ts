@@ -12,7 +12,14 @@ import { labelFromFile, proposeModelChange } from "../src/server/model-choice.js
 import { XoraRuntime, type XoraStatus } from "../src/server/runtime.js";
 import type { XoraSource } from "../src/server/server.js";
 import { chatPrompt } from "../src/server/xora-prompt.js";
-import { asksForModelChange, interpret, PROMPTS, SETUP_STEPS } from "../src/shared/conversation.js";
+import {
+  asksForModelChange,
+  asksWhatNow,
+  carriesDescription,
+  interpret,
+  PROMPTS,
+  SETUP_STEPS,
+} from "../src/shared/conversation.js";
 
 /** Milestone 16 delivery 2: the step "Xora", choosing another model, and the project name. */
 
@@ -109,6 +116,50 @@ test("asking Xora for another model gets the fixed answer, with or without a mod
     { reply: "model" },
   );
   assert.equal(asked.length, 0, "the model is not asked");
+});
+
+test('Check A: "What now?" points to the first Mission while it waits', async () => {
+  assert.equal(asksWhatNow("Was soll ich jetzt tun?", "de"), true);
+  assert.equal(asksWhatNow("Wie geht es weiter?", "de"), true);
+  assert.equal(asksWhatNow("What should I do now?", "en"), true);
+  assert.equal(asksWhatNow("Was kannst du?", "de"), false);
+  assert.equal(asksWhatNow("Was ist ein Logbuch?", "de"), false);
+  const asked: ModelRequest[] = [];
+  const assistant = new ModelAssistant(
+    { url: () => "http://127.0.0.1:1", fail: () => undefined },
+    new ScriptedAssistant(),
+    async (_base, request) => {
+      asked.push(request);
+      return { text: "Schau dich um." };
+    },
+  );
+  const message = { kind: "message", text: "Was soll ich jetzt tun?" } as const;
+  assert.deepEqual(
+    await assistant.respond(message, "de", { captain: "Alex", firstMission: true }),
+    {
+      reply: "firstMission",
+    },
+  );
+  assert.equal(asked.length, 0, "the model is not asked while the first Mission waits");
+  assert.deepEqual(await assistant.respond(message, "de", { captain: "Alex" }), {
+    text: "Schau dich um.",
+  });
+  assert.deepEqual(
+    await new ScriptedAssistant().respond(message, "de", { captain: "Alex", firstMission: true }),
+    { reply: "firstMission" },
+  );
+  assert.deepEqual(await new ScriptedAssistant().respond(message, "de"), { reply: "notOnBoard" });
+});
+
+test('Check A: a typed answer to "Which project?" can already be the description', () => {
+  assert.equal(
+    carriesDescription("Ein mobile Webgame online RPG mit Soulslike Elementen erstellen.", "de"),
+    true,
+  );
+  assert.equal(carriesDescription("Ich möchte gerne ein neues Projekt anlegen", "de"), false);
+  assert.equal(carriesDescription("neu", "de"), false);
+  assert.equal(carriesDescription("Start a new project", "en"), false);
+  assert.equal(carriesDescription("Create a website for my bakery", "en"), true);
 });
 
 test("Xora knows on the bridge where the first Mission waits and where her model changes", () => {

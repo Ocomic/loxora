@@ -309,6 +309,11 @@ test.describe("English, by typing", () => {
     await page.getByRole("textbox", { name: "Message" }).fill("Hello Xora");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(page.locator(".bridge-thread")).toContainText("Hello Xora");
+    // While the first Mission waits, "What now?" points to it (delivery 2, Check A).
+    const topic = page.getByRole("textbox", { name: "Message" }).first();
+    await topic.fill("What should I do now?");
+    await topic.press("Enter");
+    await expect(page.getByText("Best start your first Mission now").first()).toBeVisible();
     await page.locator(".bridge-chat").getByLabel("Channel menu").click();
     await page.getByRole("button", { name: text.clear }).click();
     await expect(page.locator(".bridge-chat")).not.toContainText("Hello Xora");
@@ -320,6 +325,28 @@ test.describe("English, by typing", () => {
       "string",
     );
     expect(errors).toEqual([]);
+  });
+});
+
+test.describe("English, describing the plan right away", () => {
+  test.use({ locale: "en-US" });
+
+  test("a description typed at the project question is not asked for again", async ({ page }) => {
+    const text = TEXT.en;
+    await start(page, text.answer);
+    await say(page, text.answer, "Alex");
+    await say(page, text.answer, "keep it");
+    await say(page, text.answer, "Enterprise");
+    await say(page, text.answer, "Yes, that's fine");
+    await say(page, text.answer, "Create a small platform game for my kids.");
+    await expect(page.getByRole("button", { name: "Use “My game”" })).toBeVisible();
+    await say(page, text.answer, "whatever");
+    await expect(page.getByText(text.projectCard)).toBeVisible();
+    await say(page, text.answer, "yes");
+    await say(page, text.answer, "to the bridge");
+    await expect(page).toHaveURL(/\/bridge\/direct%3Axora$/);
+    const setup = settings().setup as Record<string, unknown>;
+    expect(setup.purpose).toBe("Create a small platform game for my kids.");
   });
 });
 

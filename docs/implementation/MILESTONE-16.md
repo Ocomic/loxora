@@ -132,6 +132,10 @@ Three pull requests:
 - **"Continue without Xora"** writes nothing: the restart question comes again on the next app start. `xora.enabled: false` is still read ("declined") and is cleared by "Restart Xora".
 - **Back to the previous model:** if a confirmed model does not get ready, the runtime writes the previous `xora` entry back and starts it again; `GET /api/xora` reports `failedChange` until the next change or restart.
 - **Bridge facts:** with a model, Xora's chat prompt says where her model is changed and, while the first Mission is offered, that it waits at the top of her direct chat.
+- **From the Windows check A (November 2, 2026):**
+  - A plan typed at the project question ("Ein mobile Webgame online RPG mit Soulslike Elementen erstellen.") was placed as "New project", and Xora then asked for the description again. Now a typed answer placed as "new" that has at least three words beyond "new project" words (`carriesDescription`) is taken as the description right away.
+  - "Was soll ich jetzt tun?" on the bridge got a general answer from Gemma 4 E2B, which ignored the first-Mission fact in its prompt. While the first Mission is offered, a "what now" question (`asksWhatNow`, keyword list) now gets a fixed reply that points to it, with or without a model, like the model-change question. Other questions still go to the model.
+- **Check A with the real model, automated (asked for by the decision owner):** `npm run test:xora:live` runs Check A in the browser against the model that already runs (default `http://127.0.0.1:8080`, or `LOXORA_LIVE_XORA_URL`), with a temporary LOXORA_HOME. It checks what the app decides hard and only records what the model says, and writes screenshots plus `bericht.md` to `output/xora-live/<time>/` (ignored by git). It lives in `packages/app/e2e-live/` with its own Playwright config, so `npm run test:app:e2e` and CI never run it; the fake runtime stays the only model in automatic tests.
 
 ## Choices made in this document
 

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   asksForModelChange,
+  asksWhatNow,
   type Interpretation,
   interpret,
   PROMPTS,
@@ -212,7 +213,11 @@ const CONTENT: Record<Language, Content> = {
 
 /** Script mode (RFC-011 section 2): fixed content and fixed choices, deterministic. */
 export class ScriptedAssistant implements Assistant {
-  public async respond(input: AssistantInput, language: Language): Promise<AssistantTurn> {
+  public async respond(
+    input: AssistantInput,
+    language: Language,
+    people?: PromptPeople,
+  ): Promise<AssistantTurn> {
     const content = CONTENT[language];
     switch (input.kind) {
       case "goal": {
@@ -243,7 +248,11 @@ export class ScriptedAssistant implements Assistant {
         };
       case "message":
         if (input.topic === "missions") return { reply: "missions" };
-        return { reply: asksForModelChange(input.text, language) ? "model" : "notOnBoard" };
+        if (asksForModelChange(input.text, language)) return { reply: "model" };
+        if (people?.firstMission && asksWhatNow(input.text, language)) {
+          return { reply: "firstMission" };
+        }
+        return { reply: "notOnBoard" };
       case "setup": {
         if (input.choice !== undefined) {
           return PROMPTS[input.prompt].choices.some((choice) => choice === input.choice)
@@ -301,6 +310,10 @@ export class ModelAssistant implements Assistant {
       if (input.kind === "message" && input.topic === undefined) {
         // Changing her model is a fixed answer, with or without a model (section 6).
         if (asksForModelChange(input.text, language)) return { reply: "model" };
+        // So is "What now?" while the first Mission waits (delivery 2, Check A).
+        if (people.firstMission && asksWhatNow(input.text, language)) {
+          return { reply: "firstMission" };
+        }
         const turn = await this.complete(base, {
           system: chatPrompt(language, people),
           messages: [...(input.history ?? []).slice(-10), { role: "user", content: input.text }],

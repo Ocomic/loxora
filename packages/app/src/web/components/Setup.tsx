@@ -1,5 +1,6 @@
 import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import {
+  carriesDescription,
   PROMPTS,
   type ProjectGoal,
   type PromptKey,
@@ -645,6 +646,20 @@ export function Setup({ initial, onDone }: { initial: SetupInfo; onDone: () => P
         // Xora's own question from the model, or the fixed text (Milestone 16 section 4).
         say(result.text ?? t.xora.replies.notUnderstood);
         setAsking(asking);
+      } else if (
+        (key === "project" || key === "existingProject") &&
+        result.choice === "new" &&
+        "text" in given &&
+        carriesDescription(given.text, language)
+      ) {
+        // "A mobile web game …" already is the description: Xora does not ask for it again.
+        const described = await post<AssistantReply>("/api/assistant/message", {
+          prompt: "describe",
+          text: given.text,
+          language,
+        });
+        if (described.reply === "notUnderstood") await handle(key, result);
+        else await handle("describe", described);
       } else {
         await handle(key, result);
       }
