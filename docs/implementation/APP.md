@@ -1,6 +1,6 @@
 # Loxora App (Mission Control)
 
-`@loxora/app` is the product UI (RFC-010). Milestone 11 delivers a **read-only Mission Control** on the real local workspace. Milestone 12 adds the **write path**: with a configured human actor, Missions can be answered, paused, stopped, and resumed in the UI. Milestone 13 (RFC-011) adds the **first-launch setup** in script mode: scenes A4 to C3 (name, ship, logbook folder, orientation) and the first steps D1 to E4 (first project, first Mission, first accepted knowledge), the Xora input bar, and empty states. Milestone 14 (RFC-011 Amendment 1) turns the setup into **one conversation with Xora**: name, ship, logbook, project, and bridge, typed or tapped, and moves the first Mission to the bridge. Milestone 15 (RFC-011 Amendment 2, ADR-007) makes **the bridge the ship's chat** at `/bridge`, the start screen: a ship channel, one channel per project with a thread per Mission, task channels, a decisions channel, and a direct chat with Xora. The Hackathon demo inspector (`WEB-UI.md`) stays frozen.
+`@loxora/app` is the product UI (RFC-010). Milestone 11 delivers a **read-only Mission Control** on the real local workspace. Milestone 12 adds the **write path**: with a configured human actor, Missions can be answered, paused, stopped, and resumed in the UI. Milestone 13 (RFC-011) adds the **first-launch setup** in script mode: scenes A4 to C3 (name, ship, logbook folder, orientation) and the first steps D1 to E4 (first project, first Mission, first accepted knowledge), the Xora input bar, and empty states. Milestone 14 (RFC-011 Amendment 1) turns the setup into **one conversation with Xora**: name, ship, logbook, project, and bridge, typed or tapped, and moves the first Mission to the bridge. Milestone 15 (RFC-011 Amendment 2, ADR-007) makes **the bridge the ship's chat** at `/bridge`, the start screen: a ship channel, one channel per project with a thread per Mission, task channels, a decisions channel, and a direct chat with Xora. Milestone 16 (ADR-008, RFC-011 Amendment 3) puts **Xora on a local model**: delivery 1 adds the runtime, the model adapter, and the rule that the app records fixed choices itself. The Hackathon demo inspector (`WEB-UI.md`) stays frozen.
 
 ## Running it
 
@@ -9,6 +9,7 @@ npm ci && npm run build
 npm run app                                   # settings file; setup if there is no workspace
 npm run app -- --workspace <dir> --port 4181  # explicit workspace and port, no setup
 npm run app -- --actor <your-id>              # write mode as a human workspace actor
+npm run app -- --xora-url http://127.0.0.1:8080  # Xora on a model runtime that already runs
 ```
 
 - **Workspace:**
@@ -19,6 +20,15 @@ npm run app -- --actor <your-id>              # write mode as a human workspace 
   1. `--actor`: the app refuses to start if the actor is an `agent:*` id or not listed in `workspace.json` `reviewers`;
   2. the `captain` from the settings file, checked on every request in the same way (Milestone 13).
   - Without either, the app is read-only. The header shows the actor; it cannot be switched in the UI.
+
+## Xora's model (Milestone 16)
+
+- **Runtime** (ADR-008): llama.cpp `llama-server`, never inside the app process. Two modes:
+  - **attached**: `--xora-url <address>` connects to a runtime that already runs on this computer, for this session only; nothing is written to the settings file. The address must be `http` on `127.0.0.1`, `localhost`, or `[::1]`, without a path; otherwise the app does not start. A `xora.local` entry with `mode: "attached"` in the settings file does the same permanently.
+  - **managed**: with `xora.local.mode: "managed"`, the app starts `runtimePath` with `-m <modelPath> --host 127.0.0.1 --port <free port> --jinja -c 8192 --no-mmproj`, writes its output to `xora-runtime.log` next to the settings file, and stops its whole process tree when the app stops (Ctrl+C, closing the window). It never passes `-hf`, so it never downloads a model, and never stops a runtime it did not start. It does not start below 4 GB of free memory (until measured, Milestone 16 section 9).
+- **Start:** in the background; the setup does not wait. `GET /health` every 500 ms for at most 60 seconds. The result is recorded as `xora.lastStart` (not with `--xora-url`). After a failed start Xora stays in script mode on later starts (`failedBefore`); the restart question follows in delivery 2. If an answer fails during a session (30 seconds per answer), that turn is answered in script mode and Xora stays there until the app restarts.
+- **What the model is asked** (Milestone 16 sections 3 and 4): a tapped button and a typed answer the keyword list places are recorded without the model (`by: "button"` or `"keywords"`). Only a typed answer the keywords cannot place goes to the model, which may only pick one of the step's buttons or `unclear` (`by: "model"`); on `unclear` Xora's own question replaces the fixed not-understood text. Names, a typed ship name, and paths are never sent for placement. For the plan description the model proposes a project name and a goal template; the purpose stays the typed text. In Xora's direct chat and with `@Xora`, the model answers with text only and sees the last 10 messages of the thread. The system prompt (`xora-prompt.ts`, prompt version 3 of the evaluation) holds the captain's and ship's names, never project content. Prompts and raw model output are not stored.
+- **States:** `GET /api/xora` and `xora` in `GET /api/setup` report `{ state: "starting" | "ready" | "scriptMode", reason?, provider: "local", modelLabel, mode? }`. Reasons: `notConfigured`, `declined`, `failedBefore`, `missingFile`, `lowMemory`, `timeout`, `exited`, `notLocal`. `boot.xora` on the start screen uses the same state.
 
 ## App settings file (Milestone 13)
 
@@ -32,12 +42,12 @@ A per-user JSON file (RFC-011 section 3). It holds no secrets and no project kno
 
 | Field | Meaning |
 |---|---|
-| `configVersion` | `1` |
+| `configVersion` | `2` since Milestone 16; version 1 files are read and written as version 2 |
 | `displayName` | how Xora addresses the person |
 | `captain` | the human actor id, derived from the name (`Alex Müller` becomes `alex-mueller`) |
 | `workspacePath` | absolute path of the logbook; the CLI reads it as resolution step 3 (`CLI.md`) |
 | `language` | `de` or `en`; absent means the browser's language |
-| `xora` | `{ "state": "not_installed" }` |
+| `xora` | Xora's model (ADR-008 section 5): `enabled` (`false`: continue without Xora), `provider` (`local`), `local` (`{ mode: "managed", runtimePath, modelPath, modelLabel }` with absolute paths and a `.gguf` model, or `{ mode: "attached", url, modelLabel }` with a local address), `lastStart` (`at`, `result`: `ready`, `timeout`, `exited`, `lowMemory`, or `declined`, `seconds`). Any other field, for example a key, makes the file unusable. Version 1's `{ "state": "not_installed" }` means no model. |
 | `setup` | the answers (`shipName`, `logbookPath`) until the workspace exists; the ids the project and the first Mission wrote (`purpose`, `projectId`, `spaceIds`, `collectionId`, `missionId`, `sourceId`, `evidenceId`, `proposalId`), so a repeated step continues instead of duplicating; `completedAt` once the setup conversation ended on the bridge; `firstMissionDismissedAt` once the first Mission offer was dismissed. `introducedAt` (Milestone 13) is no longer written but still read. |
 
 - Writes are atomic (a temporary file, then a rename).
@@ -183,5 +193,6 @@ The UI is available in German and English (RFC-010, Amendment 1). All UI text li
 
 ## Tests
 
+- `packages/app/test/xora.test.ts` (in `npm test`): settings version 2, local addresses, parsing model answers, the fixed-choice rule, the project proposal, fallbacks, the runtime attached and managed (against a fake runtime and a fake executable), and the server with a fake runtime. No test uses a real model.
 - `packages/app/test/app.test.ts`, `bridge.test.ts`, and `setup.test.ts` (in `npm test`): read and write API, the bridge chat routes and derived entries, setup, the keyword list, first steps and the first Mission offer, assistant routes, request protection, label parity.
 - `packages/app/e2e/setup.spec.ts` (Playwright, `npm run test:app:e2e`): the setup in German by tapping (apart from the name) through the first Mission in Xora's direct chat (its thread in the project channel, the three hints, and the next step), with requests to other hosts blocked to show the typefaces are bundled; in English by typing, with "Change name", a not-understood reply, "Clear chat" leaving the guide in place, and dismissing the offer; "Look around first" with the inactive "Add an existing project"; a not-understood reply and a resumed setup; and opening an existing workspace. `packages/app/e2e/bridge.spec.ts`: the decisions channel leading to an open question, answering and writing in a Mission thread with and without `@Xora`, Xora's direct chat, a message link preview and jump, creating, renaming, and archiving a task channel, deleting a message, the narrow layout, and a workspace without `008_chat`. Each test starts its own server with a temporary `LOXORA_HOME`; the real user folders are never touched. CI runs it as "App end-to-end (Playwright)".

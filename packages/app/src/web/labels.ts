@@ -169,6 +169,8 @@ export interface Labels {
       readonly notCreated: string;
       readonly xora: string;
       readonly scriptMode: string;
+      readonly starting: (model: string) => string;
+      readonly online: (model: string) => string;
     };
     readonly unreachable: string;
     readonly retry: string;
@@ -179,7 +181,9 @@ export interface Labels {
     readonly xoraRole: string;
     readonly statusConnecting: string;
     readonly statusOnline: string;
+    readonly statusModel: (model: string) => string;
     readonly scriptNote: string;
+    readonly modelNote: (model: string) => string;
     readonly conversation: string;
     readonly captain: string;
     readonly termsTitle: string;
@@ -530,6 +534,8 @@ const de: Labels = {
       notCreated: "noch nicht angelegt",
       xora: "Xora",
       scriptMode: "online im Skriptmodus",
+      starting: (model) => `startet (${model})`,
+      online: (model) => `online (${model})`,
     },
     unreachable: "Der Bordcomputer antwortet nicht. Läuft Loxora noch?",
     retry: "Erneut verbinden",
@@ -546,6 +552,9 @@ const de: Labels = {
     xoraRole: "Erste Offizierin",
     statusConnecting: "Verbinde …",
     statusOnline: "Online · Skriptmodus",
+    statusModel: (model) => `Online · ${model} · auf diesem Computer`,
+    modelNote: (model) =>
+      `Ich arbeite mit ${model} direkt auf deinem Computer. Tipp eine Antwort an oder schreib sie unten.`,
     scriptNote:
       "Skriptmodus: Ich antworte noch mit festen Texten. Tipp eine Antwort an oder schreib sie unten.",
     conversation: "Gespräch mit Xora",
@@ -1009,6 +1018,8 @@ const en: Labels = {
       notCreated: "not created yet",
       xora: "Xora",
       scriptMode: "online in script mode",
+      starting: (model) => `starting (${model})`,
+      online: (model) => `online (${model})`,
     },
     unreachable: "The ship computer does not answer. Is Loxora still running?",
     retry: "Connect again",
@@ -1025,6 +1036,9 @@ const en: Labels = {
     xoraRole: "First officer",
     statusConnecting: "Connecting …",
     statusOnline: "Online · script mode",
+    statusModel: (model) => `Online · ${model} · on this computer`,
+    modelNote: (model) =>
+      `I run on ${model}, right on your computer. Tap an answer or type it below.`,
     scriptNote: "Script mode: I still answer with fixed texts. Tap an answer or type it below.",
     conversation: "Conversation with Xora",
     captain: "You",

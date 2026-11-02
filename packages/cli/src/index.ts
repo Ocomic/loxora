@@ -14,10 +14,16 @@ export {
 } from "./workspace.js";
 export {
   type AppSettings,
+  isLoopbackUrl,
   readSettings,
   SETTINGS_CONFIG_VERSION,
+  type SettingsInput,
   type SettingsLanguage,
   SettingsUnreadable,
   settingsPath,
   writeSettings,
+  XORA_START_RESULTS,
+  type XoraLocalModel,
+  type XoraSettings,
+  type XoraStartResult,
 } from "./settings.js";

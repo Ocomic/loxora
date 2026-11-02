@@ -118,7 +118,12 @@ test("without a workspace the app runs the setup, then Mission Control with the 
     places: null,
     picker: false,
   });
-  assert.deepEqual(first.body.xora, { state: "not_installed" });
+  assert.deepEqual(first.body.xora, {
+    state: "scriptMode",
+    reason: "notConfigured",
+    provider: "local",
+    modelLabel: null,
+  });
   assert.equal(first.body.step, "name");
   assert.deepEqual(first.body.boot, {
     shipComputer: "ready",
@@ -153,11 +158,10 @@ test("without a workspace the app runs the setup, then Mission Control with the 
   });
   assert.equal(existsSync(join(logbook, "workspace.sqlite")), true);
   assert.deepEqual(settingsOf(place), {
-    configVersion: 1,
+    configVersion: 2,
     displayName: "Alex Müller",
     captain: "alex-mueller",
     workspacePath: logbook,
-    xora: { state: "not_installed" },
     setup: {},
   });
 
@@ -171,6 +175,7 @@ test("without a workspace the app runs the setup, then Mission Control with the 
       logbookPath: logbook,
     },
     boot: { shipComputer: "ready", logbook: "found", xora: "scriptMode" },
+    xora: { state: "scriptMode", reason: "notConfigured", provider: "local", modelLabel: null },
     firstSteps: {
       pending: false,
       stage: "goal",
@@ -327,11 +332,10 @@ test("an existing workspace is offered and opened in place, never migrated", asy
   });
   assert.deepEqual(opened.body, { mode: "ready", step: "project" });
   assert.deepEqual(settingsOf(place), {
-    configVersion: 1,
+    configVersion: 2,
     displayName: "Ocomic",
     captain: "Ocomic",
     workspacePath: place.defaultWorkspace,
-    xora: { state: "not_installed" },
     setup: {},
   });
   assert.equal((await get(`${server.url}/api/workspace`)).body.actor, "Ocomic");
@@ -808,6 +812,7 @@ test("setup answers go through the assistant and write nothing", async (t) => {
     language: "de",
   });
   assert.deepEqual(typed.body, {
+    by: "keywords",
     prompt: "logbook",
     choice: "fits",
     choices: ["fits", "other", "open"],
@@ -829,6 +834,7 @@ test("setup answers go through the assistant and write nothing", async (t) => {
     choice: "aurora",
   });
   assert.equal(tapped.body.choice, "aurora");
+  assert.equal(tapped.body.by, "button");
   for (const body of [
     { prompt: "launch", text: "x" },
     { prompt: "ship", choice: "enterprise" },

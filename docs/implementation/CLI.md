@@ -18,7 +18,7 @@ The CLI needs Node.js as pinned in `.nvmrc`. It works on Windows, macOS, and Lin
 - **Location**, in resolution order:
   1. `--workspace <dir>`;
   2. the `LOXORA_WORKSPACE` environment variable;
-  3. `workspacePath` from the app settings file written by the setup of `@loxora/app` (RFC-011 section 4, Milestone 13), if the file exists and has one. The CLI only reads this file. Its location is in `APP.md`; an unreadable file stops the command with a message instead of silently using another workspace;
+  3. `workspacePath` from the app settings file written by the setup of `@loxora/app` (RFC-011 section 4, Milestone 13), if the file exists and has one. The CLI only reads this file. Its location and fields are in `APP.md` (settings version 2 since Milestone 16; the CLI still reads only `workspacePath`, and also reads version 1 files); an unreadable file stops the command with a message instead of silently using another workspace;
   4. `<home>/.loxora/workspaces/default`. Tests may set `LOXORA_HOME` to replace `<home>`.
 - **Contents:**
   - `workspace.sqlite`, the store;

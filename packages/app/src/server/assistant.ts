@@ -1,12 +1,35 @@
 import { randomUUID } from "node:crypto";
-import { type Interpretation, interpret, PROMPTS, type PromptKey } from "../shared/conversation.js";
+import {
+  type Interpretation,
+  interpret,
+  PROMPTS,
+  type PromptKey,
+  words,
+} from "../shared/conversation.js";
+import {
+  chatCompletion,
+  limitWords,
+  type ModelMessage,
+  type ModelRequest,
+  type ModelTurn,
+  ModelUnavailable,
+} from "./model.js";
+import {
+  CHOICE_SITUATIONS,
+  type ChoiceSituation,
+  chatPrompt,
+  choicePrompt,
+  describePrompt,
+  type PromptPeople,
+  UNCLEAR,
+} from "./xora-prompt.js";
 
 /**
  * Xora as a capability (RFC-011 section 5, Milestone 13). The flow depends only on the
  * `Assistant` interface. An assistant returns text, a fixed reply key, or one proposed
  * action; it never writes. The server keeps proposed actions pending and executes one only
- * after the person confirms it. This milestone has only `ScriptedAssistant`: fixed content,
- * no model. A local model is another implementation (milestone 3).
+ * after the person confirms it. `ScriptedAssistant` has fixed content and no model;
+ * `ModelAssistant` (Milestone 16) asks a model for free text and falls back to it.
  */
 
 export type Language = "de" | "en";
@@ -40,7 +63,13 @@ export type AssistantInput =
   /** Scene E3 in script mode: the goal text the person wrote. */
   | { readonly kind: "goalText"; readonly text: string }
   /** The input bar; `topic` names an empty state that asked. */
-  | { readonly kind: "message"; readonly text: string; readonly topic?: string };
+  | {
+      readonly kind: "message";
+      readonly text: string;
+      readonly topic?: string;
+      /** The earlier messages of the open thread, oldest first, at most 10 (section 3). */
+      readonly history?: readonly ModelMessage[];
+    };
 
 export interface CreateProjectAction {
   readonly kind: "createProject";
@@ -81,10 +110,12 @@ export interface AssistantTurn {
   readonly action?: ActionPayload;
   /** For a setup answer: what it was understood as; absent when it was not understood. */
   readonly answer?: Interpretation;
+  /** For a setup answer: who placed it (Milestone 16 section 4). */
+  readonly by?: "button" | "keywords" | "model";
 }
 
 export interface Assistant {
-  respond(input: AssistantInput, language: Language): Promise<AssistantTurn>;
+  respond(input: AssistantInput, language: Language, people?: PromptPeople): Promise<AssistantTurn>;
 }
 
 interface Content {
@@ -213,14 +244,126 @@ export class ScriptedAssistant implements Assistant {
       case "setup": {
         if (input.choice !== undefined) {
           return PROMPTS[input.prompt].choices.some((choice) => choice === input.choice)
-            ? { answer: { choice: input.choice } }
+            ? { answer: { choice: input.choice }, by: "button" }
             : { reply: "notUnderstood" };
         }
         const answer = interpret(input.prompt, input.text ?? "", language);
-        return answer ? { answer } : { reply: "notUnderstood" };
+        return answer ? { answer, by: "keywords" } : { reply: "notUnderstood" };
       }
     }
   }
+}
+
+/** What `ModelAssistant` needs from the runtime (Milestone 16 section 2). */
+export interface ModelSource {
+  /** The runtime's address while Xora is ready; null otherwise. */
+  url(): string | null;
+  /** A failed answer: Xora stays in script mode until a restart. */
+  fail(reason: "timeout" | "exited"): void;
+}
+
+type Complete = (baseUrl: string, request: ModelRequest) => Promise<ModelTurn>;
+
+const MAX_PROJECT_NAME_LENGTH = 80;
+const MAX_PROJECT_NAME_WORDS = 4;
+const DEFAULT_PEOPLE: PromptPeople = { captain: "Captain" };
+
+/**
+ * Xora with a model (Milestone 16 section 3). The app decides everything it can itself: a
+ * tapped button, a typed answer the keyword list places, typed names and paths, the first
+ * Mission, and the goal text. The model is asked only for free text: a typed answer the
+ * keywords could not place (one of the step's buttons or "unclear"), the plan description
+ * (a project name and a goal template; the purpose stays the typed text), and messages to
+ * Xora on the bridge. Every model answer is checked; a failure falls back to script mode.
+ */
+export class ModelAssistant implements Assistant {
+  public constructor(
+    private readonly source: ModelSource,
+    private readonly scripted: Assistant = new ScriptedAssistant(),
+    private readonly complete: Complete = chatCompletion,
+  ) {}
+
+  public async respond(
+    input: AssistantInput,
+    language: Language,
+    people: PromptPeople = DEFAULT_PEOPLE,
+  ): Promise<AssistantTurn> {
+    const fallback = () => this.scripted.respond(input, language, people);
+    const base = this.source.url();
+    if (!base) return fallback();
+    try {
+      if (input.kind === "setup" && input.choice === undefined) {
+        return await this.setupText(base, input.prompt, input.text ?? "", language, people);
+      }
+      if (input.kind === "message" && input.topic === undefined) {
+        const turn = await this.complete(base, {
+          system: chatPrompt(language, people),
+          messages: [...(input.history ?? []).slice(-10), { role: "user", content: input.text }],
+          tools: [],
+        });
+        return turn.text ? { text: limitWords(turn.text) } : await fallback();
+      }
+    } catch (error) {
+      if (!(error instanceof ModelUnavailable)) throw error;
+      this.source.fail(error.reason);
+    }
+    return fallback();
+  }
+
+  private async setupText(
+    base: string,
+    prompt: PromptKey,
+    text: string,
+    language: Language,
+    people: PromptPeople,
+  ): Promise<AssistantTurn> {
+    const placed = interpret(prompt, text, language);
+    if (prompt === "describe") {
+      if (!placed || placed.choice !== undefined) {
+        return placed ? { answer: placed, by: "keywords" } : { reply: "notUnderstood" };
+      }
+      const { system, tool } = describePrompt(language, people);
+      const turn = await this.complete(base, {
+        system,
+        messages: [{ role: "user", content: text }],
+        tools: [tool],
+      });
+      const proposal = validProject(turn);
+      if (!proposal) return { answer: placed, by: "keywords" };
+      return {
+        answer: { value: placed.value ?? text.trim(), ...proposal },
+        by: "model",
+        ...(turn.text ? { text: limitWords(turn.text) } : {}),
+      };
+    }
+    if (placed) return { answer: placed, by: "keywords" };
+    if (!CHOICE_SITUATIONS.includes(prompt as ChoiceSituation)) return { reply: "notUnderstood" };
+    const choices = PROMPTS[prompt].choices;
+    const { system, tool } = choicePrompt(prompt as ChoiceSituation, choices, language, people);
+    const turn = await this.complete(base, {
+      system,
+      messages: [{ role: "user", content: text }],
+      tools: [tool],
+    });
+    const choice = turn.call?.name === "place_answer" ? turn.call.arguments.choice : undefined;
+    if (typeof choice === "string" && choice !== UNCLEAR && choices.some((one) => one === choice)) {
+      return { answer: { choice }, by: "model" };
+    }
+    return { reply: "notUnderstood", ...(turn.text ? { text: limitWords(turn.text) } : {}) };
+  }
+}
+
+/** A model's project proposal, if it passes the checks of section 3. */
+function validProject(turn: ModelTurn): { projectName: string; goal: Goal } | null {
+  if (turn.call?.name !== "propose_project") return null;
+  const { name, goal } = turn.call.arguments;
+  if (typeof name !== "string" || typeof goal !== "string") return null;
+  const projectName = name.trim();
+  const count = words(projectName).length;
+  if (!projectName || projectName.length > MAX_PROJECT_NAME_LENGTH) return null;
+  if (count < 1 || count > MAX_PROJECT_NAME_WORDS) return null;
+  const template = GOALS.find((one) => one === goal);
+  return template ? { projectName, goal: template } : null;
 }
 
 const PENDING_LIFETIME_MS = 30 * 60 * 1000;

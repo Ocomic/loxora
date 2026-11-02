@@ -126,7 +126,7 @@ export interface SetupInfo {
   readonly boot?: {
     readonly shipComputer: "ready";
     readonly logbook: "found" | "notCreated";
-    readonly xora: "scriptMode";
+    readonly xora: XoraState;
   };
   readonly answers?: {
     readonly name: string | null;
@@ -154,7 +154,7 @@ export interface SetupInfo {
   };
   /** After `POST /api/setup/folder`: whether a folder was chosen in the window. */
   readonly picked?: boolean;
-  readonly xora?: { readonly state: "not_installed" };
+  readonly xora?: XoraInfo;
   /** Ready mode: the first Mission and its offer on the bridge. */
   readonly firstSteps?: FirstSteps;
 }
@@ -192,8 +192,22 @@ export type ProposedAction = { readonly id: string } & (
   | { readonly kind: "recordGoal"; readonly title: string; readonly content: string }
 );
 
+/** Xora's model state (Milestone 16 section 7). */
+export type XoraState = "starting" | "ready" | "scriptMode";
+
+export interface XoraInfo {
+  readonly state: XoraState;
+  readonly reason?: string;
+  readonly provider: "local";
+  readonly modelLabel: string | null;
+  readonly mode?: "managed" | "attached";
+}
+
 export interface AssistantReply extends Interpretation {
+  /** Xora's own sentence from the model, shown instead of a fixed text. */
   readonly text?: string;
+  /** Who placed a setup answer (Milestone 16 section 4). */
+  readonly by?: "button" | "keywords" | "model";
   /** A fixed reply key; the text is in the labels. */
   readonly reply?: "notOnBoard" | "missions" | "notUnderstood";
   readonly action?: ProposedAction;

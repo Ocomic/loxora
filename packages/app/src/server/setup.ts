@@ -11,6 +11,7 @@ import {
   isAgentActor,
   loadWorkspaceConfig,
   readSettings,
+  SETTINGS_CONFIG_VERSION,
   WORKSPACE_CONFIG_FILE,
   writeSettings,
 } from "@loxora/cli";
@@ -179,7 +180,7 @@ export interface SetupEnvironment {
 }
 
 export function loadSettings(path: string): AppSettings {
-  return readSettings(path) ?? { configVersion: 1 };
+  return readSettings(path) ?? { configVersion: SETTINGS_CONFIG_VERSION };
 }
 
 function updateSettings(path: string, change: (settings: AppSettings) => AppSettings): void {
@@ -247,7 +248,6 @@ export function setupState(environment: SetupEnvironment, settings: AppSettings)
       places: oneDrive ? { local: environment.home ?? homedir(), oneDrive } : null,
       picker: environment.pickFolder !== undefined,
     },
-    xora: { state: "not_installed" as const },
   };
 }
 
@@ -369,7 +369,6 @@ export async function createOrOpenWorkspace(
     writeSettings(environment.settingsPath, {
       ...settings,
       workspacePath: directory,
-      xora: { state: "not_installed" },
       setup: {},
     });
     return;
@@ -396,7 +395,6 @@ export async function createOrOpenWorkspace(
       displayName: settings.displayName ?? captain,
       captain,
       workspacePath: path,
-      xora: { state: "not_installed" },
       setup: {},
     });
     return;

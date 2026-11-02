@@ -41,8 +41,13 @@ import {
   GOALS,
   type Language,
   PendingActions,
+  type Assistant,
+  ModelAssistant,
+  type ModelSource,
   ScriptedAssistant,
 } from "./assistant.js";
+import type { XoraStatus } from "./runtime.js";
+import type { PromptPeople } from "./xora-prompt.js";
 import {
   conversationStep,
   executeAction,
@@ -95,7 +100,23 @@ export interface AppServerOptions {
    * file acts, if valid (Milestone 13); otherwise the app is read-only.
    */
   readonly actor?: string;
+  /**
+   * Xora's model runtime (Milestone 16). Without it Xora stays in script mode, as in
+   * Milestones 13 to 15; tests use a fake runtime.
+   */
+  readonly xora?: XoraSource;
 }
+
+/** The runtime as the server sees it: its address, its state, and failure reports. */
+export interface XoraSource extends ModelSource {
+  status(): XoraStatus;
+}
+
+const SCRIPT_ONLY: XoraSource = {
+  url: () => null,
+  fail: () => {},
+  status: () => ({ state: "scriptMode", reason: "notConfigured" }),
+};
 
 /** Thrown at start when the configured actor may not write through the UI. */
 export class ActorRejected extends Error {}
@@ -136,7 +157,8 @@ export async function startAppServer(options: AppServerOptions): Promise<AppServ
   }
   const flagActor = options.actor === undefined ? null : checkActor(options);
   let origins: readonly string[] = [];
-  const assistant = new ScriptedAssistant();
+  const xora = options.xora ?? SCRIPT_ONLY;
+  const assistant: Assistant = options.xora ? new ModelAssistant(xora) : new ScriptedAssistant();
   const pending = new PendingActions();
   const serial = serialQueue();
   const server = createServer(async (request, response) => {
@@ -144,7 +166,7 @@ export async function startAppServer(options: AppServerOptions): Promise<AppServ
     try {
       if (request.url?.startsWith("/api/")) {
         await api(
-          { ...resolveRequest(options, flagActor), origins, assistant, pending, serial },
+          { ...resolveRequest(options, flagActor), origins, assistant, xora, pending, serial },
           request,
           response,
         );
@@ -349,7 +371,8 @@ interface RequestState {
 
 interface ApiContext extends RequestState {
   readonly origins: readonly string[];
-  readonly assistant: ScriptedAssistant;
+  readonly assistant: Assistant;
+  readonly xora: XoraSource;
   readonly pending: PendingActions;
   /** Runs confirmed actions one at a time, so two confirmations never pass the same step. */
   readonly serial: <T>(work: () => Promise<T>) => Promise<T>;
@@ -462,30 +485,67 @@ async function setupInfo(context: ApiContext) {
     mode: context.mode,
     ...(context.settingsError ? { settingsError: context.settingsError.message } : {}),
     ...(context.mode === "setup" && context.environment && context.settings
-      ? withBoot(setupState(context.environment, context.settings))
+      ? withBoot(setupState(context.environment, context.settings), context.xora)
       : {}),
     ...(context.mode === "ready" && workspaceDirectory && settings
-      ? readyConversation(workspaceDirectory, settings)
+      ? readyConversation(workspaceDirectory, settings, context.xora)
       : {}),
     ...(firstSteps ? { firstSteps } : {}),
   };
 }
 
-/** The start screen states (Milestone 14 section 2); each one is what the server knows. */
-function boot(logbookFound: boolean) {
+/**
+ * The start screen states (Milestone 14 section 2, Milestone 16 section 5); each one is what
+ * the server knows. Xora is `starting`, `ready`, or `scriptMode`.
+ */
+function boot(logbookFound: boolean, xora: XoraSource) {
+  const state = xora.status().state;
   return {
     shipComputer: "ready" as const,
     logbook: logbookFound ? ("found" as const) : ("notCreated" as const),
-    xora: "scriptMode" as const,
+    xora: state === "off" ? ("starting" as const) : state,
   };
 }
 
-function withBoot<T extends ReturnType<typeof setupState>>(state: T) {
-  return { ...state, boot: boot(state.existing !== null || state.logbook.hasWorkspace) };
+/** Xora's state for `GET /api/xora` and the setup (Milestone 16 section 7). */
+function xoraInfo(xora: XoraSource) {
+  const status = xora.status();
+  return {
+    state: status.state === "off" ? "starting" : status.state,
+    ...(status.reason ? { reason: status.reason } : {}),
+    provider: "local" as const,
+    modelLabel: status.modelLabel ?? null,
+    ...(status.mode ? { mode: status.mode } : {}),
+  };
+}
+
+function withBoot<T extends ReturnType<typeof setupState>>(state: T, xora: XoraSource) {
+  return {
+    ...state,
+    boot: boot(state.existing !== null || state.logbook.hasWorkspace, xora),
+    xora: xoraInfo(xora),
+  };
+}
+
+/** Who Xora talks to, for her prompt: names only, never project content. */
+function promptPeople(context: ApiContext): PromptPeople {
+  const settings = context.settings;
+  let ship = settings?.setup?.shipName;
+  if (!ship && context.workspaceDirectory) {
+    try {
+      ship = loadWorkspaceConfig(context.workspaceDirectory).name;
+    } catch {
+      // Xora talks without the ship's name.
+    }
+  }
+  return {
+    captain: settings?.displayName ?? context.actor ?? "Captain",
+    ...(ship ? { ship } : {}),
+  };
 }
 
 /** The conversation after the logbook exists: its step and the answers to rebuild it from. */
-function readyConversation(workspaceDirectory: string, settings: AppSettings) {
+function readyConversation(workspaceDirectory: string, settings: AppSettings, xora: XoraSource) {
   const step = conversationStep(settings);
   if (!step) return { step: null };
   let shipName: string | null = null;
@@ -502,7 +562,8 @@ function readyConversation(workspaceDirectory: string, settings: AppSettings) {
       shipName,
       logbookPath: workspaceDirectory,
     },
-    boot: boot(true),
+    boot: boot(true, xora),
+    xora: xoraInfo(xora),
   };
 }
 
@@ -554,6 +615,7 @@ async function api(
     );
   }
   if (url.pathname === "/api/setup") return json(response, 200, await setupInfo(context));
+  if (url.pathname === "/api/xora") return json(response, 200, xoraInfo(context.xora));
   if (url.pathname === "/api/settings") {
     return json(response, 200, {
       available: context.environment !== null && context.settingsError === null,
@@ -696,7 +758,7 @@ async function chatWrite(
         }
         const threadRoot = parseThreadKey(body.threadRoot);
         const topic = typeof body.topic === "string" ? body.topic : undefined;
-        return postToChat(store, chat, context.assistant, {
+        return postToChat(store, chat, context.assistant, promptPeople(context), {
           address: route.address,
           text: body.text,
           language: requestLanguage(context, body),
@@ -1049,9 +1111,10 @@ async function assistantWrite(
     const input = assistantInput(body);
     const language = requestLanguage(context, body);
     if (input.kind !== "message" && input.kind !== "setup") await requireFirstSteps(context);
-    const turn = await context.assistant.respond(input, language);
+    const turn = await context.assistant.respond(input, language, promptPeople(context));
     return {
       ...(turn.text ? { text: turn.text } : {}),
+      ...(turn.by ? { by: turn.by } : {}),
       ...(turn.reply ? { reply: turn.reply } : {}),
       ...(input.kind === "setup"
         ? {
