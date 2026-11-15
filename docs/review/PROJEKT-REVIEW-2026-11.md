@@ -352,7 +352,7 @@ Die Wochenangaben sind Schätzungen für eine Person in Teilzeit und nicht belas
 
 | Phase | Pakete | Meilenstein | Woran man ihn erkennt |
 |---|---|---|---|
-| 0 | M1, M2, R8, Entscheidungen E1 bis E4, Doku-Diät (Tipps 1 bis 3) | **„Sauberer Stand“** | Milestone 16 ist zu, die Sicherheitslücken sind geschlossen, `README.md` beschreibt das Produkt, das gebaut wird |
+| 0 | M1, M2, R8, Entscheidungen E1 bis E4, Doku-Diät (Tipps 1 bis 3) | **„Sauberer Stand“** | Milestone 16 ist zu, die Sicherheitslücke ist geschlossen, `README.md` beschreibt das Produkt, das gebaut wird |
 | 1 | R1, R2, R3, R6 | **„Wir wissen, für wen“** | Eine Zielgruppe, ein Anwendungsfall, ein Positionierungssatz, mit Belegen aus Gesprächen |
 | 2 | P1, P3, R4, P2, P5 | **„Erste echte Mission“** | Eine frei formulierte Bitte führt zu einer Datei im Projektordner, mit Rückfrage und Freigabe |
 | 3 | M3, M4, M5, M6, M7, R7, P4 | **„Fünf Fremde“** | Fünf Personen ohne Programmierkenntnisse erledigen auf Olivers Rechner oder per Fernsitzung eine eigene Aufgabe, drei davon würden es wieder benutzen |
