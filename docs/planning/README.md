@@ -11,6 +11,7 @@ No implementation plan is final until the foundational RFCs are reviewed.
 - [Product UI Vision (Mission Control)](./UI-VISION.md)
 - [Licensing Strategy](./LICENSING-STRATEGY.md)
 - [Open Questions](./open-questions.md)
+- [Project review, November 2026](../review/PROJEKT-REVIEW-2026-11.md) (German; a review, not a decision, and it authorizes nothing)
 - [Hackathon planning index](../hackathon/README.md)
 - [RFC-007 Hackathon MVP decision](../rfcs/RFC-007-initial-architecture-and-mvp-boundaries.md)
 - [Hackathon-only ADR decisions](../adr/README.md)

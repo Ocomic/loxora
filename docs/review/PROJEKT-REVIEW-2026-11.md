@@ -28,7 +28,7 @@
 5. **Die Metapher trägt, wenn sie dünn bleibt.** Kapitän, Crew, Mission, Logbuch und Brücke erklären sich fast selbst. Darunter liegen aber noch „Bereich“, „Sammlung“, „Vorschlag“, „Quelle“ und „Beleg“. Das sind zu viele Begriffe für jemanden, der nur eine Aufgabe erledigt haben will.
 6. **Der Prozess ist für eine Person zu schwer.** Rund 645 KB Doku stehen 42.000 Zeilen Code gegenüber, RFC-011 hat drei Amendments in vier Wochen. Die Doku-zuerst-Regel ist für KI-gestützte Entwicklung wertvoll, kostet aber jedes Mal Tokens und Zeit. Für Experimente fehlt eine leichte Spur.
 7. **Die Reihenfolge der Roadmap stimmt nicht.** Geplant ist: Xora, dann Installer, Mehr-Agenten-Betrieb irgendwann. Ich empfehle: erst ein einzelner Agent, der eine echte Mission ausführt, dann fünf Testpersonen, dann der Installer.
-8. **Zwei Sicherheitslücken mit kleinem Aufwand:** Lese-Routen prüfen den Host-Header nicht (Auslesen des Chats über DNS-Rebinding möglich), und die Regel „nur Menschen übernehmen Wissen“ ist eine Namenskonvention (`agent:`-Präfix), die ein Agent mit Shell-Zugriff umgehen kann.
+8. **Eine Sicherheitslücke mit kleinem Aufwand und eine Vertrauensannahme, die mit der ersten Crew nicht mehr hält:** Lese-Routen prüfen den Host-Header nicht (Auslesen des Chats über DNS-Rebinding möglich). Und die Regel „nur Menschen übernehmen Wissen“ ist laut ADR-004 bewusst nur ein Schutz gegen Versehen (`agent:`-Präfix), keine Sicherheitsgrenze. Ein ausführender Agent braucht deshalb eine Sandbox.
 9. **Die stärkste ungenutzte Positionierung ist Privatsphäre plus Kontrolle,** nicht das Raumschiff: ein lokaler Assistent, der fragt, bevor etwas den Rechner verlässt oder geschrieben wird, und über den man jederzeit nachlesen kann, was warum entschieden wurde.
 10. **Vier Entscheidungen blockieren alles Weitere:** Zielgruppe für die erste Version, erster echter Anwendungsfall, wie die erste Crew angebunden wird, und ob das Wissensmodell für Nicht-Entwickler vereinfacht wird (Kapitel 8).
 
@@ -97,7 +97,7 @@ Meine Empfehlung: **Privatsphäre** als Positionierung und **Vereine oder Selbst
 | Speicher und Gedächtnis | **stark im Modell, schwach im Zugriff** | Xora und künftige Agenten bekommen kein Wissen aus dem Logbuch. Ein Kontextpaket für einen Knoten kostete im Dogfooding rund 4.200 Tokens. Das ist die Hälfte von Xoras Kontextfenster (`-c 8192`). |
 | Werkzeuganbindung | **fehlt** | Kein MCP-Client, kein Fähigkeitsmodell im Code. Die Vision spricht von Fähigkeiten statt Anbietern, der Code kennt den Begriff nicht. |
 | Lokal und Cloud | **sauber getrennt** | Ein Protokoll, Schlüssel nur aus der Umgebung, Zustimmungskarte. Der Cloud-Teil ist noch nicht auf `main`. |
-| Sicherheit | **zwei Lücken, sonst sorgfältig** | Siehe unten. |
+| Sicherheit | **eine Lücke und eine offene Vertrauensannahme, sonst sorgfältig** | Siehe unten. |
 | Laufzeitbasis | **Risiko** | `node:sqlite` ist laut ADR-001 und laut Warnung im Testlauf experimentell. Polling statt Push ist für den Chat mit einem antwortenden Modell auf Dauer zu träge. |
 
 ### Konkrete Verbesserungen
@@ -123,10 +123,10 @@ Der Core bleibt unverändert, denn `MissionService` kann das alles schon. Neu is
 
 **A6. Projektinhalte sind nicht vertrauenswürdig.** Sobald ein Agent Dateien oder Logbuchtexte liest, können diese Anweisungen enthalten. Regel für den neuen RFC: Gelesene Inhalte werden dem Modell als Daten gekennzeichnet übergeben, und jede schreibende oder nach außen gehende Aktion braucht eine Karte, egal was das Modell begründet. RFC-011 nennt das Risiko schon, eine Regel dafür fehlt.
 
-**A7. Sicherheitslücken schließen.**
+**A7. Sicherheit: eine Lücke schließen, eine Annahme absichern.**
 
 - *Host-Prüfung auf Lese-Routen.* `readWriteRequest` in `server.ts` prüft Host und Origin nur für schreibende Anfragen. `GET /api/chats`, `/api/missions` und `/api/settings` antworten jedem Host-Header. Eine fremde Webseite kann über DNS-Rebinding den Chat und die Missionen auslesen. Abhilfe: dieselbe Host-Prüfung für alle `/api`-Routen. Aufwand: klein.
-- *Identität der Akteure.* Die CLI nimmt den Akteur aus `--actor` oder `LOXORA_ACTOR` (`commands.ts`). Ein Agent mit Shell-Zugriff kann sich als Mensch ausgeben und Wissen annehmen. Solange Agenten nur über die CLI melden, ist das eine Ehrenregel. Mit A1 muss der Ausführer seine Identität vom Server bekommen und darf die CLI nicht mit Menschenrechten aufrufen können. Mindestens gehört die Grenze ehrlich in die Doku.
+- *Identität der Akteure.* Die CLI nimmt den Akteur aus `--actor` oder `LOXORA_ACTOR` (`commands.ts`). Ein Agent mit Shell-Zugriff kann sich als Mensch ausgeben und Wissen annehmen. Das ist keine unentdeckte Lücke, sondern eine dokumentierte Annahme: ADR-004 („Actors and review“) und `CLI.md` nennen die Regel ausdrücklich einen Schutz gegen versehentliche Selbstannahme und keine Sicherheitsgrenze, weil jeder mit Dateizugriff den Arbeitsbereich ändern kann. Die Annahme trägt, solange ein Mensch die Agenten selbst startet. Sie trägt nicht mehr, sobald Loxora nach A1 selbst einen Agenten ausführt. Eine Identität vom Server allein reicht dann nicht, denn ein Agent mit Dateizugriff könnte die SQLite-Datei oder `workspace.json` direkt ändern. Anforderung für den RFC zu A1: Der Ausführer läuft in einer Sandbox, hat keinen Shell-Zugriff, erreicht den Logbuch-Ordner nicht direkt und schreibt nur über die Werkzeuge, die der Server ihm gibt.
 - *Lokale Prozesse.* Jedes Programm auf dem Rechner kann mit gefälschtem Origin-Header als Kapitän schreiben. Das ist für eine lokale App üblich, sollte aber in „Security and privacy“ stehen. Abhilfe später: ein zufälliges Sitzungsgeheimnis beim Start, das nur die eigene Seite kennt.
 
 **A8. Laufzeitbasis vor dem Installer klären.** Der Installer friert die Node-Version ein. Vorher entscheiden: bei `node:sqlite` bleiben (Risiko: Verhalten ändert sich) oder auf `better-sqlite3` wechseln (Risiko: nativer Build pro Plattform). Der Port im Core macht den Wechsel billig. Außerdem prüfen, ob die Mindestversion 24.18 wirklich nötig ist: Die Tests laufen unter 22.23 durch.
@@ -266,7 +266,7 @@ Aufwand für eine Person mit KI-Unterstützung: **S** bis zwei Tage, **M** bis e
 
 | Nr. | Paket | Ziel | Ergebnis | Abhängig von | Aufwand | Abnahmekriterium |
 |---|---|---|---|---|---|---|
-| M1 | Sicherheit und Aufräumen | Lücken aus A7 schließen | Host-Prüfung auf allen Routen, Akteur-Grenze dokumentiert, englische Reste entfernt | – | S | Test: Lese-Anfrage mit fremdem Host wird abgelehnt |
+| M1 | Sicherheit und Aufräumen | Lücke aus A7 schließen | Host-Prüfung auf allen Routen, Hinweis auf lokale Prozesse in der Doku, englische Reste entfernt | – | S | Test: Lese-Anfrage mit fremdem Host wird abgelehnt |
 | M2 | Milestone 16 abschließen | Xora mit lokalem Modell | PR #56 und Cloud-PoC, Messwerte aus R8 | R8 | M | Windows-Check aus `MILESTONE-16.md` bestanden |
 | M3 | Vereinfachte Brücke | Erste Version für eine Person | „Heute“-Ansicht, eine Missionsliste, Kanäle erst bei Bedarf, drei Statusgruppen | R3 | M | Im Nutzertest findet jede Person ohne Hilfe, was auf sie wartet |
 | M4 | Onboarding mit echtem Ergebnis | Nutzen in den ersten zehn Minuten | Einrichtung in vier Schritten, erste Mission liefert eine Datei | P1, R3 | M | Drei von fünf Testpersonen haben nach zehn Minuten eine Datei im Projektordner |
